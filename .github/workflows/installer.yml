@@ -73,6 +73,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
+          Novità: grafica Tassinari Associati con logo, font Acherus Grotesque e colori aziendali.
+          Menu Export per report HTML con logo e font incorporati.
+          Apertura cartelle con doppio clic, menu contestuale e menu Apri.
+
           Installatore Windows x64 con .NET 10 incluso.
           Scaricare TA-Gestione-Cartelle-Commesse-Setup.exe e avviarlo.
           Installazione per utente, collegamento nel menu Start e disinstallazione inclusi.

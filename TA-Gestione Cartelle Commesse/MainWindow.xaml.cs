@@ -1,24 +1,34 @@
-﻿using System.Text;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using TA_Gestione_Cartelle_Commesse.ViewModels;
 
-namespace TA_Gestione_Cartelle_Commesse
+namespace TA_Gestione_Cartelle_Commesse;
+
+public partial class MainWindow : Window
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
+    public MainWindow() => InitializeComponent();
+
+    // These handlers translate view gestures into the shared ViewModel command.
+    private void FolderRow_RightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        public MainWindow()
+        if (sender is DataGridRow row)
         {
-            InitializeComponent();
+            row.IsSelected = true;
+            row.Focus();
         }
+    }
+
+    private void FolderRow_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left ||
+            sender is not DataGridRow row ||
+            row.DataContext is not FolderRecord record ||
+            row.Tag is not CategoryViewModel category) return;
+
+        category.Selected = record;
+        if (category.OpenFolderCommand.CanExecute(null))
+            category.OpenFolderCommand.Execute(null);
+        e.Handled = true;
     }
 }

@@ -4,7 +4,7 @@ Applicazione Windows WPF, .NET 10 e architettura MVVM per consultare commesse e 
 
 ## Scarica e installa
 
-[![Scarica installatore Windows](https://img.shields.io/badge/Scarica_installatore-Windows_x64-0078D4?style=for-the-badge&logo=windows)](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/latest/download/TA-Gestione-Cartelle-Commesse-Setup.exe)
+[![Scarica installatore Windows](https://img.shields.io/badge/Scarica_installatore-Windows_x64-135F6E?style=for-the-badge&logo=windows)](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/latest/download/TA-Gestione-Cartelle-Commesse-Setup.exe)
 
 **[Scarica installatore Windows (.exe)](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/latest/download/TA-Gestione-Cartelle-Commesse-Setup.exe)** · [Tutte le versioni e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases)
 
@@ -19,12 +19,18 @@ L’installatore non è firmato digitalmente: Windows può mostrare un avviso di
 
 Per aggiornare, chiudi il programma e installa la nuova versione nella stessa cartella. Per disinstallare, apri **Impostazioni Windows → App → App installate → TA-Gestione Cartelle Commesse → Disinstalla**. Le cartelle di lavoro e i report salvati esternamente non vengono rimossi.
 
+## Novità della versione
+
+Interfaccia coordinata con l’identità aziendale, menu Apri ed Export e accesso diretto alle cartelle. Le risorse grafiche sono incluse nel programma e non richiedono accesso alla cartella dei loghi in rete.
+
 ## Funzioni
 
 - Commesse da `Z:\lavori`: solo cartelle annuali principali e loro sottocartelle immediate; nessuna discesa nei livelli successivi.
 - Gare da `Z:\gare`, in una sezione separata.
 - Lettura di codice, anno, progressivo, cliente e argomento; ricerca e segnalazioni di non conformità.
-- Pulsante per generare un report HTML ordinato, stampabile, con elenco e anomalie.
+- Menu **Export** per generare un report HTML ordinato e stampabile, con elenco e anomalie.
+- Apertura della cartella selezionata in Esplora file con doppio clic, menu contestuale o menu **Apri**.
+- Grafica Tassinari Associati: logo originale, font Acherus Grotesque e colori ottanio e notte. Logo e font sono incorporati anche nel report HTML.
 - Consultazione in sola lettura: il programma non rinomina né modifica le cartelle.
 
 Formato previsto: `CXXYYY - Cliente - Argomento` per le commesse, `GXXYYY - Cliente - Argomento` per le gare.

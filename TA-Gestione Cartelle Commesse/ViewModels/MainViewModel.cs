@@ -60,18 +60,35 @@ public sealed class CategoryViewModel : Observable
     public ObservableCollection<FolderRecord> Records { get; } = [];
     public ObservableCollection<string> Warnings { get; } = [];
     public ObservableCollection<FolderNode> Hierarchy { get; } = [];
-    public FolderRecord? Selected { get => selected; set { selected = value; Notify(); Hierarchy.Clear(); if (value != null) Hierarchy.Add(new(value.Path, prefix == 'C') { IsExpanded = prefix != 'C' }); } }
+    public FolderRecord? Selected { get => selected; set { selected = value; Notify(); OpenFolderCommand.Refresh(); Hierarchy.Clear(); if (value != null) Hierarchy.Add(new(value.Path, prefix == 'C') { IsExpanded = prefix != 'C' }); } }
     public Command RefreshCommand { get; }
     public Command CancelCommand { get; }
+    public Command OpenFolderCommand { get; }
     public CategoryViewModel(string title, string root, char code)
     {
         Title = title; path = root; prefix = code;
+        OpenFolderCommand = new(OpenFolder, () => Selected != null);
         status = code == 'C' ? "Premere Aggiorna elenco. Verranno analizzate solo le cartelle di primo livello dentro ogni anno (es. 2026), senza sottocartelle." : "Premere Aggiorna elenco. Cestini e copie storiche esclusi.";
         RefreshCommand = new(() => _ = Refresh(), () => !busy);
         CancelCommand = new(() => { cancellation?.Cancel(); Status = "Annullamento richiesto..."; }, () => busy);
     }
+    private void OpenFolder()
+    {
+        var folder = Selected?.Path;
+        if (folder == null) return;
+        try
+        {
+            if (!Directory.Exists(folder)) throw new DirectoryNotFoundException("Cartella non disponibile. Verificare il percorso e la connessione alla rete.");
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(folder) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            System.Windows.MessageBox.Show(ex.Message + "\n\n" + folder, "Impossibile aprire la cartella", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+        }
+    }
     private void ApplyFilter()
     {
+        Selected = null;
         Records.Clear();
         foreach (var row in all.Where(r => (r.Code + " " + r.Client + " " + r.Subject).Contains(filter, StringComparison.OrdinalIgnoreCase))) Records.Add(row);
     }
@@ -98,6 +115,9 @@ public sealed class MainViewModel : Observable
 {
     public CategoryViewModel Commesse { get; } = new("Commesse", @"Z:\lavori", 'C');
     public CategoryViewModel Gare { get; } = new("Gare", @"Z:\gare", 'G');
+    private int activeTabIndex;
+    public int ActiveTabIndex { get => activeTabIndex; set { activeTabIndex = value; Notify(); Notify(nameof(ActiveCategory)); } }
+    public CategoryViewModel ActiveCategory => ActiveTabIndex == 1 ? Gare : Commesse;
     private bool reporting;
     private string reportStatus = "Report completo: commesse, gare e non conformita.";
     public string ReportStatus { get => reportStatus; private set { reportStatus = value; Notify(); } }
@@ -195,12 +215,22 @@ public static class FolderReader
 
 public static class ReportWriter
 {
+    private static string BrandData(string name)
+    {
+        var resource = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/Assets/Brand/" + name));
+        using var stream = resource.Stream;
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return Convert.ToBase64String(buffer.ToArray());
+    }
     private static string H(string? value) => System.Net.WebUtility.HtmlEncode(value ?? "");
     public static string Create(string jobsRoot, ScanResult jobs, string bidsRoot, ScanResult bids)
     {
         var html = new System.Text.StringBuilder();
-        html.Append("<!doctype html><html lang='it'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>TA - Report cartelle e non conformita</title><style>body{font:15px/1.5 Segoe UI,Arial,sans-serif;color:#203247;background:#f2f5f9;margin:0}main{max-width:1400px;margin:auto;background:white;padding:40px}h1{font-size:30px;margin:0}h2{border-bottom:2px solid #224c70;padding-bottom:8px;margin-top:36px}h3{margin-top:28px}p{max-width:1000px}.meta{color:#53677a}.summary{padding:18px;background:#eaf1f7;border-left:5px solid #224c70}.warning{background:#fff1d6}.path{font-size:12px;color:#526477;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;margin:14px 0 28px;table-layout:fixed}th,td{text-align:left;vertical-align:top;border:1px solid #d5dde6;padding:9px;overflow-wrap:anywhere}th{background:#224c70;color:white}tr:nth-child(even){background:#f6f8fa}tr.bad{background:#fff1d6}a{color:#224c70}thead{display:table-header-group}@media print{body{background:white}main{max-width:none;padding:0;font-size:10pt}tr{break-inside:avoid}h2,h3{break-after:avoid}@page{size:A4 landscape;margin:12mm}</style></head><body><main>");
-        html.Append("<h1>TA - Gestione Cartelle Commesse</h1><p class='meta'>Report delle cartelle e delle non conformita | " + H(DateTime.Now.ToString("dd/MM/yyyy HH:mm")) + "</p>");
+        html.Append("<!doctype html><html lang='it'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>TA - Report cartelle e non conformita</title><style>body{font:15px/1.5 Acherus,Segoe UI,Arial,sans-serif;color:#192845;background:#f3f6f6;margin:0}main{max-width:1400px;margin:auto;background:white;padding:40px}h1{font-size:30px;margin:0}h2{border-bottom:2px solid #135f6e;padding-bottom:8px;margin-top:36px}h3{margin-top:28px}p{max-width:1000px}.meta{color:#53677a}.summary{padding:18px;background:#edf5f5;border-left:5px solid #135f6e}.warning{background:#fff1d6}.path{font-size:12px;color:#526477;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;margin:14px 0 28px;table-layout:fixed}th,td{text-align:left;vertical-align:top;border:1px solid #d5dde6;padding:9px;overflow-wrap:anywhere}th{background:#135f6e;color:white}tr:nth-child(even){background:#f0f6f6}tr.bad{background:#fff1d6}a{color:#135f6e}thead{display:table-header-group}@media print{body{background:white}main{max-width:none;padding:0;font-size:10pt}tr{break-inside:avoid}h2,h3{break-after:avoid}@page{size:A4 landscape;margin:12mm}</style></head><body><main>");
+        html.Append("<style>@font-face{font-family:Acherus;src:url(data:font/otf;base64," + BrandData("Acherus-Regular.otf") + ") format('opentype');font-weight:400}@font-face{font-family:Acherus;src:url(data:font/otf;base64," + BrandData("Acherus-Bold.otf") + ") format('opentype');font-weight:700}.brand{display:block;width:260px;height:auto;margin:44px}h1{color:#192845}</style>");
+        html.Append("<img class='brand' alt='Tassinari Associati' src='data:image/png;base64," + BrandData("Logo.png") + "'>");
+        html.Append("<h1>Gestione Cartelle Commesse</h1><p class='meta'>Report delle cartelle e delle non conformita | " + H(DateTime.Now.ToString("dd/MM/yyyy HH:mm")) + "</p>");
         html.Append("<div class='summary'><strong>" + jobs.Records.Count + " commesse · " + bids.Records.Count + " gare</strong><br>" + jobs.Records.Concat(bids.Records).Count(r => r.Status != "Valido") + " nomi non conformi. " + (jobs.Warnings.Count + bids.Warnings.Count) + " segnalazioni complessive.</div>");
         html.Append("<p>Commesse: analisi delle sole cartelle di primo livello dentro ogni cartella annuale principale (1900–2099). Nessuna scansione dei livelli successivi. Gare: ricerca nella radice selezionata. Cestini, copie storiche e collegamenti esclusi. Nessuna cartella e stata modificata. Ordine: anno e codice crescenti, quindi cliente.</p><p>Formato atteso: <strong>CXXYYY - Cliente - Argomento</strong>, oppure <strong>GXXYYY - Cliente - Argomento</strong>. XX indica l'anno a due cifre; YYY il progressivo. Il controllo riguarda il formato del nome, non la correttezza amministrativa dei dati. Per i nomi non conformi, cliente e argomento non vengono dedotti.</p><nav><a href='#commesse'>Commesse</a> | <a href='#gare'>Gare</a></nav>");
         Section(html, "commesse", "Commesse", jobsRoot, jobs); Section(html, "gare", "Gare", bidsRoot, bids);
