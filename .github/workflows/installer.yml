@@ -39,13 +39,38 @@ jobs:
           }
           & $compiler "/DAppVersion=$env:APP_VERSION" installer.iss
           if ($LASTEXITCODE -ne 0) { throw 'Creazione installer non riuscita' }
-      - name: Verifica installazione, avvio e disinstallazione
+      - name: Verifica aggiornamento da 1.0.2, reinstallazione, avvio e disinstallazione
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $destination = Join-Path $env:RUNNER_TEMP 'TA-Installer-Test'
           $setup = (Resolve-Path 'artifacts/installer/TA-Gestione-Cartelle-Commesse-Setup.exe').Path
-          $install = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',('/DIR="' + $destination + '"')) -WindowStyle Hidden -Wait -PassThru
-          if ($install.ExitCode -ne 0) { throw "Installazione fallita: $($install.ExitCode)" }
+          $previousDir = Join-Path $env:RUNNER_TEMP 'TA-Previous-Installer'
+          gh release download v1.0.2 --repo $env:GITHUB_REPOSITORY --pattern 'TA-Gestione-Cartelle-Commesse-Setup.exe' --dir $previousDir
+          if ($LASTEXITCODE -ne 0) { throw 'Download versione precedente non riuscito' }
+          $previousSetup = Join-Path $previousDir 'TA-Gestione-Cartelle-Commesse-Setup.exe'
+          $install = Start-Process -FilePath $previousSetup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',('/DIR="' + $destination + '"')) -WindowStyle Hidden -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installazione 1.0.2 fallita: $($install.ExitCode)" }
           $exe = Join-Path $destination 'TA-Gestione Cartelle Commesse.exe'
+          if ((Get-Item $exe).VersionInfo.FileVersion -ne '1.0.2.0') { throw 'Versione precedente non installata' }
+          $roots = @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*')
+          function Get-TaEntries {
+            @(Get-ItemProperty $roots -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq '{D0B63D8F-FF51-4B68-9553-4B49A78C7B3A}_is1' -or $_.DisplayName -like 'TA-Gestione Cartelle Commesse*' })
+          }
+          # Senza /DIR: deve riconoscere e riutilizzare la cartella della 1.0.2.
+          foreach ($attempt in 1..2) {
+            $install = Start-Process -FilePath $setup -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' -WindowStyle Hidden -Wait -PassThru
+            if ($install.ExitCode -ne 0) { throw "Aggiornamento/reinstallazione fallita: $($install.ExitCode)" }
+            $entries = @(Get-TaEntries)
+            if ($entries.Count -ne 1 -or $entries[0].DisplayVersion -ne $env:APP_VERSION) { throw 'Versione precedente o voci duplicate rimaste nel registro' }
+            if ((Get-Item $exe).VersionInfo.FileVersion -ne "$env:APP_VERSION.0") { throw 'File installati non aggiornati' }
+            if ((Get-FileHash $exe).Hash -ne (Get-FileHash 'artifacts/publish/TA-Gestione Cartelle Commesse.exe').Hash) { throw 'Eseguibile installato diverso dal programma pubblicato' }
+            if (@(Get-ChildItem $destination -Filter 'unins*.exe').Count -ne 1) { throw 'Disinstallatori duplicati' }
+          }
+          $shortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'TA-Gestione Cartelle Commesse\TA-Gestione Cartelle Commesse.lnk'
+          $shell = New-Object -ComObject WScript.Shell
+          if (!(Test-Path $shortcutPath) -or $shell.CreateShortcut($shortcutPath).TargetPath -ne $exe) { throw 'Collegamento Start non punta al programma installato' }
+          if (Select-String -Path installer.iss -Pattern '^\s*\[Run\]' -Quiet) { throw 'Il setup non deve eseguire processi dopo Fine' }
           if (!(Test-Path $exe)) { throw 'Eseguibile installato assente' }
           $app = Start-Process -FilePath $exe -WindowStyle Hidden -PassThru
           try {
@@ -58,6 +83,7 @@ jobs:
           }
           $uninstall = Start-Process -FilePath (Join-Path $destination 'unins000.exe') -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -WindowStyle Hidden -Wait -PassThru
           if ($uninstall.ExitCode -ne 0 -or (Test-Path $exe)) { throw 'Disinstallazione non riuscita' }
+          if (@(Get-TaEntries).Count -ne 0 -or (Test-Path $shortcutPath)) { throw 'Registrazione o collegamento residui dopo disinstallazione' }
       - name: Calcola impronta SHA256
         run: |
           $setup = 'artifacts/installer/TA-Gestione-Cartelle-Commesse-Setup.exe'
@@ -73,6 +99,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
+          Installatore aggiornato: Fine chiude il setup senza avvii automatici.
+          Avviare il programma dal menu Start dopo l'installazione.
+          Aggiornamento dalla 1.0.2 e reinstallazione verificati: file sostituiti, una sola voce nelle App installate.
+          La versione precedente viene aggiornata nella stessa cartella, senza disinstallazione manuale.
+
           Novità: grafica Tassinari Associati con logo, font Acherus Grotesque e colori aziendali.
           Menu Export per report HTML con logo e font incorporati.
           Apertura cartelle con doppio clic, menu contestuale e menu Apri.

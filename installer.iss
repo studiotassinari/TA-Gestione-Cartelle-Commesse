@@ -28,6 +28,10 @@ WizardStyle=modern
 UninstallDisplayIcon={app}\TA-Gestione Cartelle Commesse.exe
 CloseApplications=yes
 RestartApplications=no
+UsePreviousAppDir=yes
+DisableDirPage=auto
+SetupMutex=TA-Gestione-Cartelle-Commesse-Setup
+SetupLogging=yes
 [Languages]
 Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
 [Tasks]
@@ -37,5 +41,4 @@ Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 [Icons]
 Name: "{group}\TA-Gestione Cartelle Commesse"; Filename: "{app}\TA-Gestione Cartelle Commesse.exe"
 Name: "{autodesktop}\TA-Gestione Cartelle Commesse"; Filename: "{app}\TA-Gestione Cartelle Commesse.exe"; Tasks: desktopicon
-[Run]
-Filename: "{app}\TA-Gestione Cartelle Commesse.exe"; Description: "Avvia TA-Gestione Cartelle Commesse"; Flags: nowait postinstall skipifsilent
+; Fine chiude esclusivamente il setup. Avviare il programma dal menu Start.

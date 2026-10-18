@@ -11,13 +11,16 @@ Applicazione Windows WPF, .NET 10 e architettura MVVM per consultare commesse e 
 1. Accedi a GitHub con un account autorizzato a questo repository privato.
 2. Scarica ed esegui `TA-Gestione-Cartelle-Commesse-Setup.exe`.
 3. Segui la procedura guidata in italiano; il collegamento sul desktop è facoltativo.
-4. Avvia il programma dal menu Start e premi **Aggiorna elenco**.
+4. Premi **Fine** per chiudere l'installatore: non viene avviato automaticamente alcun programma.
+5. Avvia **TA-Gestione Cartelle Commesse** dal menu Start e premi **Aggiorna elenco**.
 
 Il pacchetto include il runtime .NET 10 e si installa per il solo utente corrente, senza richiedere privilegi di amministratore. È destinato a Windows x64. Il programma necessita di accesso alla rete aziendale per leggere i percorsi selezionati.
 
 L’installatore non è firmato digitalmente: Windows può mostrare un avviso di autore sconosciuto. L’impronta SHA256 è disponibile nella stessa release.
 
-Per aggiornare, chiudi il programma e installa la nuova versione nella stessa cartella. Per disinstallare, apri **Impostazioni Windows → App → App installate → TA-Gestione Cartelle Commesse → Disinstalla**. Le cartelle di lavoro e i report salvati esternamente non vengono rimossi.
+Per aggiornare, chiudi il programma ed esegui il nuovo installatore con lo stesso utente Windows. Il setup riutilizza la cartella esistente, sostituisce i file della versione precedente e aggiorna la stessa voce nelle App installate: non occorre disinstallare prima. La pagina di scelta della cartella viene saltata durante l'aggiornamento. Per disinstallare, apri **Impostazioni Windows → App → App installate → TA-Gestione Cartelle Commesse → Disinstalla**. Le cartelle di lavoro e i report salvati esternamente non vengono rimossi.
+
+Il setup impedisce due installazioni simultanee e registra le operazioni in un file `Setup Log ... .txt` nella cartella temporanea dell'utente, utile per la diagnosi. I test di rilascio verificano aggiornamento dalla 1.0.2, reinstallazione, versione dei file, assenza di registrazioni duplicate, collegamento Start, avvio e disinstallazione.
 
 ## Novità della versione
 
