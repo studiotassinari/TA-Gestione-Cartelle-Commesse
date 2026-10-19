@@ -28,7 +28,8 @@ Interfaccia coordinata con l’identità aziendale, menu Apri ed Export e access
 
 ## Funzioni
 
-- Commesse da `Z:\lavori`: solo cartelle annuali principali e loro sottocartelle immediate; nessuna discesa nei livelli successivi.
+- Commesse da `Z:\lavori`: identificazione e verifica dei nomi limitate alle cartelle immediatamente sotto le cartelle annuali principali.
+- Gerarchia delle commesse: selezionando una commessa si possono esplorare le sue sottocartelle, caricate quando si espande ciascun nodo. Le cartelle interne non vengono identificate come ulteriori commesse, né aggiunte all'elenco o alle non conformità del report.
 - Gare da `Z:\gare`, in una sezione separata.
 - Lettura di codice, anno, progressivo, cliente e argomento; ricerca e segnalazioni di non conformità.
 - Menu **Export** per generare un report HTML ordinato e stampabile, con elenco e anomalie.

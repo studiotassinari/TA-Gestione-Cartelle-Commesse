@@ -1,191 +1,374 @@
-﻿<Window x:Class="TA_Gestione_Cartelle_Commesse.MainWindow"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
- xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:vm="clr-namespace:TA_Gestione_Cartelle_Commesse.ViewModels"
- Title="TA-Gestione Cartelle Commesse" Width="1300" Height="900" MinWidth="900" MinHeight="700" Background="#F3F6F6" Foreground="#192845" FontSize="13" FontFamily="./Assets/Brand/#Acherus Grotesque" Icon="Assets/Brand/App.ico" UseLayoutRounding="True">
+<!-- Definisce la finestra principale, i namespace XAML e le proprietà di presentazione aziendale. -->
+<Window x:Class="TA_Gestione_Cartelle_Commesse.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="clr-namespace:TA_Gestione_Cartelle_Commesse.ViewModels" Title="TA-Gestione Cartelle Commesse" Width="1300" Height="900" MinWidth="900" MinHeight="700" Background="#F3F6F6" Foreground="#192845" FontSize="13" FontFamily="./Assets/Brand/#Acherus Grotesque" Icon="Assets/Brand/App.ico" UseLayoutRounding="True">
+    <!-- Assegna il modello di presentazione ereditato dai binding della finestra. -->
     <Window.DataContext>
+        <!-- Crea il ViewModel principale con categorie e comando di esportazione. -->
         <vm:MainViewModel/>
+    <!-- Conclude lʼelemento Window.DataContext e il suo contenuto. -->
     </Window.DataContext>
+    <!-- Raccoglie colori, stili e modelli riutilizzati dai controlli della finestra. -->
     <Window.Resources>
+        <!-- Definisce un colore aziendale riutilizzabile tramite la chiave indicata. -->
         <SolidColorBrush x:Key="BrandTeal" Color="#135F6E"/>
+        <!-- Definisce un colore aziendale riutilizzabile tramite la chiave indicata. -->
         <SolidColorBrush x:Key="BrandNight" Color="#192845"/>
+        <!-- Definisce lo stile comune del tipo di controllo indicato. -->
         <Style TargetType="MenuItem">
+            <!-- Imposta la proprietà Padding al valore 14,8. -->
             <Setter Property="Padding" Value="14,8"/>
+        <!-- Conclude lʼelemento Style e il suo contenuto. -->
         </Style>
+        <!-- Definisce lo stile comune del tipo di controllo indicato. -->
         <Style TargetType="TabItem">
+            <!-- Imposta la proprietà Padding al valore 24,10. -->
             <Setter Property="Padding" Value="24,10"/>
+            <!-- Imposta la proprietà FontWeight al valore Bold. -->
             <Setter Property="FontWeight" Value="Bold"/>
+            <!-- Imposta la proprietà Foreground al valore #135F6E. -->
             <Setter Property="Foreground" Value="#135F6E"/>
+        <!-- Conclude lʼelemento Style e il suo contenuto. -->
         </Style>
+        <!-- Definisce lo stile comune del tipo di controllo indicato. -->
         <Style TargetType="DataGrid">
+            <!-- Imposta la proprietà Background al valore White. -->
             <Setter Property="Background" Value="White"/>
+            <!-- Imposta la proprietà BorderBrush al valore #D6E0E2. -->
             <Setter Property="BorderBrush" Value="#D6E0E2"/>
+            <!-- Imposta la proprietà RowHeight al valore 32. -->
             <Setter Property="RowHeight" Value="32"/>
+            <!-- Imposta la proprietà HorizontalGridLinesBrush al valore #E5ECEE. -->
             <Setter Property="HorizontalGridLinesBrush" Value="#E5ECEE"/>
+            <!-- Imposta la proprietà ColumnHeaderHeight al valore 38. -->
             <Setter Property="ColumnHeaderHeight" Value="38"/>
+            <!-- Imposta la proprietà SelectionUnit al valore FullRow. -->
             <Setter Property="SelectionUnit" Value="FullRow"/>
+        <!-- Conclude lʼelemento Style e il suo contenuto. -->
         </Style>
+        <!-- Definisce lo stile comune del tipo di controllo indicato. -->
         <Style TargetType="DataGridColumnHeader">
+            <!-- Imposta la proprietà Background al valore #192845. -->
             <Setter Property="Background" Value="#192845"/>
+            <!-- Imposta la proprietà Foreground al valore White. -->
             <Setter Property="Foreground" Value="White"/>
+            <!-- Imposta la proprietà FontWeight al valore Bold. -->
             <Setter Property="FontWeight" Value="Bold"/>
+            <!-- Imposta la proprietà Padding al valore 10,8. -->
             <Setter Property="Padding" Value="10,8"/>
+            <!-- Imposta la proprietà BorderThickness al valore 0. -->
             <Setter Property="BorderThickness" Value="0"/>
+        <!-- Conclude lʼelemento Style e il suo contenuto. -->
         </Style>
+        <!-- Definisce lo stile comune del tipo di controllo indicato. -->
         <Style TargetType="DataGridCell">
+            <!-- Imposta la proprietà Padding al valore 8,4. -->
             <Setter Property="Padding" Value="8,4"/>
+            <!-- Imposta la proprietà BorderThickness al valore 0. -->
             <Setter Property="BorderThickness" Value="0"/>
+            <!-- Imposta la proprietà Template con la definizione contenuta nel blocco. -->
             <Setter Property="Template">
+                <!-- Fornisce un valore complesso alla proprietà impostata dallo stile. -->
                 <Setter.Value>
+                    <!-- Definisce la struttura visiva del controllo indicato. -->
                     <ControlTemplate TargetType="DataGridCell">
+                        <!-- Disegna lo sfondo e il bordo del contenuto usando colori, spessori e spaziature dichiarati. -->
                         <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <!-- Visualizza il contenuto del controllo con gli allineamenti indicati. -->
                             <ContentPresenter VerticalAlignment="Center"/>
+                        <!-- Conclude lʼelemento Border e il suo contenuto. -->
                         </Border>
+                    <!-- Conclude lʼelemento ControlTemplate e il suo contenuto. -->
                     </ControlTemplate>
+                <!-- Conclude lʼelemento Setter.Value e il suo contenuto. -->
                 </Setter.Value>
+            <!-- Conclude lʼelemento Setter e il suo contenuto. -->
             </Setter>
+            <!-- Raccoglie le modifiche dello stile attivate da cambiamenti di stato. -->
             <Style.Triggers>
+                <!-- Applica le impostazioni interne quando la proprietà raggiunge il valore indicato. -->
                 <Trigger Property="IsSelected" Value="True">
+                    <!-- Imposta la proprietà Background al valore #135F6E. -->
                     <Setter Property="Background" Value="#135F6E"/>
+                    <!-- Imposta la proprietà Foreground al valore White. -->
                     <Setter Property="Foreground" Value="White"/>
+                <!-- Conclude lʼelemento Trigger e il suo contenuto. -->
                 </Trigger>
+            <!-- Conclude lʼelemento Style.Triggers e il suo contenuto. -->
             </Style.Triggers>
+        <!-- Conclude lʼelemento Style e il suo contenuto. -->
         </Style>
+        <!-- Definisce lo stile comune del tipo di controllo indicato. -->
         <Style TargetType="GroupBox">
+            <!-- Imposta la proprietà BorderBrush al valore #D6E0E2. -->
             <Setter Property="BorderBrush" Value="#D6E0E2"/>
+            <!-- Imposta la proprietà Padding al valore 8. -->
             <Setter Property="Padding" Value="8"/>
+            <!-- Imposta la proprietà Background al valore White. -->
             <Setter Property="Background" Value="White"/>
+        <!-- Conclude lʼelemento Style e il suo contenuto. -->
         </Style>
+        <!-- Definisce lo stile comune del tipo di controllo indicato. -->
         <Style TargetType="Button">
+            <!-- Imposta la proprietà Padding al valore 16,9. -->
             <Setter Property="Padding" Value="16,9"/>
+            <!-- Imposta la proprietà Background al valore #135F6E. -->
             <Setter Property="Background" Value="#135F6E"/>
+            <!-- Imposta la proprietà Foreground al valore White. -->
             <Setter Property="Foreground" Value="White"/>
+            <!-- Imposta la proprietà BorderBrush al valore #135F6E. -->
             <Setter Property="BorderBrush" Value="#135F6E"/>
+            <!-- Imposta la proprietà FontWeight al valore Bold. -->
             <Setter Property="FontWeight" Value="Bold"/>
+            <!-- Imposta la proprietà Template con la definizione contenuta nel blocco. -->
             <Setter Property="Template">
+                <!-- Fornisce un valore complesso alla proprietà impostata dallo stile. -->
                 <Setter.Value>
+                    <!-- Definisce la struttura visiva del controllo indicato. -->
                     <ControlTemplate TargetType="Button">
+                        <!-- Disegna lo sfondo e il bordo del contenuto usando colori, spessori e spaziature dichiarati. -->
                         <Border x:Name="ButtonSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <!-- Visualizza il contenuto del controllo con gli allineamenti indicati. -->
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <!-- Conclude lʼelemento Border e il suo contenuto. -->
                         </Border>
+                        <!-- Gestisce gli stati interattivi degli elementi del modello visivo. -->
                         <ControlTemplate.Triggers>
+                            <!-- Applica le impostazioni interne quando la proprietà raggiunge il valore indicato. -->
                             <Trigger Property="IsMouseOver" Value="True">
+                                <!-- Imposta la proprietà Background al valore #192845. -->
                                 <Setter TargetName="ButtonSurface" Property="Background" Value="#192845"/>
+                            <!-- Conclude lʼelemento Trigger e il suo contenuto. -->
                             </Trigger>
+                            <!-- Applica le impostazioni interne quando la proprietà raggiunge il valore indicato. -->
                             <Trigger Property="IsKeyboardFocused" Value="True">
+                                <!-- Imposta la proprietà BorderBrush al valore #192845. -->
                                 <Setter TargetName="ButtonSurface" Property="BorderBrush" Value="#192845"/>
+                                <!-- Imposta la proprietà BorderThickness al valore 2. -->
                                 <Setter TargetName="ButtonSurface" Property="BorderThickness" Value="2"/>
+                            <!-- Conclude lʼelemento Trigger e il suo contenuto. -->
                             </Trigger>
+                            <!-- Applica le impostazioni interne quando la proprietà raggiunge il valore indicato. -->
                             <Trigger Property="IsEnabled" Value="False">
+                                <!-- Imposta la proprietà Opacity al valore 0.4. -->
                                 <Setter TargetName="ButtonSurface" Property="Opacity" Value="0.4"/>
+                            <!-- Conclude lʼelemento Trigger e il suo contenuto. -->
                             </Trigger>
+                        <!-- Conclude lʼelemento ControlTemplate.Triggers e il suo contenuto. -->
                         </ControlTemplate.Triggers>
+                    <!-- Conclude lʼelemento ControlTemplate e il suo contenuto. -->
                     </ControlTemplate>
+                <!-- Conclude lʼelemento Setter.Value e il suo contenuto. -->
                 </Setter.Value>
+            <!-- Conclude lʼelemento Setter e il suo contenuto. -->
             </Setter>
+            <!-- Imposta la proprietà Margin al valore 6,0,0,0. -->
             <Setter Property="Margin" Value="6,0,0,0"/>
+        <!-- Conclude lʼelemento Style e il suo contenuto. -->
         </Style>
+        <!-- Definisce lo stile comune del tipo di controllo indicato. -->
         <Style TargetType="TextBox">
+            <!-- Imposta la proprietà Padding al valore 10,8. -->
             <Setter Property="Padding" Value="10,8"/>
+            <!-- Imposta la proprietà BorderBrush al valore #B8CDD1. -->
             <Setter Property="BorderBrush" Value="#B8CDD1"/>
+            <!-- Imposta la proprietà VerticalContentAlignment al valore Center. -->
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <!-- Conclude lʼelemento Style e il suo contenuto. -->
         </Style>
+        <!-- Mostra i nodi FolderNode e ricava i nodi figli dalla proprietà Children. -->
         <HierarchicalDataTemplate DataType="{x:Type vm:FolderNode}" ItemsSource="{Binding Children}">
+            <!-- Mostra il testo {Binding Name} con lo stile e gli allineamenti specificati. -->
             <TextBlock Text="{Binding Name}" ToolTip="{Binding Path}"/>
+        <!-- Conclude lʼelemento HierarchicalDataTemplate e il suo contenuto. -->
         </HierarchicalDataTemplate>
+        <!-- Definisce lo stile comune del tipo di controllo indicato. -->
         <Style TargetType="TreeViewItem">
+            <!-- Imposta la proprietà IsExpanded al valore {Binding IsExpanded, Mode=TwoWay}. -->
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+        <!-- Conclude lʼelemento Style e il suo contenuto. -->
         </Style>
+        <!-- Definisce il modello di vista condiviso dalle categorie Commesse e Gare. -->
         <DataTemplate x:Key="CategoryTemplate">
+            <!-- Organizza i controlli in una griglia con le proprietà di disposizione indicate. -->
             <Grid Margin="16" TextElement.FontWeight="Normal">
+                <!-- Definisce le righe della griglia, nellʼordine in cui verranno indicizzate. -->
                 <Grid.RowDefinitions>
+                    <!-- Riserva una riga: Auto segue il contenuto, * usa lo spazio residuo, i numeri indicano unità WPF. -->
                     <RowDefinition Height="Auto"/>
+                    <!-- Riserva una riga: Auto segue il contenuto, * usa lo spazio residuo, i numeri indicano unità WPF. -->
                     <RowDefinition Height="Auto"/>
+                    <!-- Riserva una riga: Auto segue il contenuto, * usa lo spazio residuo, i numeri indicano unità WPF. -->
                     <RowDefinition Height="*"/>
+                    <!-- Riserva una riga: Auto segue il contenuto, * usa lo spazio residuo, i numeri indicano unità WPF. -->
                     <RowDefinition Height="Auto"/>
+                    <!-- Riserva una riga: Auto segue il contenuto, * usa lo spazio residuo, i numeri indicano unità WPF. -->
                     <RowDefinition Height="110"/>
+                <!-- Conclude lʼelemento Grid.RowDefinitions e il suo contenuto. -->
                 </Grid.RowDefinitions>
+                <!-- Dispone i figli sui bordi indicati; lʼultimo occupa lo spazio residuo. -->
                 <DockPanel Margin="0,0,0,12">
+                    <!-- Mostra il pulsante Annulla lettura e delega esecuzione e abilitazione al comando associato. -->
                     <Button DockPanel.Dock="Right" Content="Annulla lettura" Command="{Binding CancelCommand}"/>
+                    <!-- Mostra il pulsante Aggiorna elenco e delega esecuzione e abilitazione al comando associato. -->
                     <Button DockPanel.Dock="Right" Content="Aggiorna elenco" Command="{Binding RefreshCommand}"/>
+                    <!-- Consente di modificare {Binding RootPath, UpdateSourceTrigger=PropertyChanged} aggiornando il ViewModel a ogni modifica del testo. -->
                     <TextBox Text="{Binding RootPath, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsIdle}" ToolTip="Cartella radice"/>
+                <!-- Conclude lʼelemento DockPanel e il suo contenuto. -->
                 </DockPanel>
+                <!-- Dispone i figli sui bordi indicati; lʼultimo occupa lo spazio residuo. -->
                 <DockPanel Grid.Row="1" Margin="0,0,0,12">
+                    <!-- Mostra il testo Cerca codice, cliente o argomento con lo stile e gli allineamenti specificati. -->
                     <TextBlock Text="Cerca codice, cliente o argomento" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <!-- Consente di modificare {Binding Filter, UpdateSourceTrigger=PropertyChanged} aggiornando il ViewModel a ogni modifica del testo. -->
                     <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"/>
+                <!-- Conclude lʼelemento DockPanel e il suo contenuto. -->
                 </DockPanel>
+                <!-- Organizza i controlli in una griglia con le proprietà di disposizione indicate. -->
                 <Grid Grid.Row="2">
+                    <!-- Definisce le colonne della griglia, nellʼordine in cui verranno indicizzate. -->
                     <Grid.ColumnDefinitions>
+                        <!-- Riserva una colonna: Auto segue il contenuto e * ripartisce lo spazio disponibile. -->
                         <ColumnDefinition Width="3*"/>
+                        <!-- Riserva una colonna: Auto segue il contenuto e * ripartisce lo spazio disponibile. -->
                         <ColumnDefinition Width="8"/>
+                        <!-- Riserva una colonna: Auto segue il contenuto e * ripartisce lo spazio disponibile. -->
                         <ColumnDefinition Width="*"/>
+                    <!-- Conclude lʼelemento Grid.ColumnDefinitions e il suo contenuto. -->
                     </Grid.ColumnDefinitions>
+                    <!-- Mostra i risultati filtrati in sola lettura e sincronizza la selezione con il ViewModel. -->
                     <DataGrid ItemsSource="{Binding Records}" SelectedItem="{Binding Selected}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal" AlternatingRowBackground="#F0F6F6">
+                        <!-- Configura comportamento, eventi e menu contestuale di ciascuna riga. -->
                         <DataGrid.RowStyle>
+                            <!-- Definisce lo stile comune del tipo di controllo indicato. -->
                             <Style TargetType="DataGridRow">
+                                <!-- Conserva sulla riga il ViewModel della categoria per i gestori mouse e il menu contestuale. -->
                                 <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                                <!-- Collega lʼevento PreviewMouseRightButtonDown al gestore FolderRow_RightButtonDown. -->
                                 <EventSetter Event="PreviewMouseRightButtonDown" Handler="FolderRow_RightButtonDown"/>
+                                <!-- Collega lʼevento MouseDoubleClick al gestore FolderRow_DoubleClick. -->
                                 <EventSetter Event="MouseDoubleClick" Handler="FolderRow_DoubleClick"/>
+                                <!-- Imposta la proprietà ContextMenu con la definizione contenuta nel blocco. -->
                                 <Setter Property="ContextMenu">
+                                    <!-- Fornisce un valore complesso alla proprietà impostata dallo stile. -->
                                     <Setter.Value>
+                                        <!-- Recupera dal Tag della riga il ViewModel, poiché il menu non eredita il contesto visivo della tabella. -->
                                         <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                                            <!-- Definisce MenuItem con intestazione Apri cartella in Esplora file e gli eventuali comandi o contenuti associati. -->
                                             <MenuItem Header="Apri cartella in Esplora file" Command="{Binding OpenFolderCommand}"/>
+                                        <!-- Conclude lʼelemento ContextMenu e il suo contenuto. -->
                                         </ContextMenu>
+                                    <!-- Conclude lʼelemento Setter.Value e il suo contenuto. -->
                                     </Setter.Value>
+                                <!-- Conclude lʼelemento Setter e il suo contenuto. -->
                                 </Setter>
+                            <!-- Conclude lʼelemento Style e il suo contenuto. -->
                             </Style>
+                        <!-- Conclude lʼelemento DataGrid.RowStyle e il suo contenuto. -->
                         </DataGrid.RowStyle>
+                        <!-- Definisce esplicitamente le colonne senza generazione automatica. -->
                         <DataGrid.Columns>
+                            <!-- Visualizza la colonna Codice leggendo il campo indicato nel binding, con la larghezza specificata. -->
                             <DataGridTextColumn Header="Codice" Binding="{Binding Code}" Width="90"/>
+                            <!-- Visualizza la colonna Anno (XX) leggendo il campo indicato nel binding, con la larghezza specificata. -->
                             <DataGridTextColumn Header="Anno (XX)" Binding="{Binding Year}" Width="90"/>
+                            <!-- Visualizza la colonna N. leggendo il campo indicato nel binding, con la larghezza specificata. -->
                             <DataGridTextColumn Header="N." Binding="{Binding Number}" Width="55"/>
+                            <!-- Visualizza la colonna Cliente leggendo il campo indicato nel binding, con la larghezza specificata. -->
                             <DataGridTextColumn Header="Cliente" Binding="{Binding Client}" Width="2*"/>
+                            <!-- Visualizza la colonna Argomento leggendo il campo indicato nel binding, con la larghezza specificata. -->
                             <DataGridTextColumn Header="Argomento" Binding="{Binding Subject}" Width="3*"/>
+                            <!-- Visualizza la colonna Esito leggendo il campo indicato nel binding, con la larghezza specificata. -->
                             <DataGridTextColumn Header="Esito" Binding="{Binding Status}" Width="100"/>
+                        <!-- Conclude lʼelemento DataGrid.Columns e il suo contenuto. -->
                         </DataGrid.Columns>
+                    <!-- Conclude lʼelemento DataGrid e il suo contenuto. -->
                     </DataGrid>
+                    <!-- Permette di ridimensionare le aree della tabella e della gerarchia. -->
                     <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"/>
+                    <!-- Definisce GroupBox con intestazione Gerarchia cartelle e gli eventuali comandi o contenuti associati. -->
                     <GroupBox Grid.Column="2" Header="Gerarchia cartelle">
+                        <!-- Visualizza la gerarchia della selezione usando i modelli dei nodi definiti nelle risorse. -->
                         <TreeView ItemsSource="{Binding Hierarchy}"/>
+                    <!-- Conclude lʼelemento GroupBox e il suo contenuto. -->
                     </GroupBox>
+                <!-- Conclude lʼelemento Grid e il suo contenuto. -->
                 </Grid>
+                <!-- Mostra il testo {Binding Status} con lo stile e gli allineamenti specificati. -->
                 <TextBlock Grid.Row="3" Text="{Binding Status}" Foreground="#135F6E" Margin="0,12,0,8" TextWrapping="Wrap"/>
+                <!-- Definisce GroupBox con intestazione Segnalazioni di lettura e nomi non conformi e gli eventuali comandi o contenuti associati. -->
                 <GroupBox Grid.Row="4" Header="Segnalazioni di lettura e nomi non conformi">
+                    <!-- Mostra le segnalazioni di lettura e consente lo scorrimento orizzontale dei percorsi lunghi. -->
                     <ListBox ItemsSource="{Binding Warnings}" ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
+                <!-- Conclude lʼelemento GroupBox e il suo contenuto. -->
                 </GroupBox>
+            <!-- Conclude lʼelemento Grid e il suo contenuto. -->
             </Grid>
+        <!-- Conclude lʼelemento DataTemplate e il suo contenuto. -->
         </DataTemplate>
+    <!-- Conclude lʼelemento Window.Resources e il suo contenuto. -->
     </Window.Resources>
+    <!-- Dispone i figli sui bordi indicati; lʼultimo occupa lo spazio residuo. -->
     <DockPanel Margin="18">
+        <!-- Definisce la barra dei menu nella parte superiore della finestra. -->
         <Menu DockPanel.Dock="Top" Margin="0,0,0,14" Padding="4" Background="White">
+            <!-- Definisce MenuItem con intestazione _Apri e gli eventuali comandi o contenuti associati. -->
             <MenuItem Header="_Apri">
+                <!-- Definisce MenuItem con intestazione Apri cartella in Esplora file e gli eventuali comandi o contenuti associati. -->
                 <MenuItem Header="Apri cartella in Esplora file" Command="{Binding ActiveCategory.OpenFolderCommand}"/>
+            <!-- Conclude lʼelemento MenuItem e il suo contenuto. -->
             </MenuItem>
+            <!-- Definisce MenuItem con intestazione _Export e gli eventuali comandi o contenuti associati. -->
             <MenuItem Header="_Export">
+                <!-- Definisce MenuItem con intestazione Crea report cartelle e non conformità e gli eventuali comandi o contenuti associati. -->
                 <MenuItem Header="Crea report cartelle e non conformità" Command="{Binding ReportCommand}"/>
+            <!-- Conclude lʼelemento MenuItem e il suo contenuto. -->
             </MenuItem>
+        <!-- Conclude lʼelemento Menu e il suo contenuto. -->
         </Menu>
+        <!-- Disegna lo sfondo e il bordo del contenuto usando colori, spessori e spaziature dichiarati. -->
         <Border DockPanel.Dock="Top" Background="White" Margin="0,0,0,16" BorderBrush="#135F6E" BorderThickness="0,0,0,3">
+            <!-- Organizza i controlli in una griglia con le proprietà di disposizione indicate. -->
             <Grid>
+                <!-- Definisce le colonne della griglia, nellʼordine in cui verranno indicizzate. -->
                 <Grid.ColumnDefinitions>
+                    <!-- Riserva una colonna: Auto segue il contenuto e * ripartisce lo spazio disponibile. -->
                     <ColumnDefinition Width="Auto"/>
+                    <!-- Riserva una colonna: Auto segue il contenuto e * ripartisce lo spazio disponibile. -->
                     <ColumnDefinition Width="*"/>
+                <!-- Conclude lʼelemento Grid.ColumnDefinitions e il suo contenuto. -->
                 </Grid.ColumnDefinitions>
+                <!-- Visualizza il logo incorporato mantenendone le proporzioni e fornendo un nome accessibile. -->
                 <Image Source="Assets/Brand/Logo.png" Width="240" Stretch="Uniform" Margin="40" AutomationProperties.Name="Tassinari Associati"/>
+                <!-- Dispone in sequenza il titolo e il sottotitolo aziendali. -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,20,24,20">
+                    <!-- Mostra il testo Gestione Cartelle Commesse con lo stile e gli allineamenti specificati. -->
                     <TextBlock Text="Gestione Cartelle Commesse" FontSize="25" FontWeight="Bold" TextWrapping="Wrap"/>
+                    <!-- Mostra il testo Commesse e gare · Archivio e verifica delle denominazioni con lo stile e gli allineamenti specificati. -->
                     <TextBlock Text="Commesse e gare · Archivio e verifica delle denominazioni" Foreground="#135F6E" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                <!-- Conclude lʼelemento StackPanel e il suo contenuto. -->
                 </StackPanel>
+            <!-- Conclude lʼelemento Grid e il suo contenuto. -->
             </Grid>
+        <!-- Conclude lʼelemento Border e il suo contenuto. -->
         </Border>
+        <!-- Mostra il testo {Binding ReportStatus} con lo stile e gli allineamenti specificati. -->
         <TextBlock DockPanel.Dock="Top" Text="{Binding ReportStatus}" Foreground="#536775" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+        <!-- Sincronizza in entrambe le direzioni la scheda selezionata con ActiveTabIndex. -->
         <TabControl SelectedIndex="{Binding ActiveTabIndex, Mode=TwoWay}">
+            <!-- Definisce TabItem con intestazione    Commesse    e gli eventuali comandi o contenuti associati. -->
             <TabItem Header="   Commesse   ">
+                <!-- Applica il modello condiviso CategoryTemplate al ViewModel della categoria indicata. -->
                 <ContentControl Content="{Binding Commesse}" ContentTemplate="{StaticResource CategoryTemplate}"/>
+            <!-- Conclude lʼelemento TabItem e il suo contenuto. -->
             </TabItem>
+            <!-- Definisce TabItem con intestazione    Gare    e gli eventuali comandi o contenuti associati. -->
             <TabItem Header="   Gare   ">
+                <!-- Applica il modello condiviso CategoryTemplate al ViewModel della categoria indicata. -->
                 <ContentControl Content="{Binding Gare}" ContentTemplate="{StaticResource CategoryTemplate}"/>
+            <!-- Conclude lʼelemento TabItem e il suo contenuto. -->
             </TabItem>
+        <!-- Conclude lʼelemento TabControl e il suo contenuto. -->
         </TabControl>
+    <!-- Conclude lʼelemento DockPanel e il suo contenuto. -->
     </DockPanel>
+<!-- Conclude lʼelemento Window e il suo contenuto. -->
 </Window>

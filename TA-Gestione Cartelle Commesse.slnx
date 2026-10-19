@@ -1,3 +1,6 @@
+<!-- Raccoglie i progetti aperti insieme nella soluzione Visual Studio. -->
 <Solution>
+  <!-- Dichiara il progetto e il relativo SDK oppure il percorso del progetto nella soluzione. -->
   <Project Path="TA-Gestione Cartelle Commesse/TA-Gestione Cartelle Commesse.csproj" />
+<!-- Conclude lʼelemento Solution e il suo contenuto. -->
 </Solution>

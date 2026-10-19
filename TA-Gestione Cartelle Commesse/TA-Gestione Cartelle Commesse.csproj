@@ -1,16 +1,30 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<!-- Dichiara il progetto e il relativo SDK oppure il percorso del progetto nella soluzione. -->
+<Project Sdk="Microsoft.NET.Sdk">
 
+	<!-- Raggruppa le impostazioni di compilazione del progetto. -->
 	<PropertyGroup>
+		<!-- Genera un eseguibile Windows grafico senza finestra console. -->
 		<OutputType>WinExe</OutputType>
+		<!-- Compila per .NET 10 su Windows, necessario per WPF. -->
 		<TargetFramework>net10.0-windows</TargetFramework>
+		<!-- Imposta il namespace di base per i tipi generati dal progetto. -->
 		<RootNamespace>TA_Gestione_Cartelle_Commesse</RootNamespace>
+		<!-- Abilita lʼanalisi statica dei riferimenti che possono contenere null. -->
 		<Nullable>enable</Nullable>
+		<!-- Abilita le importazioni C# standard generate automaticamente dallʼSDK. -->
 		<ImplicitUsings>enable</ImplicitUsings>
+		<!-- Abilita compilazione XAML e riferimenti alla piattaforma WPF. -->
 		<UseWPF>true</UseWPF>
+		<!-- Assegna lʼicona aziendale allʼeseguibile generato. -->
 		<ApplicationIcon>Assets\Brand\App.ico</ApplicationIcon>
+	<!-- Conclude lʼelemento PropertyGroup e il suo contenuto. -->
 	</PropertyGroup>
 
+	<!-- Raggruppa gli elementi e le risorse inclusi nel progetto. -->
 	<ItemGroup>
+		<!-- Incorpora logo, icona e font aziendali per renderli disponibili tramite URI pack. -->
 		<Resource Include="Assets\Brand\*" />
+	<!-- Conclude lʼelemento ItemGroup e il suo contenuto. -->
 	</ItemGroup>
+<!-- Conclude lʼelemento Project e il suo contenuto. -->
 </Project>

@@ -1,103 +1,203 @@
+# Assegna il nome del workflow mostrato nella scheda Actions.
 name: Installer Windows
+# Definisce gli eventi che avviano la compilazione e la pubblicazione.
 on:
+  # Permette l'avvio manuale del workflow da GitHub.
   workflow_dispatch:
+  # Avvia il workflow anche quando vengono pubblicati commit corrispondenti ai filtri seguenti.
   push:
+    # Limita gli avvii automatici al ramo master.
     branches: [master]
+    # Limita gli avvii alle modifiche dei percorsi elencati.
     paths:
+      # Include tutte le modifiche ai sorgenti e alle risorse dell'applicazione.
       - 'TA-Gestione Cartelle Commesse/**'
+      # Include le modifiche alla configurazione dell'installatore.
       - 'installer.iss'
+      # Include le modifiche a questa procedura di compilazione e pubblicazione.
       - '.github/workflows/installer.yml'
+# Dichiara i permessi assegnati al token del workflow.
 permissions:
+  # Consente di creare release e caricare i relativi file nel repository.
   contents: write
+# Coordina le esecuzioni per evitare pubblicazioni contemporanee.
 concurrency:
+  # Raggruppa le esecuzioni di questo workflow sotto la stessa chiave di concorrenza.
   group: installer-release
+  # Non interrompe una pubblicazione già in corso quando arriva una nuova richiesta.
   cancel-in-progress: false
+# Introduce i lavori eseguiti dal workflow.
 jobs:
+  # Identifica il lavoro che produce, verifica e pubblica l'installatore.
   installer:
+    # Esegue il lavoro su un runner Windows ospitato da GitHub.
     runs-on: windows-latest
+    # Interrompe il lavoro se supera venti minuti.
     timeout-minutes: 20
+    # Definisce le impostazioni predefinite dei passi.
     defaults:
+      # Applica le impostazioni seguenti agli script eseguiti con run.
       run:
+        # Usa PowerShell per interpretare i comandi degli script.
         shell: pwsh
+    # Elenca nell'ordine i passi del lavoro.
     steps:
+      # Scarica sul runner i sorgenti del commit che ha avviato il workflow.
       - uses: actions/checkout@v4
+      # Prepara l'SDK .NET richiesto dal progetto.
       - uses: actions/setup-dotnet@v4
+        # Specifica gli argomenti dell'azione di preparazione dell'SDK.
         with:
+          # Seleziona un SDK della famiglia .NET 10.
           dotnet-version: '10.0.x'
+      # Identifica il passo che compila il programma includendo il runtime.
       - name: Pubblica applicazione con runtime incluso
+        # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
+          # Deriva una versione univoca dal numero progressivo di esecuzione del workflow.
           $version = "1.0.$env:GITHUB_RUN_NUMBER"
+          # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
+          # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
           dotnet publish 'TA-Gestione Cartelle Commesse/TA-Gestione Cartelle Commesse.csproj' -c Release -r win-x64 --self-contained true -p:Version=$version -p:DebugType=None -p:DebugSymbols=false -o artifacts/publish
+          # Blocca il lavoro se dotnet publish restituisce un errore.
           if ($LASTEXITCODE -ne 0) { throw 'Compilazione non riuscita' }
+      # Identifica il passo di compilazione del pacchetto Inno Setup.
       - name: Crea installatore
+        # Introduce lo script PowerShell di creazione del setup.
         run: |
+          # Individua il compilatore Inno Setup nel percorso standard del runner.
           $compiler = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          # Verifica se è necessario installare il compilatore sul runner.
           if (!(Test-Path $compiler)) {
+            # Installa Inno Setup tramite Chocolatey senza richieste interattive.
             choco install innosetup --yes --no-progress
+            # Interrompe il lavoro se l'installazione del compilatore non riesce.
             if ($LASTEXITCODE -ne 0) { throw 'Installazione compilatore non riuscita' }
+          # Conclude il ramo di preparazione del compilatore mancante.
           }
+          # Compila installer.iss passando la versione generata per questa esecuzione.
           & $compiler "/DAppVersion=$env:APP_VERSION" installer.iss
+          # Interrompe il lavoro se non è stato possibile creare il setup.
           if ($LASTEXITCODE -ne 0) { throw 'Creazione installer non riuscita' }
+      # Identifica la verifica completa del ciclo di aggiornamento e rimozione.
       - name: Verifica aggiornamento da 1.0.2, reinstallazione, avvio e disinstallazione
+        # Definisce le variabili ambiente disponibili soltanto a questo passo.
         env:
+          # Fornisce alla CLI GitHub il token temporaneo del workflow per scaricare la release precedente.
           GH_TOKEN: ${{ github.token }}
+        # Introduce lo script PowerShell dei controlli sul pacchetto.
         run: |
+          # Sceglie una cartella temporanea del runner per l'installazione di prova.
           $destination = Join-Path $env:RUNNER_TEMP 'TA-Installer-Test'
+          # Ricava il percorso assoluto del setup appena compilato.
           $setup = (Resolve-Path 'artifacts/installer/TA-Gestione-Cartelle-Commesse-Setup.exe').Path
+          # Sceglie una cartella temporanea separata per scaricare il vecchio setup.
           $previousDir = Join-Path $env:RUNNER_TEMP 'TA-Previous-Installer'
+          # Scarica dal repository il setup 1.0.2 da usare come base del test di aggiornamento.
           gh release download v1.0.2 --repo $env:GITHUB_REPOSITORY --pattern 'TA-Gestione-Cartelle-Commesse-Setup.exe' --dir $previousDir
+          # Interrompe il test se il download della versione precedente fallisce.
           if ($LASTEXITCODE -ne 0) { throw 'Download versione precedente non riuscito' }
+          # Compone il percorso del setup precedente appena scaricato.
           $previousSetup = Join-Path $previousDir 'TA-Gestione-Cartelle-Commesse-Setup.exe'
+          # Installa silenziosamente la 1.0.2 nella destinazione di prova senza riavvio del sistema.
           $install = Start-Process -FilePath $previousSetup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',('/DIR="' + $destination + '"')) -WindowStyle Hidden -Wait -PassThru
+          # Verifica che l'installazione iniziale della 1.0.2 termini correttamente.
           if ($install.ExitCode -ne 0) { throw "Installazione 1.0.2 fallita: $($install.ExitCode)" }
+          # Compone il percorso dell'eseguibile installato nella destinazione di prova.
           $exe = Join-Path $destination 'TA-Gestione Cartelle Commesse.exe'
+          # Conferma che l'eseguibile iniziale abbia effettivamente versione 1.0.2.0.
           if ((Get-Item $exe).VersionInfo.FileVersion -ne '1.0.2.0') { throw 'Versione precedente non installata' }
+          # Elenca le posizioni del registro che possono contenere le voci di disinstallazione del programma.
           $roots = @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*')
+          # Definisce una funzione per individuare tutte le registrazioni dell'applicazione.
           function Get-TaEntries {
+            # Seleziona le voci corrispondenti all'AppId stabile o al nome del programma.
             @(Get-ItemProperty $roots -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq '{D0B63D8F-FF51-4B68-9553-4B49A78C7B3A}_is1' -or $_.DisplayName -like 'TA-Gestione Cartelle Commesse*' })
+          # Conclude la funzione di ricerca delle voci nel registro.
           }
           # Senza /DIR: deve riconoscere e riutilizzare la cartella della 1.0.2.
+          # Esegue due passaggi: prima l'aggiornamento, poi la reinstallazione della medesima versione.
           foreach ($attempt in 1..2) {
+            # Avvia il nuovo setup senza specificare la destinazione, verificando il riuso della cartella esistente.
             $install = Start-Process -FilePath $setup -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' -WindowStyle Hidden -Wait -PassThru
+            # Blocca il test se aggiornamento o reinstallazione terminano con errore.
             if ($install.ExitCode -ne 0) { throw "Aggiornamento/reinstallazione fallita: $($install.ExitCode)" }
+            # Rilegge le registrazioni del programma dopo ciascuna installazione.
             $entries = @(Get-TaEntries)
+            # Richiede esattamente una registrazione con la versione appena compilata.
             if ($entries.Count -ne 1 -or $entries[0].DisplayVersion -ne $env:APP_VERSION) { throw 'Versione precedente o voci duplicate rimaste nel registro' }
+            # Verifica che la versione dei file installati sia stata aggiornata.
             if ((Get-Item $exe).VersionInfo.FileVersion -ne "$env:APP_VERSION.0") { throw 'File installati non aggiornati' }
+            # Confronta gli hash per garantire che sia stato installato l'eseguibile realmente pubblicato.
             if ((Get-FileHash $exe).Hash -ne (Get-FileHash 'artifacts/publish/TA-Gestione Cartelle Commesse.exe').Hash) { throw 'Eseguibile installato diverso dal programma pubblicato' }
+            # Verifica che non siano rimasti più disinstallatori nella cartella del programma.
             if (@(Get-ChildItem $destination -Filter 'unins*.exe').Count -ne 1) { throw 'Disinstallatori duplicati' }
+          # Conclude il ciclo di aggiornamento e reinstallazione.
           }
+          # Ricava il percorso del collegamento nel menu Start dell'utente del runner.
           $shortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'TA-Gestione Cartelle Commesse\TA-Gestione Cartelle Commesse.lnk'
+          # Usa l'oggetto COM della shell per leggere la destinazione del collegamento Windows.
           $shell = New-Object -ComObject WScript.Shell
+          # Verifica che il collegamento esista e punti al programma installato, non al setup.
           if (!(Test-Path $shortcutPath) -or $shell.CreateShortcut($shortcutPath).TargetPath -ne $exe) { throw 'Collegamento Start non punta al programma installato' }
+          # Impedisce la reintroduzione della sezione Run che avvierebbe processi al termine del setup.
           if (Select-String -Path installer.iss -Pattern '^\s*\[Run\]' -Quiet) { throw 'Il setup non deve eseguire processi dopo Fine' }
+          # Conferma la presenza dell'eseguibile prima della prova di avvio.
           if (!(Test-Path $exe)) { throw 'Eseguibile installato assente' }
+          # Avvia il programma installato con finestra nascosta e conserva il processo per il controllo.
           $app = Start-Process -FilePath $exe -WindowStyle Hidden -PassThru
+          # Garantisce la chiusura del processo di prova anche se un controllo fallisce.
           try {
+            # Attende cinque secondi per rilevare eventuali errori durante l'avvio.
             Start-Sleep -Seconds 5
+            # Aggiorna le informazioni sullo stato del processo avviato.
             $app.Refresh()
+            # Fallisce il test se il programma si è già chiuso durante l'avvio.
             if ($app.HasExited) { throw 'Applicazione terminata durante avvio' }
+            # Richiede che il thread grafico sia pronto entro quindici secondi.
             if (!$app.WaitForInputIdle(15000)) { throw 'Applicazione non pronta' }
+          # Passa alla pulizia del processo di prova, eseguita anche in caso di errore.
           } finally {
+            # Termina solo il processo avviato da questo test, se è ancora attivo.
             if (!$app.HasExited) { Stop-Process -Id $app.Id }
+          # Conclude la pulizia del processo di prova.
           }
+          # Esegue il disinstallatore in modalità silenziosa e attende il completamento.
           $uninstall = Start-Process -FilePath (Join-Path $destination 'unins000.exe') -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -WindowStyle Hidden -Wait -PassThru
+          # Verifica l'esito della disinstallazione e la rimozione dell'eseguibile.
           if ($uninstall.ExitCode -ne 0 -or (Test-Path $exe)) { throw 'Disinstallazione non riuscita' }
+          # Verifica che non restino registrazioni o collegamenti Start dell'applicazione.
           if (@(Get-TaEntries).Count -ne 0 -or (Test-Path $shortcutPath)) { throw 'Registrazione o collegamento residui dopo disinstallazione' }
+      # Identifica il passo che produce l'impronta del pacchetto distribuito.
       - name: Calcola impronta SHA256
+        # Introduce lo script PowerShell per il calcolo dell'hash.
         run: |
+          # Individua il setup da includere nel file delle impronte.
           $setup = 'artifacts/installer/TA-Gestione-Cartelle-Commesse-Setup.exe'
+          # Calcola SHA256 e rappresenta il risultato con cifre esadecimali minuscole.
           $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+          # Scrive impronta e nome del setup in un file di testo UTF-8.
           "$hash  TA-Gestione-Cartelle-Commesse-Setup.exe" | Set-Content 'artifacts/installer/SHA256SUMS.txt' -Encoding utf8
+      # Archivia nel workflow il pacchetto e il file delle impronte.
       - uses: actions/upload-artifact@v4
+        # Specifica gli argomenti dell'azione di archiviazione.
         with:
+          # Assegna un nome riconoscibile all'artefatto del workflow.
           name: installer-windows
+          # Include tutti i file prodotti nella cartella dell'installatore.
           path: artifacts/installer/*
+          # Considera un errore l'assenza dei file da archiviare.
           if-no-files-found: error
+      # Identifica il passo finale che rende disponibile il download nella release GitHub.
       - name: Pubblica release scaricabile
+        # Definisce le variabili ambiente del passo di pubblicazione.
         env:
+          # Fornisce alla CLI GitHub il token temporaneo autorizzato a pubblicare la release.
           GH_TOKEN: ${{ github.token }}
+        # Introduce lo script PowerShell di pubblicazione della release.
         run: |
+          # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
           Installatore aggiornato: Fine chiude il setup senza avvii automatici.
           Avviare il programma dal menu Start dopo l'installazione.
@@ -116,6 +216,9 @@ jobs:
           Il pacchetto non contiene cartelle, dati clienti o report della rete aziendale.
           Installer non firmato digitalmente. Impronta disponibile in SHA256SUMS.txt.
           '@
+          # Salva le note UTF-8 in un file per preservare accenti e interruzioni di riga.
           $notes | Set-Content release-notes.txt -Encoding utf8
+          # Crea la release sul commit corrente, allega setup e impronta e la contrassegna come più recente.
           gh release create "v$env:APP_VERSION" 'artifacts/installer/TA-Gestione-Cartelle-Commesse-Setup.exe' 'artifacts/installer/SHA256SUMS.txt' --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "TA-Gestione Cartelle Commesse $env:APP_VERSION" --notes-file release-notes.txt --latest
+          # Segnala un errore se la CLI non riesce a pubblicare la release.
           if ($LASTEXITCODE -ne 0) { throw 'Pubblicazione release non riuscita' }
