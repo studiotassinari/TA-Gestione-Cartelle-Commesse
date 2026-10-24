@@ -22,6 +22,7 @@ using (var serviceIdentity = System.Security.Principal.WindowsIdentity.GetCurren
 builder.Services.AddWindowsService(options => options.ServiceName = "TACommesseServer");
 builder.Services.AddSingleton(settings);
 builder.Services.AddSingleton<ChangeHub>();
+builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());
 builder.Services.AddHostedService<TcpService>();

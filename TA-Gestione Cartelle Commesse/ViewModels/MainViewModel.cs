@@ -22,12 +22,14 @@ public sealed class MainViewModel : Observable
     public string ServerPort { get => port; set { port = value; Notify(); } }
     public string ReportStatus { get => reportStatus; private set { reportStatus = value; Notify(); } }
     public string ArchiveLocation => "Archivio e scansioni gestiti dal servizio Windows; trasporto TCP/Kerberos con account di dominio.";
+    public Command CreateJobCommand { get; }
     public Command UpdateCommand { get; }
     public Command AboutCommand { get; }
     public Command ConnectCommand { get; }
     public Command ReportCommand { get; }
     public MainViewModel()
     {
+        CreateJobCommand = new(CreateJob, () => connection != null);
         UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
         AboutCommand = new(() => _ = ShowAboutAsync());
         ConnectCommand = new(() => _ = ConnectAsync(), () => !connecting);
@@ -55,7 +57,7 @@ public sealed class MainViewModel : Observable
         }
         connecting = true; ConnectCommand.Refresh();
         connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); ReportCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); ReportCommand.Refresh(); CreateJobCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";
@@ -128,6 +130,13 @@ public sealed class MainViewModel : Observable
     public void Stop() => pushCancellation?.Cancel();
 
 
+    private void CreateJob()
+    {
+        if (connection == null) return;
+        var dialog = new Views.CreateJobDialog(connection) { Owner = System.Windows.Application.Current.MainWindow };
+        if (dialog.ShowDialog() == true)
+            ReportStatus = "Commessa creata: " + dialog.CreatedPath + ". L'elenco si aggiornera al termine della verifica server.";
+    }
     private async Task ShowAboutAsync()
     {
         var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "Sconosciuta";

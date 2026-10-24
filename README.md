@@ -2,12 +2,12 @@
 
 Applicazione .NET 10 con client WPF/MVVM e servizio Windows per Windows Server 2022 nel dominio aziendale.
 
-## Scarica e installa - versione 2.3.0
+## Scarica e installa - versione 2.4.0
 
 Aggiornare prima il server e poi i client.
 
-- [Scarica installatore Server 2.3.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.3.0/TA-Gestione-Cartelle-Commesse-Server-Setup-2.3.0.exe)
-- [Scarica installatore Client 2.3.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.3.0/TA-Gestione-Cartelle-Commesse-Setup-2.3.0.exe)
+- [Scarica installatore Server 2.4.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.4.0/TA-Gestione-Cartelle-Commesse-Server-Setup-2.4.0.exe)
+- [Scarica installatore Client 2.4.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.4.0/TA-Gestione-Cartelle-Commesse-Setup-2.4.0.exe)
 
 Il server verifica commesse e gare ogni minuto, senza sovrapporre scansioni della stessa categoria, e invia notifiche push ai client. Il menu Aiuto > Informazioni mostra la versione client e, quando disponibile, quella server. Resta necessario configurare account, gruppo AD e SPN seguendo la guida.
 
@@ -19,6 +19,12 @@ Il server verifica commesse e gare ogni minuto, senza sovrapporre scansioni dell
 [Release pubblicate](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases). I setup includono il runtime e non sono firmati digitalmente; le impronte sono in `SHA256SUMS.txt`.
 
 **[Guida di installazione e configurazione server-client](deployment/SERVER-CLIENT.md)**
+
+## Nuova commessa da modello
+
+Il menu **Nuovo > Commessa da modello...** richiede codice CXXYYY, cliente, luogo facoltativo e argomento. Anteprima mostra destinazione e struttura; Crea commessa crea solo cartelle vuote. Il modello predefinito e `\\ingtassinari.it\data\lavori\2026\C26198 - CLIENTE - LUOGO - COSA`, con 14 sottocartelle al momento della verifica; il file Excel non viene copiato. Il percorso si configura sul server con JobTemplate. Il modello per le gare non e ancora definito.
+
+La cartella annuale di destinazione deve esistere. Codici duplicati, percorsi non validi e collegamenti vengono rifiutati. Il servizio necessita di permessi di creazione e rinomina sulla destinazione; non vengono concessi automaticamente. Gli utenti autorizzati dal gruppo AD possono usare il comando. Consultare la guida per i permessi minimi e i limiti.
 
 ## Area di notifica e aggiornamenti
 

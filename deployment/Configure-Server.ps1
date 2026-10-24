@@ -6,6 +6,7 @@ param(
     [string]$JobsRoot='\\ingtassinari.it\data\lavori',
     [string]$BidsRoot='\\ingtassinari.it\data\gare',
     [string]$ArchiveFolder='\\ingtassinari.it\data\amministrazione\_GESTIONE COMMESSE',
+    [string]$JobTemplate="\\ingtassinari.it\data\lavori\2026\C26198 - CLIENTE - LUOGO - COSA",
     [switch]$OpenDomainFirewall
 )
 $ErrorActionPreference='Stop'
@@ -26,7 +27,7 @@ foreach($sid in @('S-1-5-18','S-1-5-32-544')) {
 $rule=New-Object System.Security.AccessControl.FileSystemAccessRule([System.Security.Principal.SecurityIdentifier]::new('S-1-5-11'),'ReadAndExecute','ContainerInherit,ObjectInherit','None','Allow')
 $acl.AddAccessRule($rule)
 Set-Acl -LiteralPath $folder -AclObject $acl
-$settings=@{ Server=@{ JobsRoot=$JobsRoot; BidsRoot=$BidsRoot; ArchiveFolder=$ArchiveFolder; AllowedGroup=$AllowedGroup; Port=$Port; RefreshMinutes=1 } }
+$settings=@{ Server=@{ JobsRoot=$JobsRoot; BidsRoot=$BidsRoot; ArchiveFolder=$ArchiveFolder; AllowedGroup=$AllowedGroup; Port=$Port; RefreshMinutes=1; JobTemplate=$JobTemplate } }
 $settings | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $folder 'server-settings.json') -Encoding UTF8
 if ($OpenDomainFirewall) {
     # Regola limitata al profilo di dominio, sottorete locale e all'eseguibile del servizio.

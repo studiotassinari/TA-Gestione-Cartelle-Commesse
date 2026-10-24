@@ -11,7 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 // Ogni comando richiede cifratura, firma, autenticazione Windows mutua e appartenenza al gruppo configurato.
-public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, ChangeHub changes, ILogger<TcpService> logger) : BackgroundService
+public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -98,6 +98,16 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, C
         switch (request.Operation)
         {
             case "Info": return Reply.Ok(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "Sconosciuta");
+            case "TemplatePreview":
+                if (request.Category != "C") return Reply.Fail("Il modello e disponibile solo per le commesse.");
+                return Reply.Ok(templates.Preview(request.Creation ?? throw new ArgumentException("Dati commessa mancanti.")));
+            case "CreateJob":
+                if (request.Category != "C") return Reply.Fail("Il modello e disponibile solo per le commesse.");
+                var created = templates.Create(request.Creation ?? throw new ArgumentException("Dati commessa mancanti."));
+                logger.LogInformation("Commessa creata da modello: {Path}", created);
+                scans.Get("C").NotifyChange();
+                scans.Refresh("C");
+                return Reply.Ok(created);
             case "State": return Reply.Ok(scans.Get(request.Category).State);
             case "Refresh": return Reply.Ok(scans.Refresh(request.Category));
             case "Cancel": scans.Get(request.Category).Cancel(); return Reply.Ok(true);
