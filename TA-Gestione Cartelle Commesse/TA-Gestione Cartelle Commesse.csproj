@@ -27,4 +27,4 @@
 	<!-- Conclude lʼelemento ItemGroup e il suo contenuto. -->
 	</ItemGroup>
 <!-- Conclude lʼelemento Project e il suo contenuto. -->
-</Project>
+<ItemGroup><ProjectReference Include="../TA.Transport/TA.Transport.csproj" /></ItemGroup></Project>

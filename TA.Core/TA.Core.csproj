@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Logica di lettura e report indipendente dall'interfaccia desktop. -->
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TA.Contracts/TA.Contracts.csproj" />
+    <EmbeddedResource Include="../TA-Gestione Cartelle Commesse/Assets/Brand/Logo.png" LogicalName="Brand.Logo.png" />
+    <EmbeddedResource Include="../TA-Gestione Cartelle Commesse/Assets/Brand/Acherus-Regular.otf" LogicalName="Brand.Acherus-Regular.otf" />
+    <EmbeddedResource Include="../TA-Gestione Cartelle Commesse/Assets/Brand/Acherus-Bold.otf" LogicalName="Brand.Acherus-Bold.otf" />
+  </ItemGroup>
+</Project>

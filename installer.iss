@@ -1,7 +1,7 @@
 ; Verifica se il parametro AppVersion non è stato fornito al compilatore.
 #ifndef AppVersion
 ; Definisce il valore predefinito del parametro quando manca un valore esterno.
-  #define AppVersion "1.0.0"
+  #define AppVersion "2.2.1"
 ; Termina la definizione condizionale del parametro.
 #endif
 ; Verifica se il parametro PublishDir non è stato fornito al compilatore.
@@ -45,7 +45,7 @@ MinVersion=10.0
 ; Scrive il setup nella cartella indicata dal parametro di compilazione.
 OutputDir={#InstallerOutput}
 ; Mantiene un nome stabile per il file scaricabile del setup.
-OutputBaseFilename=TA-Gestione-Cartelle-Commesse-Setup
+OutputBaseFilename=TA-Gestione-Cartelle-Commesse-Setup-{#AppVersion}
 ; Comprime i file distribuiti usando LZMA2.
 Compression=lzma2
 ; Comprime insieme i file per ridurre le dimensioni del pacchetto.

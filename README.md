@@ -1,48 +1,62 @@
 # TA-Gestione Cartelle Commesse
 
-Applicazione Windows WPF, .NET 10 e architettura MVVM per consultare commesse e gare e produrre report delle non conformità nei nomi delle cartelle.
+Applicazione .NET 10 con client WPF/MVVM e servizio Windows per Windows Server 2022 nel dominio aziendale.
 
-## Scarica e installa
+## Scarica e installa - versione 2.2.1
 
-[![Scarica installatore Windows](https://img.shields.io/badge/Scarica_installatore-Windows_x64-135F6E?style=for-the-badge&logo=windows)](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/latest/download/TA-Gestione-Cartelle-Commesse-Setup.exe)
+Aggiornare prima il server e poi i client.
 
-**[Scarica installatore Windows (.exe)](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/latest/download/TA-Gestione-Cartelle-Commesse-Setup.exe)** · [Tutte le versioni e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases)
+- [Scarica installatore Server 2.2.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.2.1/TA-Gestione-Cartelle-Commesse-Server-Setup-2.2.1.exe)
+- [Scarica installatore Client 2.2.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.2.1/TA-Gestione-Cartelle-Commesse-Setup-2.2.1.exe)
 
-1. Accedi a GitHub con un account autorizzato a questo repository privato.
-2. Scarica ed esegui `TA-Gestione-Cartelle-Commesse-Setup.exe`.
-3. Segui la procedura guidata in italiano; il collegamento sul desktop è facoltativo.
-4. Premi **Fine** per chiudere l'installatore: non viene avviato automaticamente alcun programma.
-5. Avvia **TA-Gestione Cartelle Commesse** dal menu Start e premi **Aggiorna elenco**.
+Il server verifica commesse e gare ogni minuto, senza sovrapporre scansioni della stessa categoria, e invia notifiche push ai client. Il menu Aiuto > Informazioni mostra la versione client e, quando disponibile, quella server. Resta necessario configurare account, gruppo AD e SPN seguendo la guida.
 
-Il pacchetto include il runtime .NET 10 e si installa per il solo utente corrente, senza richiedere privilegi di amministratore. È destinato a Windows x64. Il programma necessita di accesso alla rete aziendale per leggere i percorsi selezionati.
+## Due installatori
 
-L’installatore non è firmato digitalmente: Windows può mostrare un avviso di autore sconosciuto. L’impronta SHA256 è disponibile nella stessa release.
+- **Client**: `TA-Gestione-Cartelle-Commesse-Setup-<versione>.exe`, per i PC Windows. Aggiorna la precedente applicazione mantenendo la stessa identità di installazione.
+- **Server**: `TA-Gestione-Cartelle-Commesse-Server-Setup-<versione>.exe`, da eseguire come amministratore sulla VM. Registra `TACommesseServer`; alla prima installazione resta fermo fino alla configurazione.
 
-Per aggiornare, chiudi il programma ed esegui il nuovo installatore con lo stesso utente Windows. Il setup riutilizza la cartella esistente, sostituisce i file della versione precedente e aggiorna la stessa voce nelle App installate: non occorre disinstallare prima. La pagina di scelta della cartella viene saltata durante l'aggiornamento. Per disinstallare, apri **Impostazioni Windows → App → App installate → TA-Gestione Cartelle Commesse → Disinstalla**. Le cartelle di lavoro e i report salvati esternamente non vengono rimossi.
+[Release pubblicate](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases). I setup includono il runtime e non sono firmati digitalmente; le impronte sono in `SHA256SUMS.txt`.
 
-Il setup impedisce due installazioni simultanee e registra le operazioni in un file `Setup Log ... .txt` nella cartella temporanea dell'utente, utile per la diagnosi. I test di rilascio verificano aggiornamento dalla 1.0.2, reinstallazione, versione dei file, assenza di registrazioni duplicate, collegamento Start, avvio e disinstallazione.
+**[Guida di installazione e configurazione server-client](deployment/SERVER-CLIENT.md)**
 
-## Novità della versione
+## Comunicazione dedicata
 
-Interfaccia coordinata con l’identità aziendale, menu Apri ed Export e accesso diretto alle cartelle. Le risorse grafiche sono incluse nel programma e non richiedono accesso alla cartella dei loghi in rete.
+Nessun HTTP, HTTPS, IIS o sito web. Il client usa un protocollo di messaggi dedicato su **TCP cifrato e firmato tramite Windows NegotiateStream**, porta predefinita **5443**, autenticazione mutua Windows/Kerberos e gruppo di dominio autorizzato. Non occorrono certificati TLS. Il nome DNS deve corrispondere allo SPN registrato per il servizio. Il client consente account Windows corrente oppure credenziali di dominio esplicite, mantenute solo in memoria. Non vengono salvate password.
 
-## Funzioni
+Il client visualizza gli elenchi e mantiene una sottoscrizione push TCP autenticata: recupera gli stati quando il server segnala un aggiornamento, senza interrogazione ogni dieci secondi. Il server coordina le verifiche per tutti i PC: una sola scansione per categoria. Le verifiche partono all'avvio, ogni minuto e su richiesta. L'annullamento richiesto da un client riguarda la scansione condivisa della categoria. Report e gerarchie provengono dal server; solo Esplora file apre direttamente il percorso UNC con i permessi dell'utente.
 
-- Commesse da `Z:\lavori`: identificazione e verifica dei nomi limitate alle cartelle immediatamente sotto le cartelle annuali principali.
-- Gerarchia delle commesse: selezionando una commessa si possono esplorare le sue sottocartelle, caricate quando si espande ciascun nodo. Le cartelle interne non vengono identificate come ulteriori commesse, né aggiunte all'elenco o alle non conformità del report.
-- Gare da `Z:\gare`, in una sezione separata.
-- Lettura di codice, anno, progressivo, cliente e argomento; ricerca e segnalazioni di non conformità.
-- Menu **Export** per generare un report HTML ordinato e stampabile, con elenco e anomalie.
-- Apertura della cartella selezionata in Esplora file con doppio clic, menu contestuale o menu **Apri**.
-- Grafica Tassinari Associati: logo originale, font Acherus Grotesque e colori ottanio e notte. Logo e font sono incorporati anche nel report HTML.
-- Consultazione in sola lettura: il programma non rinomina né modifica le cartelle.
+## Cartelle, metadati e preventivi
 
-Formato previsto: `CXXYYY - Cliente - Argomento` per le commesse, `GXXYYY - Cliente - Argomento` per le gare.
+- Commesse: `\\ingtassinari.it\data\lavori`, con identificazione solo nelle cartelle immediatamente sotto gli anni 1900–2099.
+- Gare: `\\ingtassinari.it\data\gare`, separate dalle commesse.
+- JSON condivisi: `\\ingtassinari.it\data\amministrazione\_GESTIONE COMMESSE`, gestiti esclusivamente dal server.
+- Dimensione logica totale, numero file, ultima modifica dei file e istante della verifica. I livelli inferiori contribuiscono ai metadati e sono esplorabili, ma non vengono identificati come nuove commesse.
+- Controllo dei nomi nelle cartelle `amministraione`, `amministrazione` e `99_AMMINISTRAZIONE`: candidati preventivo/offerta, con richieste, modelli e bozze segnalati come ambigui. Non verifica contenuti, approvazioni o firme e non usa IA esterna.
 
-## Compilazione e rilascio
+I dati salvati sono caricati prima delle verifiche. Gli accessi falliti sono segnalati come parziali e non come preventivo assente. Le scritture JSON usano file temporanei, sostituzione e lock; gli archivi corrotti non sono sovrascritti. Se il server è irraggiungibile, il client conserva i dati già caricati in memoria, con un avviso.
 
-Aprire `TA-Gestione Cartelle Commesse.slnx` in Visual Studio con supporto .NET 10 e sviluppo desktop WPF.
+## Struttura della soluzione
 
-Il workflow **Installer Windows** compila la versione Release con runtime incluso, crea il pacchetto Inno Setup, verifica installazione/avvio/disinstallazione su un runner Windows e pubblica una release con eseguibile e SHA256. Parte sui cambiamenti al programma o all’installatore nel ramo `master`, oppure manualmente da **Actions → Installer Windows → Run workflow**. La versione è `1.0.<numero esecuzione>`.
+| Progetto | Responsabilità |
+|---|---|
+| TA-Gestione Cartelle Commesse | Client WPF, comandi MVVM e configurazione della connessione |
+| TA.Contracts | Modelli e contratti condivisi |
+| TA.Core | Lettura cartelle, preventivi, JSON e report con risorse incorporate |
+| TA.Transport | Protocollo, framing, connessione TCP/Kerberos e autenticazione del client |
+| TA.Server | Servizio Windows, autorizzazione, pianificazione e comandi del server |
 
-Il pacchetto distribuito contiene il programma e il runtime; non include dati clienti, cartelle di rete o report generati.
+## Compilazione e verifica
+
+Aprire `TA-Gestione Cartelle Commesse.slnx` in Visual Studio con .NET 10 e supporto WPF.
+
+```powershell
+dotnet build 'TA-Gestione Cartelle Commesse.slnx' -c Release
+dotnet run --project tests/ArchiveChecks/ArchiveChecks.csproj -c Release
+dotnet run --project tests/TransportChecks/TransportChecks.csproj -c Release
+dotnet run --project tests/PushChecks/PushChecks.csproj -c Release
+```
+
+I test usano dati sintetici e un listener di prova su loopback. Verificano metadati, archivio, limiti delle scansioni, framing, rifiuto delle richieste HTTP, percorsi fuori radice e server non autenticati. Il collaudo reale Kerberos, avvio del servizio e permessi sulla rete deve essere eseguito sulla VM configurata.
+
+Il workflow Installer Windows costruisce entrambi i pacchetti, verifica il client in aggiornamento dalla 1.0.2 e pubblica setup e impronte. La versione del workflow è `2.2.<numero esecuzione>`. I dati di rete e le credenziali non sono inclusi nei pacchetti.

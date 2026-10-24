@@ -3,4 +3,4 @@
   <!-- Dichiara il progetto e il relativo SDK oppure il percorso del progetto nella soluzione. -->
   <Project Path="TA-Gestione Cartelle Commesse/TA-Gestione Cartelle Commesse.csproj" />
 <!-- Conclude lʼelemento Solution e il suo contenuto. -->
-</Solution>
+<Project Path="TA.Contracts/TA.Contracts.csproj" /><Project Path="TA.Core/TA.Core.csproj" /><Project Path="TA.Transport/TA.Transport.csproj" /><Project Path="TA.Server/TA.Server.csproj" /><Project Path="TA.ServiceManager/TA.ServiceManager.csproj" /></Solution>

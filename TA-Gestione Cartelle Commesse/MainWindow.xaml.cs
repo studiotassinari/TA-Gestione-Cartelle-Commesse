@@ -4,7 +4,9 @@ using System.Windows;
 using System.Windows.Controls;
 // Importa i tipi degli eventi e dei pulsanti del mouse.
 using System.Windows.Input;
-// Importa i record di cartella e i ViewModel utilizzati dalla vista.
+// Importa i record di cartella utilizzati dalla vista.
+using TA_Gestione_Cartelle_Commesse.Models;
+// Importa i ViewModel utilizzati dalla vista.
 using TA_Gestione_Cartelle_Commesse.ViewModels;
 
 // Colloca la finestra nel namespace dell'applicazione.
@@ -15,7 +17,17 @@ public partial class MainWindow : Window
 // Inizio del blocco di istruzioni o della definizione precedente.
 {
     // Inizializza i controlli, le risorse e i binding dichiarati nel file XAML.
-    public MainWindow() => InitializeComponent();
+    public MainWindow()
+    {
+        InitializeComponent();
+        Closed += (_, _) => { if (DataContext is MainViewModel viewModel) viewModel.Stop(); };
+    }
+
+    // Avvia il caricamento dell'archivio solo quando la vista è pronta a ricevere le notifiche.
+    private async void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel) await viewModel.InitializeAsync();
+    }
 
     // I gestori traducono i gesti della vista nel comando condiviso del ViewModel.
     // Seleziona la riga prima dell'apertura del suo menu contestuale.
