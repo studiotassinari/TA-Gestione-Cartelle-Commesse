@@ -68,6 +68,8 @@ public sealed class CategoryViewModel : Observable
             if (!ReferenceEquals(current, connection)) return;
             ApplyState(state);
         }
+        catch (ServerRejectedException ex) when (prefix == 'A' && ex.Message.Contains("Categoria non valida"))
+        { ConnectionFailed = false; connected = false; LastConnectionError = null; Status = "Archivio richiede server 2.7.0 o successivo."; }
         catch (Exception ex)
         {
             if (ReferenceEquals(current, connection)) { ClientLog.Write("Recupero vista " + Title + " fallito", ex); LastConnectionError = ex; ConnectionFailed = true; connected = false; Status = "Server non disponibile; dati precedenti conservati: " + ex.Message; }
@@ -96,6 +98,8 @@ public sealed class CategoryViewModel : Observable
     {
         if (connection == null) return;
         try { await connection.SendAsync<bool>(new(operation, prefix.ToString())); await PollAsync(); }
+        catch (ServerRejectedException ex) when (prefix == 'A' && ex.Message.Contains("Categoria non valida"))
+        { ConnectionFailed = false; connected = false; LastConnectionError = null; Status = "Archivio richiede server 2.7.0 o successivo."; }
         catch (Exception ex) { Status = "Comando non riuscito: " + ex.Message; }
     }
     private void UpdateCommands() { Notify(nameof(IsIdle)); RefreshCommand.Refresh(); CancelCommand.Refresh(); }
@@ -110,7 +114,17 @@ public sealed class CategoryViewModel : Observable
     private void OpenFolder()
     {
         if (Selected is not { } record) return;
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(record.Path) { UseShellExecute = true }); }
+        try
+        {
+            if (prefix == 'A')
+            {
+                var start = new System.Diagnostics.ProcessStartInfo("explorer.exe") { UseShellExecute = false };
+                start.ArgumentList.Add("/select,"); start.ArgumentList.Add(record.Path); System.Diagnostics.Process.Start(start);
+            }
+            else System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(record.Path) { UseShellExecute = true });
+        }
+        catch (ServerRejectedException ex) when (prefix == 'A' && ex.Message.Contains("Categoria non valida"))
+        { ConnectionFailed = false; connected = false; LastConnectionError = null; Status = "Archivio richiede server 2.7.0 o successivo."; }
         catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "Apertura cartella non riuscita"); }
     }
 }

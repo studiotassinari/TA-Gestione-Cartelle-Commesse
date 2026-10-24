@@ -29,7 +29,7 @@ public static class ReportWriter
     // Codifica i caratteri speciali HTML e sostituisce i valori nulli con testo vuoto.
     private static string H(string? value) => System.Net.WebUtility.HtmlEncode(value ?? "");
     // Genera un documento completo a partire da percorsi e risultati delle due categorie.
-    public static string Create(string jobsRoot, ScanResult jobs, string bidsRoot, ScanResult bids)
+    public static string Create(string jobsRoot, ScanResult jobs, string bidsRoot, ScanResult bids, string? archivedRoot = null, ScanResult? archived = null)
     // Inizio del blocco di istruzioni o della definizione precedente.
     {
         // Accumula il contenuto HTML evitando concatenazioni ripetute dell'intero documento.
@@ -47,7 +47,7 @@ public static class ReportWriter
         // Descrive limiti, formato atteso e ordine del report, aggiungendo i collegamenti alle due sezioni.
         html.Append("<p>Commesse: analisi delle sole cartelle di primo livello dentro ogni cartella annuale principale (1900–2099). I livelli successivi sono letti soltanto per dimensioni, date e ricerca dei preventivi, senza identificare ulteriori commesse. Gare: ricerca nella radice selezionata. Cestini, copie storiche e collegamenti esclusi. Nessuna cartella e stata modificata. Ordine: anno e codice crescenti, quindi cliente.</p><p>Formato atteso: <strong>CXXYYY - Cliente - Argomento</strong>, oppure <strong>GXXYYY - Cliente - Argomento</strong>. XX indica l'anno a due cifre; YYY il progressivo. Il controllo riguarda il formato del nome, non la correttezza amministrativa dei dati. Per i nomi non conformi, cliente e argomento non vengono dedotti.</p><nav><a href='#commesse'>Commesse</a> | <a href='#gare'>Gare</a></nav>");
         // Genera separatamente le sezioni delle commesse e delle gare.
-        Section(html, "commesse", "Commesse", jobsRoot, jobs); Section(html, "gare", "Gare", bidsRoot, bids);
+        Section(html, "commesse", "Commesse", jobsRoot, jobs); Section(html, "gare", "Gare", bidsRoot, bids); if (archived != null) Section(html, "archivio", "Archivio ZIP/7z (sola lettura)", archivedRoot ?? "", archived);
         // Aggiunge le note sulle letture parziali e chiude il documento HTML.
         html.Append("<p class='meta'>Fine report. Le segnalazioni di accesso indicano possibili letture parziali. Le sottocartelle delle commesse e delle gare sono esplorabili nella gerarchia dell'applicazione, e non sono soggette al controllo di denominazione. Dimensioni e date includono i file dei livelli inferiori. Il controllo preventivi usa soltanto i nomi in amministraione, amministrazione e 99_AMMINISTRAZIONE: non certifica contenuto o approvazione.</p></main></body></html>");
         // Restituisce il documento completo come stringa da salvare.
@@ -73,7 +73,7 @@ public static class ReportWriter
         // Esamina ciascuna cartella nell'ordine di presentazione del report.
         foreach (var row in ordered)
             // Genera una riga con tutti i campi codificati e applica l'evidenziazione ai nomi non validi.
-            html.Append("<tr" + (row.Status == "Valido" ? "" : " class='bad'") + "><td>" + H(row.Code) + "</td><td>" + H(row.Year) + "</td><td>" + H(row.Client) + "</td><td>" + H(row.Subject) + "<div class='path'>" + H(row.Path) + "</div></td><td>" + H(row.Status) + "</td><td>" + H(row.Inspection?.SizeText) + "<br>" + H(row.Inspection?.LastWriteText) + "</td><td>" + H(row.Inspection?.QuoteStatus) + "<div class='path'>" + H(row.Inspection?.Details) + "</div></td></tr>");
+            html.Append("<tr" + (row.Status == "Valido" ? "" : " class='bad'") + "><td>" + H(row.Code) + "</td><td>" + H(row.Year) + "</td><td>" + H(row.Client) + "</td><td>" + H(row.Subject) + "<div class='path'>" + H(row.Path) + "</div></td><td>" + H(row.Status) + "</td><td>" + H(row.SizeText) + "<br>" + H(row.Inspection?.LastWriteText) + "</td><td>" + H(row.Inspection?.QuoteStatus) + "<div class='path'>" + H(row.Inspection?.Details) + "</div></td></tr>");
         // Chiude il corpo e la tabella delle cartelle della sezione corrente.
         html.Append("</tbody></table>");
     // Fine del blocco di istruzioni o della definizione corrente.

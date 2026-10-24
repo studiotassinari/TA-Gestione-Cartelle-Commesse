@@ -25,7 +25,7 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel model)
         {
             model.Commesse.DataChanged += message => tray.Notify("Commesse aggiornate", message);
-            model.Gare.DataChanged += message => tray.Notify("Gare aggiornate", message);
+            model.Gare.DataChanged += message => tray.Notify("Gare aggiornate", message); model.Archivio.DataChanged += message => tray.Notify("Archivio aggiornato", message);
         }
         Closed += (_, _) => { if (DataContext is MainViewModel viewModel) viewModel.Stop(); };
     }

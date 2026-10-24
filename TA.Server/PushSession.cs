@@ -25,11 +25,11 @@ public static class PushSession
             trace?.Invoke(notice, false);
             if (!requireAcknowledgement) continue; // Compatibilita con i client precedenti.
             using var receipt = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-            receipt.CancelAfter(TimeSpan.FromSeconds(90)); // Due richieste State possono richiedere fino a 60 secondi.
+            receipt.CancelAfter(TimeSpan.FromSeconds(120)); // Due richieste State possono richiedere fino a 60 secondi.
             PushAcknowledgement ack;
             try { ack = await WireProtocol.ReadAsync<PushAcknowledgement>(stream, receipt.Token); }
             catch (OperationCanceledException) when (!lifetime.IsCancellationRequested)
-            { throw new TimeoutException("Riscontro client mancante entro 90 secondi; aggiornamento viste non confermato."); }
+            { throw new TimeoutException("Riscontro client mancante entro 120 secondi; aggiornamento viste non confermato."); }
             if (ack.ProbeId != notice.ProbeId || ack.Revision != notice.Revision || ack.Kind != notice.Kind
                 || (notice.Kind == "Changed" && !ack.ViewsUpdated))
                 throw new InvalidDataException("Riscontro push non valido o viste non aggiornate.");

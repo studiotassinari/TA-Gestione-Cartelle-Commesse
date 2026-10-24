@@ -11,7 +11,7 @@ public static class FolderChanges
         foreach (var item in current.Values.OrderBy(r => r.Path))
         {
             if (!old.TryGetValue(item.Path, out var prior)) { result.Add("Aggiunta: " + item.Path); continue; }
-            var fields = new List<string>();
+            var fields = new List<string>(); if (prior.ArchiveBytes != item.ArchiveBytes || prior.ArchiveModifiedUtc != item.ArchiveModifiedUtc) fields.Add("dimensione/data archivio compresso");
             if (prior.Code != item.Code || prior.Client != item.Client || prior.Subject != item.Subject) fields.Add("codice/cliente/argomento");
             if (prior.Status != item.Status) fields.Add($"conformita: {prior.Status} → {item.Status}");
             var a = prior.Inspection; var b = item.Inspection;

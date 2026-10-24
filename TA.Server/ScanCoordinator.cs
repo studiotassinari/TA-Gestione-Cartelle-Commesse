@@ -6,11 +6,11 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     private readonly Dictionary<char, CategoryWorker> workers = new()
     {
         ['C'] = new('C', settings.JobsRoot, settings.ArchiveFolder, logger, changes),
-        ['G'] = new('G', settings.BidsRoot, settings.ArchiveFolder, logger, changes)
+        ['G'] = new('G', settings.BidsRoot, settings.ArchiveFolder, logger, changes), ['A'] = new('A', settings.ArchivedJobsRoot, settings.ArchiveFolder, logger, changes)
     };
     private CancellationToken shutdown;
     public CategoryWorker Get(string category) => category.ToUpperInvariant() switch
-    { "C" => workers['C'], "G" => workers['G'], _ => throw new ArgumentException("Categoria non valida") };
+    { "C" => workers['C'], "G" => workers['G'], "A" => workers['A'], _ => throw new ArgumentException("Categoria non valida") };
     public bool Refresh(string category)
     {
         var worker = Get(category);

@@ -11,6 +11,14 @@ public static class HierarchyService
         relative ??= "";
         if (Path.IsPathRooted(relative) || relative.Contains(':') || relative.Split(['/', '\\']).Any(p => p is ".." or "."))
             throw new ArgumentException("Percorso relativo non valido");
+        if (state.Prefix == 'A')
+        {
+            var parent = relative.Replace('\\', '/').Trim('/');
+            var metadata = ArchivedJobsReader.Inspect(record.Path, CancellationToken.None, true);
+            if (!metadata.Complete && metadata.ArchiveDirectories.Count == 0) throw new IOException(string.Join("; ", metadata.Issues));
+            return metadata.ArchiveDirectories.Where(p => (p.Contains('/') ? p[..p.LastIndexOf('/')] : "") == parent)
+                .Select(p => new FolderEntry(p.Split('/').Last(), record.Path + "\\" + p.Replace('/', '\\'), p)).ToArray();
+        }
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(record.Path));
         var target = Path.GetFullPath(Path.Combine(root, relative));
         if (target != root && !target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))

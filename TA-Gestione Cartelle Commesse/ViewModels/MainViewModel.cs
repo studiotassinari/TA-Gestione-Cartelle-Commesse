@@ -8,10 +8,10 @@ namespace TA_Gestione_Cartelle_Commesse.ViewModels;
 public sealed class MainViewModel : Observable
 {
     public CategoryViewModel Commesse { get; } = new("Commesse", 'C');
-    public CategoryViewModel Gare { get; } = new("Gare", 'G');
+    public CategoryViewModel Gare { get; } = new("Gare", 'G'); public CategoryViewModel Archivio { get; } = new("Archivio", 'A');
     private int activeTabIndex;
     public int ActiveTabIndex { get => activeTabIndex; set { activeTabIndex = value; Notify(); Notify(nameof(ActiveCategory)); } }
-    public CategoryViewModel ActiveCategory => ActiveTabIndex == 1 ? Gare : Commesse;
+    public CategoryViewModel ActiveCategory => ActiveTabIndex == 2 ? Archivio : ActiveTabIndex == 1 ? Gare : Commesse;
     private string host = "", port = "5443", reportStatus = "Configurare nome DNS del server e porta TCP dedicata.";
     private ServerConnection? connection;
     private bool reporting, initialized, connecting;
@@ -63,7 +63,7 @@ public sealed class MainViewModel : Observable
         }
         pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); ReportCommand.Refresh(); CreateJobCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); CreateJobCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";
@@ -82,8 +82,8 @@ public sealed class MainViewModel : Observable
     private async Task PollAsync()
     {
         await Commesse.PollAsync();
-        await Gare.PollAsync();
-        if (Commesse.ConnectionFailed || Gare.ConnectionFailed)
+        await Gare.PollAsync(); await Archivio.PollAsync();
+        if (Commesse.ConnectionFailed || Gare.ConnectionFailed || Archivio.ConnectionFailed)
         {
             ReportStatus = "Recupero dati non riuscito. Verifica della connessione in corso.";
         }
@@ -101,9 +101,9 @@ public sealed class MainViewModel : Observable
                     if (token.IsCancellationRequested || !ReferenceEquals(current, connection)) return;
                     await PollAsync();
                     if (token.IsCancellationRequested || !ReferenceEquals(current, connection)) return;
-                    if (Commesse.ConnectionFailed || Gare.ConnectionFailed)
+                    if (Commesse.ConnectionFailed || Gare.ConnectionFailed || Archivio.ConnectionFailed)
                     {
-                        var error = Commesse.LastConnectionError ?? Gare.LastConnectionError;
+                        var error = Commesse.LastConnectionError ?? Gare.LastConnectionError ?? Archivio.LastConnectionError;
                         if (error is System.Security.Authentication.AuthenticationException or ServerRejectedException)
                             throw new System.Security.Authentication.AuthenticationException("Richiesta rifiutata: " + error.Message);
                         throw new IOException("Recupero dati interrotto.", error);
@@ -121,14 +121,14 @@ public sealed class MainViewModel : Observable
                 if (!token.IsCancellationRequested && ReferenceEquals(current, connection))
                 {
                     ClientLog.Write("Push rifiutato: controllo credenziali/gruppo richiesto.", ex); ReportStatus = "Push interrotto: " + ex.Message + " Premere Connetti dopo la verifica; nessun tentativo automatico.";
-                    Commesse.Disconnected(); Gare.Disconnected();
+                    Commesse.Disconnected(); Gare.Disconnected(); Archivio.Disconnected();
                 }
                 return;
             }
             catch (Exception ex)
             {
                 if (token.IsCancellationRequested || !ReferenceEquals(current, connection)) return;
-                Commesse.Disconnected(); Gare.Disconnected();
+                Commesse.Disconnected(); Gare.Disconnected(); Archivio.Disconnected();
                 CommunicationStatus = "Canale interrotto; riconnessione in corso."; ClientLog.Write("Push interrotto; riconnessione automatica.", ex);
                 ReportStatus = $"Connessione push interrotta; dati conservati. Riconnessione tra {delay} secondi.";
                 try { await Task.Delay(TimeSpan.FromSeconds(delay), token); }
@@ -166,7 +166,7 @@ public sealed class MainViewModel : Observable
     private void ShowChanges()
     {
         var tabs = new System.Windows.Controls.TabControl();
-        foreach (var category in new[] { Commesse, Gare })
+        foreach (var category in new[] { Commesse, Gare, Archivio })
         {
             var list = new System.Windows.Controls.ListBox { ItemsSource = category.ChangesLog };
             tabs.Items.Add(new System.Windows.Controls.TabItem { Header = category.Title, Content = list });

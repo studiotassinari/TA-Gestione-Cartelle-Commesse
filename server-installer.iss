@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "2.6.0"
+  #define AppVersion "2.7.0"
 #endif
 #ifndef PublishDir
   #define PublishDir "artifacts\server"
@@ -33,6 +33,8 @@ UninstallDisplayIcon={app}\TA.Server.exe
 [Languages]
 Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
 [Files]
+Source: "deployment\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"
+Source: "artifacts\updater\TA.Updater.exe"; DestDir: "{app}\Updater"; Flags: ignoreversion
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "deployment\Service-Manage.ps1"; DestDir: "{app}"
 Source: "deployment\Configure-Server.ps1"; DestDir: "{app}"

@@ -8,6 +8,10 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
     Func<string, CancellationToken, FolderInspection>? inspect = null)
 {
     private readonly object gate = new();
+    private readonly Queue<FolderRecord> priority = new();
+    private readonly HashSet<string> queued = new(StringComparer.OrdinalIgnoreCase);
+    private Task priorityTask = Task.CompletedTask;
+    private bool priorityRunning;
     private CategoryState state = new(prefix, root, true, "Caricamento archivio...", "", null);
     private CancellationTokenSource? cancellation;
     private bool initialized; private readonly ArchiveWriter persistence = new(archive, prefix, logger);
@@ -46,10 +50,10 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
         try
         {
             var started = DateTime.UtcNow;
-            var result = FolderReader.Scan(root, prefix, token);
+            var result = (prefix == 'A' ? ArchivedJobsReader.Scan(root, token) : FolderReader.Scan(root, prefix, token));
             token.ThrowIfCancellationRequested();
             if (result.Cancelled) throw new OperationCanceledException(token);
-            if (result.Error != null || result.Incomplete)
+            if (result.Error != null || (result.Incomplete && prefix != 'A'))
                 throw new IOException(result.Error ?? "Elenco incompleto: " + string.Join("; ", result.Warnings));
             List<string> differences;
             bool publish;
@@ -58,8 +62,18 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
                 var previous = state.Snapshot;
                 var old = (previous?.Records ?? []).ToDictionary(r => r.Path, StringComparer.OrdinalIgnoreCase);
                 var records = result.Records.Select(r => old.TryGetValue(r.Path, out var prior) ? r with { Inspection = prior.Inspection } : r).ToList();
+                if (prefix == 'A' && result.Incomplete)
+                {
+                    var found = records.Select(r => r.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    records.AddRange(old.Values.Where(r => !found.Contains(r.Path)));
+                }
                 differences = previous == null ? [] : FolderChanges.Compare(previous.Records, records);
                 publish = previous == null || differences.Count > 0 || !previous.Warnings.SequenceEqual(result.Warnings);
+                if (previous != null)
+                    foreach (var record in records.Where(r => !old.ContainsKey(r.Path)))
+                        if (queued.Add(record.Path)) priority.Enqueue(record);
+                if (priority.Count > 0 && !priorityRunning)
+                { priorityRunning = true; priorityTask = Task.Run(() => InspectNew(token)); }
                 if (publish) state = state with { Snapshot = new ArchiveSnapshot { Root = SharedArchiveService.Normalize(root), Prefix = prefix,
                     StartedUtc = started, SavedUtc = NextRevision(), Records = records, Warnings = result.Warnings } };
             }
@@ -75,6 +89,38 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             lock (gate) state = state with { Message = "Elenco non verificato; dati conservati: " + ex.Message };
             changes.Publish();
             return false;
+        }
+    }
+    private void InspectNew(CancellationToken token)
+    {
+        while (true)
+        {
+            FolderRecord record;
+            lock (gate)
+            {
+                if (priority.Count == 0 || token.IsCancellationRequested)
+                { priority.Clear(); queued.Clear(); priorityRunning = false; return; }
+                record = priority.Dequeue(); queued.Remove(record.Path);
+            }
+            try
+            {
+                var inspection = (inspect ?? (prefix == 'A' ? ArchivedJobsReader.Inspect : FolderInspectionService.Inspect))(record.Path, token);
+                lock (gate)
+                {
+                    var snapshot = state.Snapshot;
+                    if (snapshot == null) continue;
+                    var position = snapshot.Records.FindIndex(r => r.Path.Equals(record.Path, StringComparison.OrdinalIgnoreCase));
+                    if (position < 0 || snapshot.Records[position].Inspection?.CheckedUtc > inspection.CheckedUtc) continue;
+                    var records = snapshot.Records.ToList();
+                    records[position] = records[position] with { Inspection = inspection };
+                    state = state with { Snapshot = snapshot with { Records = records, SavedUtc = NextRevision() } };
+                }
+                persistence.Enqueue(State.Snapshot!, token);
+                changes.Publish(prefix + ": dimensione e metadati disponibili per " + record.Path);
+                logger.LogInformation("Metadati prioritari completati: {Category}, {Path}", prefix, record.Path);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+            catch (Exception ex) { logger.LogWarning(ex, "Metadati prioritari non disponibili: {Path}", record.Path); }
         }
     }
     public bool Start(CancellationToken shutdown)
@@ -96,7 +142,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
         changes.Publish();
     }
     public void Cancel() { lock (gate) cancellation?.Cancel(); }
-    public Task Completion { get { lock (gate) return Task.WhenAll(current, indexTask, persistence.Completion); } }
+    public Task Completion { get { lock (gate) return Task.WhenAll(current, indexTask, priorityTask, persistence.Completion); } }
     private async Task Scan(CancellationTokenSource source)
     {
         var started = DateTime.UtcNow;
@@ -111,14 +157,14 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             {
                 source.Token.ThrowIfCancellationRequested();
                 lock (gate) state = state with { Message = $"Metadati {++completed}/{pending.Count}: {record.Code}. Elenco aggiornato separatamente." };
-                var inspection = (inspect ?? FolderInspectionService.Inspect)(record.Path, source.Token);
+                var inspection = (inspect ?? (prefix == 'A' ? ArchivedJobsReader.Inspect : FolderInspectionService.Inspect))(record.Path, source.Token);
                 List<string> differences = [];
                 lock (gate)
                 {
                     var snapshot = state.Snapshot!;
                     var position = snapshot.Records.FindIndex(r => string.Equals(r.Path, record.Path, StringComparison.OrdinalIgnoreCase));
                     // Non reinserisce cartelle rimosse o rinominate durante una lettura lunga.
-                    if (position >= 0)
+                    if (position >= 0 && snapshot.Records[position].Inspection?.CheckedUtc > inspection.CheckedUtc != true)
                     {
                         var previous = snapshot.Records[position];
                         var updated = previous with { Inspection = inspection };
@@ -147,7 +193,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
         }
         finally
         {
-            lock (gate) { state = state with { Busy = false }; cancellation = null; source.Dispose(); }
+            await priorityTask; lock (gate) { state = state with { Busy = false }; cancellation = null; source.Dispose(); }
             changes.Publish();
         }
     }

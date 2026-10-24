@@ -4,7 +4,7 @@ namespace TA_Gestione_Cartelle_Commesse.Models;
 public sealed record FolderInspection
 {
     // Somma delle dimensioni logiche dei file letti, in byte (non spazio occupato sul disco).
-    public string? ContentSignature { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore] public List<string> ArchiveDirectories { get; init; } = []; public string? ContentSignature { get; init; }
     public long TotalBytes { get; init; }
     // Numero dei file inclusi nel calcolo.
     public long FileCount { get; init; }
@@ -22,7 +22,9 @@ public sealed record FolderInspection
     public List<string> Issues { get; init; } = [];
     // Presenta la dimensione indicando espressamente eventuali dati parziali.
     [System.Text.Json.Serialization.JsonIgnore]
-    public string SizeText => $"{TotalBytes / 1048576d:N2} MiB" + (Complete ? "" : " (parziale)");
+    public string SizeText => FormatBytes(TotalBytes) + (Complete ? "" : " (parziale)");
+    public static string FormatBytes(long bytes) => bytes < 1024 ? $"{bytes:N0} B" : bytes < 1048576 ? $"{bytes / 1024d:N2} KiB"
+        : bytes < 1073741824 ? $"{bytes / 1048576d:N2} MiB" : $"{bytes / 1073741824d:N2} GiB";
     // Converte l'istante UTC nell'orario locale solo per la visualizzazione.
     [System.Text.Json.Serialization.JsonIgnore]
     public string LastWriteText => LastFileWriteUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Nessun file leggibile";

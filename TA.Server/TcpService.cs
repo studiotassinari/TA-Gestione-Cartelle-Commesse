@@ -131,7 +131,8 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, C
                 var jobs = scans.Get("C").State.Snapshot;
                 var bids = scans.Get("G").State.Snapshot;
                 if (jobs == null || bids == null) return Reply.Fail("Attendere una prima scansione completa di entrambe le categorie.");
-                var html = ReportWriter.Create(jobs.Root, new ScanResult(jobs.Records, jobs.Warnings), bids.Root, new ScanResult(bids.Records, bids.Warnings));
+                var archived = scans.Get("A").State.Snapshot;
+                var html = ReportWriter.Create(jobs.Root, new ScanResult(jobs.Records, jobs.Warnings), bids.Root, new ScanResult(bids.Records, bids.Warnings), archived?.Root, archived == null ? null : new ScanResult(archived.Records, archived.Warnings));
                 return Reply.Ok(html.Replace("<main>", $"<main><p>Verifiche server: commesse {jobs.SavedUtc:O}; gare {bids.SavedUtc:O}. Date UTC.</p>"));
             default: return Reply.Fail("Comando non supportato.");
         }

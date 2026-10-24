@@ -14,9 +14,9 @@ internal static class Program
     [STAThread] static void Main()
     {
         var app = new Application();
-        foreach (var prefix in new[] { 'C', 'G' })
+        foreach (var prefix in new[] { 'C', 'G', 'A' })
         {
-            var vm = new CategoryViewModel(prefix == 'C' ? "Commesse" : "Gare", prefix);
+            var vm = new CategoryViewModel(prefix == 'C' ? "Commesse" : prefix == 'G' ? "Gare" : "Archivio", prefix);
             vm.Connect(new ServerConnection("test.invalid", 5443));
             var first = new FolderRecord(prefix + "26197", "26", "197", "Cliente", "Progetto", @"C:\test\" + prefix + "26197", "Valido");
             var next = new FolderRecord(prefix + "26198", "26", "198", "Da verificare", "prov prova", @"C:\test\" + prefix + "26198 - prov prova", "Non conforme");
@@ -32,6 +32,8 @@ internal static class Program
             Check(notified == 1 && grid.Items.Count == 2 && vm.ChangesLog.Any(x => x.Contains("26198")), prefix + ": push aggiorna griglia WPF e cronologia durante scansione");
             vm.ApplyState(state with { Snapshot = snapshot with { Records = [first, next], SavedUtc = now.AddTicks(2) } });
             Check(notified == 1, prefix + ": fotografia invariata non ripete l'avviso");
+            vm.ApplyState(state with { Snapshot = snapshot with { Records = [first, next with { Inspection = new FolderInspection { TotalBytes = 4096, Complete = true } }], SavedUtc = now.AddTicks(3) } });
+            Check(notified == 2 && vm.Records.Last().SizeText.Contains("KiB"), prefix + ": dimensione aggiornata nella griglia con il secondo push");
         }
         var service = new ServiceLogView(); service.Output.Text = "17:10:00 Servizio avviato\n17:10:01 Elenco C verificato: 320 cartelle\n17:10:02 Metadati in corso; elenco disponibile";
         var communications = new CommunicationLogView();

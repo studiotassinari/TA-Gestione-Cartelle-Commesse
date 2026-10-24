@@ -1,7 +1,7 @@
 ; Verifica se il parametro AppVersion non è stato fornito al compilatore.
 #ifndef AppVersion
 ; Definisce il valore predefinito del parametro quando manca un valore esterno.
-  #define AppVersion "2.6.0"
+  #define AppVersion "2.7.0"
 ; Termina la definizione condizionale del parametro.
 #endif
 ; Verifica se il parametro PublishDir non è stato fornito al compilatore.
@@ -74,8 +74,9 @@ Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
 [Tasks]
 ; Offre il collegamento sul desktop come opzione inizialmente non selezionata.
 Name: "desktopicon"; Description: "Crea un collegamento sul desktop"; Flags: unchecked
-; Apre la sezione [Files] della configurazione Inno Setup.
 [Files]
+Source: "deployment\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"
+Source: "artifacts\updater\TA.Updater.exe"; DestDir: "{app}\Updater"; Flags: ignoreversion
 ; Copia ricorsivamente tutti i file pubblicati nella cartella dellʼapplicazione sostituendo quelli precedenti.
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Apre la sezione Source: "deployment\Update-Application.ps1"; DestDir: "{app}"

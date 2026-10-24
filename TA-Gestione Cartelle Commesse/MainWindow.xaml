@@ -266,31 +266,15 @@
                         </DataGrid.RowStyle>
                         <!-- Definisce esplicitamente le colonne senza generazione automatica. -->
                         <DataGrid.Columns>
-                            <!-- Visualizza la colonna Codice leggendo il campo indicato nel binding, con la larghezza specificata. -->
                             <DataGridTextColumn Header="Codice" Binding="{Binding Code}" Width="90"/>
-                            <!-- Visualizza la colonna Anno (XX) leggendo il campo indicato nel binding, con la larghezza specificata. -->
-                            <DataGridTextColumn Header="Anno (XX)" Binding="{Binding Year}" Width="90"/>
-                            <!-- Visualizza la colonna N. leggendo il campo indicato nel binding, con la larghezza specificata. -->
-                            <DataGridTextColumn Header="N." Binding="{Binding Number}" Width="55"/>
-                            <!-- Visualizza la colonna Cliente leggendo il campo indicato nel binding, con la larghezza specificata. -->
-                            <DataGridTextColumn Header="Cliente" Binding="{Binding Client}" Width="2*"/>
-                            <!-- Visualizza la colonna Argomento leggendo il campo indicato nel binding, con la larghezza specificata. -->
-                            <DataGridTextColumn Header="Argomento" Binding="{Binding Subject}" Width="3*"/>
-                            <!-- Visualizza la colonna Esito leggendo il campo indicato nel binding, con la larghezza specificata. -->
+                            <DataGridTextColumn Header="Anno" Binding="{Binding Year}" Width="65"/>
+                            <DataGridTextColumn Header="Numero" Binding="{Binding Number}" Width="65"/>
+                            <DataGridTextColumn Header="Committente" Binding="{Binding Client}" Width="180" MinWidth="150"/>
+                            <DataGridTextColumn Header="Argomento" Binding="{Binding Subject}" Width="260" MinWidth="200"/>
+                            <DataGridTextColumn Header="Dimensione" Binding="{Binding SizeText}" Width="160"/>
                             <DataGridTextColumn Header="Esito" Binding="{Binding Status}" Width="100"/>
-                            <!-- Mostra la somma dei file letti, distinguendo le letture parziali. -->
-                            <DataGridTextColumn Header="Dimensione" Binding="{Binding Inspection.SizeText}" Width="140"/>
-                            <!-- Mostra l'ultima modifica di un file contenuto nella cartella. -->
                             <DataGridTextColumn Header="Ultima modifica file" Binding="{Binding Inspection.LastWriteText}" Width="160"/>
-                            <!-- Il risultato dipende solo dai nomi; percorsi ed errori sono nel suggerimento della cella. -->
-                            <DataGridTextColumn Header="Preventivo" Binding="{Binding Inspection.QuoteStatus}" Width="210">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="ToolTip" Value="{Binding Inspection.Details}"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                        <!-- Conclude lʼelemento DataGrid.Columns e il suo contenuto. -->
+                            <DataGridTextColumn Header="Preventivo" Binding="{Binding Inspection.QuoteStatus}" Width="210"/>
                         </DataGrid.Columns>
                     <!-- Conclude lʼelemento DataGrid e il suo contenuto. -->
                     </DataGrid>
@@ -398,7 +382,7 @@
             <!-- Conclude lʼelemento TabItem e il suo contenuto. -->
             </TabItem>
         <!-- Conclude lʼelemento TabControl e il suo contenuto. -->
-        </TabControl>
+        <TabItem Header="   Archivio   "><ContentControl Content="{Binding Archivio}" ContentTemplate="{StaticResource CategoryTemplate}"/></TabItem></TabControl>
     <!-- Conclude lʼelemento DockPanel e il suo contenuto. -->
     </DockPanel>
 <!-- Conclude lʼelemento Window e il suo contenuto. -->

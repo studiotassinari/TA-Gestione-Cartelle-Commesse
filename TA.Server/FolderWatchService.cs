@@ -15,7 +15,7 @@ public sealed class FolderWatchService(ServerSettings settings, ScanCoordinator 
     }
     protected override async Task ExecuteAsync(CancellationToken token)
     {
-        var watches = new[] { new Watch("C", settings.JobsRoot), new Watch("G", settings.BidsRoot) };
+        var watches = new[] { new Watch("C", settings.JobsRoot), new Watch("G", settings.BidsRoot), new Watch("A", settings.ArchivedJobsRoot) };
         try
         {
             while (!token.IsCancellationRequested)
@@ -84,7 +84,7 @@ public sealed class FolderWatchService(ServerSettings settings, ScanCoordinator 
     {
         var relative = Path.GetRelativePath(root, path);
         if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar) || Path.IsPathRooted(relative)) return false;
-        if (relative == "." || category == "G") return true;
+        if (relative == "." || category is "G" or "A") return true;
         var first = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
         return first.Length == 4 && int.TryParse(first, out var year) && year is >= 1900 and <= 2099;
     }

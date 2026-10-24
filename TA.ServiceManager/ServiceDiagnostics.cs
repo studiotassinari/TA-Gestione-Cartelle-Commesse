@@ -27,7 +27,7 @@ internal static class ServiceDiagnostics
         {
             using var document = JsonDocument.Parse(File.ReadAllText(config));
             var server = document.RootElement.GetProperty("Server");
-            foreach (var key in new[] { "AllowedGroup", "Port", "JobsRoot", "BidsRoot", "ArchiveFolder" })
+            foreach (var key in new[] { "AllowedGroup", "Port", "JobsRoot", "BidsRoot", "ArchivedJobsRoot", "ArchiveFolder" })
                 text.AppendLine(key + ": " + (server.TryGetProperty(key, out var value) ? value.ToString() : "MANCANTE"));
             if (!server.TryGetProperty("AllowedGroup", out var group) || string.IsNullOrWhiteSpace(group.GetString()))
                 text.AppendLine("ERRORE: gruppo AD vuoto; il servizio non puo avviarsi.");

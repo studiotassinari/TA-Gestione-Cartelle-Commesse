@@ -59,7 +59,7 @@ using (var sessionStop = CancellationTokenSource.CreateLinkedTokenSource(token))
 var jobs = Path.Combine(root, "lavori"); var bids = Path.Combine(root, "gare"); var archive = Path.Combine(root, "archivio");
 var job = Directory.CreateDirectory(Path.Combine(jobs, "2026", "C26001 - Cliente - Progetto")).FullName;
 Directory.CreateDirectory(bids); Directory.CreateDirectory(archive);
-var settings = new ServerSettings { JobsRoot = jobs, BidsRoot = bids, ArchiveFolder = archive, RefreshMinutes = 999 };
+var settings = new ServerSettings { JobsRoot = jobs, BidsRoot = bids, ArchivedJobsRoot = bids, ArchiveFolder = archive, RefreshMinutes = 999 };
 using var scans = new ScanCoordinator(settings, NullLogger<ScanCoordinator>.Instance, hub);
 using var watcher = new FolderWatchService(settings, scans, NullLogger<FolderWatchService>.Instance);
 await scans.StartAsync(token); await watcher.StartAsync(token);

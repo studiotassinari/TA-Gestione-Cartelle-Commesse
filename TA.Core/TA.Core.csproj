@@ -7,4 +7,7 @@
     <EmbeddedResource Include="../TA-Gestione Cartelle Commesse/Assets/Brand/Acherus-Regular.otf" LogicalName="Brand.Acherus-Regular.otf" />
     <EmbeddedResource Include="../TA-Gestione Cartelle Commesse/Assets/Brand/Acherus-Bold.otf" LogicalName="Brand.Acherus-Bold.otf" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.50.7" />
+  </ItemGroup>
 </Project>

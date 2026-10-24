@@ -161,3 +161,23 @@ Server > Gestione servizio permette stato, avvio, arresto, riavvio e consultazio
 Avvio/arresto/riavvio usano il gestore servizi remoto di Windows (RPC/SCM), necessario anche quando il servizio applicativo e fermo. La VM deve permettere la gestione remota dei servizi e i relativi permessi Windows. Nessuna regola firewall aggiuntiva viene aperta automaticamente. I log e la verifica applicativa usano invece la porta TCP dedicata. Non sono disponibili modifica remota di account/configurazione o elevazione automatica dei privilegi. Non vengono create attivita pianificate.
 
 Verifiche locali: cartella C26198 con metadati bloccati, aggiornamento griglie WPF prima dell'avviso, salvataggio durante scansione, migrazione annuale, integrita dei JSON, riscontri corretti/errati e diniego dei comandi amministrativi agli utenti ordinari. La gestione SCM con account amministrativo richiede collaudo sulla VM.
+
+## Versione 2.7.0: aggiornamento diretto e archivio compresso
+
+### Aggiornatore
+
+TA-Commesse-Aggiornatore-2.7.0.exe e un programma autonomo: scarica da GitHub il pacchetto ZIP del componente, verifica l'impronta pubblicata da GitHub e le impronte di ogni file, chiude l'interfaccia e sostituisce soltanto i file diversi. Non esegue un installatore. Configurazioni, dati, registrazione e account del servizio restano invariati. L'aggiornamento server richiede privilegi amministrativi e arresta/riavvia il servizio solo se prima era attivo; un servizio gia fermo resta fermo.
+
+Per passare dalla 2.6.0 senza usare un installatore, scaricare una volta l'aggiornatore autonomo, eseguirlo sulla VM scegliendo Server e poi sui PC scegliendo Client. Dalla nuova versione il controllo automatico resta limitato all'apertura del client o del gestore, oltre al comando manuale. Nessuna attivita pianificata. I file Installazione-Iniziale servono solo per nuove installazioni; non sono il canale di aggiornamento.
+
+Il programma conserva un backup prima della sostituzione e un giornale di ripristino. Se la verifica fallisce ripristina i file precedenti; se il processo si interrompe, riaprire l'aggiornatore per il recupero. Una nuova versione del server deve rimanere in stato Running per cinque secondi; questo non certifica l'accesso a tutte le condivisioni. In caso di file occupati non vengono terminati forzatamente processi. Backup, download e log rimangono in UpdateCache sul server e in LocalAppData/Tassinari/CommesseClient/Updates sul client: conservarli finche non e stata verificata la versione nuova.
+
+I pacchetti sono pubblicati dal repository aziendale tramite HTTPS e non firmati digitalmente. Non vengono applicati cambi di versione principale in automatico. L'aggiornatore non modifica i file di configurazione e non rimuove file sconosciuti o obsoleti lasciati da versioni precedenti.
+
+### Archivio e dimensioni
+
+La terza scheda Archivio censisce ricorsivamente i file ZIP e 7z della radice ArchivedJobsRoot. Il servizio apre i file esclusivamente in lettura e legge intestazioni, nomi, date, dimensioni e candidati preventivi. Non estrae o ripara alcun contenuto e non crea file nella radice sorgente. Archivi danneggiati o protetti vengono segnalati come letture parziali; questo controllo dei metadati non verifica il CRC di tutto il contenuto. I file con nome non conforme rimangono visibili. Nessuna commessa viene censita dentro un file compresso.
+
+Il servizio richiede soltanto Lettura/Elenco sulla radice degli archivi. I risultati vengono salvati nell'archivio JSON applicativo separato, per categoria A e anno. La verifica avviene ogni minuto, senza sovrapposizioni delle scansioni lunghe. Se alcuni contenitori non sono accessibili, vengono mostrati i risultati disponibili e conservate le precedenti righe non verificabili, con segnalazioni. Nella scheda Archivio la dimensione mostra lo spazio del file compresso, esplicitamente etichettato. Il contenuto delle cartelle interne e consultabile in sola lettura dalla gerarchia; Apri seleziona il file in Esplora file senza estrarlo.
+
+Le colonne iniziano con Codice, Anno, Numero, Committente, Argomento, Dimensione, seguite dagli esiti. Le nuove commesse hanno una coda prioritaria per dimensioni e metadati: la riga compare prima e riceve un secondo aggiornamento quando il calcolo termina. Il valore iniziale e In verifica; le dimensioni piccole sono espresse in byte/KiB e non arrotondate a zero MiB.

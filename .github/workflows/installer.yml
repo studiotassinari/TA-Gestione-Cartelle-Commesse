@@ -20,6 +20,7 @@ on:
       - 'TA.Transport/**'
       - 'TA.Server/**'
       - 'TA.Desktop/**'
+      - 'TA.Updater/**'
       - 'TA.ServiceManager/**'
       - 'deployment/**'
       - 'tests/**'
@@ -64,7 +65,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Deriva una versione univoca dal numero progressivo di esecuzione del workflow.
-          $version = "2.6.$env:GITHUB_RUN_NUMBER"
+          $version = "2.7.$env:GITHUB_RUN_NUMBER"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -76,6 +77,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Compilazione server non riuscita' }
           dotnet publish 'TA.ServiceManager/TA.ServiceManager.csproj' -c Release -r win-x64 --self-contained true -p:Version=$version -p:DebugType=None -p:DebugSymbols=false -o artifacts/manager
           if ($LASTEXITCODE -ne 0) { throw 'Compilazione utility non riuscita' }
+      - name: Pubblica aggiornatore e pacchetti diretti
+        run: |
+          dotnet publish TA.Updater/TA.Updater.csproj -c Release -r win-x64 --self-contained true -p:Version=$env:APP_VERSION -o artifacts/updater
+          if ($LASTEXITCODE -ne 0) { throw 'Build aggiornatore fallita' }
+          ./deployment/Build-UpdatePackages.ps1 -Version $env:APP_VERSION
       - name: Verifica archivio e protocollo dedicato
         run: |
           dotnet run --project tests/ArchiveChecks/ArchiveChecks.csproj -c Release
@@ -84,7 +90,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Test trasporto fallito' }
       - name: Verifica aggiornamento viste, archivio annuale e riscontri
         run: |
-          foreach ($test in @('ClientChecks','LiveIndexChecks','AnnualArchiveChecks','AcknowledgementChecks')) {
+          foreach ($test in @('ClientChecks','LiveIndexChecks','AnnualArchiveChecks','AcknowledgementChecks','PrioritySizeChecks','ArchiveSourceChecks','UpdaterChecks')) {
             dotnet run --project "tests/$test" -c Release
             if ($LASTEXITCODE -ne 0) { throw "Test fallito: $test" }
           }
@@ -217,7 +223,11 @@ jobs:
       - name: Calcola impronta SHA256
         # Introduce lo script PowerShell per il calcolo dell'hash.
         run: |
-          Get-ChildItem artifacts/installer -Filter *.exe | ForEach-Object {
+          # I client precedenti cercavano Setup-<versione>: i setup nuovi sono solo per la prima installazione.
+          foreach ($part in @('','-Server')) {
+            Move-Item -LiteralPath "artifacts/installer/TA-Gestione-Cartelle-Commesse$part-Setup-$env:APP_VERSION.exe" -Destination "artifacts/installer/TA-Gestione-Cartelle-Commesse$part-Installazione-Iniziale-$env:APP_VERSION.exe"
+          }
+          Get-ChildItem artifacts/installer -File | Where-Object Extension -In '.exe','.zip' | ForEach-Object {
             (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $_.Name
           } | Set-Content artifacts/installer/SHA256SUMS.txt -Encoding utf8
       # Archivia nel workflow il pacchetto e il file delle impronte.
@@ -240,30 +250,16 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
-          Architettura server-client: servizio Windows su TCP/Kerberos cifrato e firmato dedicato, porta predefinita 5443, autenticazione Windows di dominio. Nessun HTTP, IIS o sito web.
-          Notifiche push: monitor modifiche, connessione persistente autenticata, riconnessione e scansione periodica di recupero. Aggiornare prima il server e poi i client.
-          Installare il pacchetto Server sulla VM Windows Server 2022 e il pacchetto client sui PC. Configurare account di servizio, gruppo AD e SPN seguendo deployment/SERVER-CLIENT.md nel repository.
-          Il server resta fermo alla prima installazione finché non è configurato. Il collaudo Kerberos sulla VM è necessario prima dell'uso aziendale.
-          Fine chiude il setup client senza avvii automatici.
-          Avviare il programma dal menu Start dopo l'installazione.
-          Aggiornamento dalla 1.0.2 e reinstallazione verificati: file sostituiti, una sola voce nelle App installate.
-          La versione precedente viene aggiornata nella stessa cartella, senza disinstallazione manuale.
-
-          Novità: grafica Tassinari Associati con logo, font Acherus Grotesque e colori aziendali.
-          Menu Export per report HTML con logo e font incorporati.
-          Apertura cartelle con doppio clic, menu contestuale e menu Apri.
-
-          Installatore Windows x64 con .NET 10 incluso.
-          Scaricare il setup Client con il numero di versione nel nome e avviarlo.
-          Installazione per utente, collegamento nel menu Start e disinstallazione inclusi.
-          Per leggere le cartelle occorre accesso alla rete aziendale e ai percorsi selezionati.
-          Commesse: verifica esclusivamente del primo livello sotto ogni anno.
-          Il pacchetto non contiene cartelle, dati clienti o report della rete aziendale.
-          Installer non firmato digitalmente. Impronta disponibile in SHA256SUMS.txt.
+          Aggiornamento diretto: eseguire una volta TA-Commesse-Aggiornatore sulla VM (Server) e poi sui PC (Client). I file Installazione-Iniziale servono alle nuove installazioni.
+          Il programma scarica pacchetti ZIP, verifica le impronte, sostituisce soltanto i file diversi e conserva configurazioni e backup. Il server viene riavviato solo se prima era attivo. Nessuna attivita pianificata: controlli all'apertura o manuali.
+          Scheda Archivio: censimento ricorsivo ZIP e 7z esclusivamente in lettura, senza estrazione o modifica degli originali. Verifica ogni minuto e notifiche push.
+          Colonne: Codice, Anno, Numero, Committente, Argomento, Dimensione. Calcolo prioritario delle dimensioni delle nuove commesse e successivo aggiornamento della vista.
+          Runtime .NET incluso. Pacchetti non firmati digitalmente; impronte SHA256 allegate. Consultare README e guida per configurazione AD e permessi di lettura.
           '@
           # Salva le note UTF-8 in un file per preservare accenti e interruzioni di riga.
           $notes | Set-Content release-notes.txt -Encoding utf8
           # Crea la release sul commit corrente, allega setup e impronta e la contrassegna come più recente.
-          gh release create "v$env:APP_VERSION" "artifacts/installer/TA-Gestione-Cartelle-Commesse-Setup-$env:APP_VERSION.exe" "artifacts/installer/TA-Gestione-Cartelle-Commesse-Server-Setup-$env:APP_VERSION.exe" 'artifacts/installer/SHA256SUMS.txt' --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "TA-Gestione Cartelle Commesse $env:APP_VERSION" --notes-file release-notes.txt --latest
+          $releaseFiles = @(Get-ChildItem artifacts/installer -File | ForEach-Object FullName)
+          gh release create "v$env:APP_VERSION" @releaseFiles --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "TA-Gestione Cartelle Commesse $env:APP_VERSION" --notes-file release-notes.txt --latest
           # Segnala un errore se la CLI non riesce a pubblicare la release.
           if ($LASTEXITCODE -ne 0) { throw 'Pubblicazione release non riuscita' }
