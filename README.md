@@ -2,12 +2,12 @@
 
 Applicazione .NET 10 con client WPF/MVVM e servizio Windows per Windows Server 2022 nel dominio aziendale.
 
-## Scarica e installa - versione 2.4.0
+## Scarica e installa - versione 2.5.0
 
 Aggiornare prima il server e poi i client.
 
-- [Scarica installatore Server 2.4.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.4.0/TA-Gestione-Cartelle-Commesse-Server-Setup-2.4.0.exe)
-- [Scarica installatore Client 2.4.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.4.0/TA-Gestione-Cartelle-Commesse-Setup-2.4.0.exe)
+- [Scarica installatore Server 2.5.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.5.0/TA-Gestione-Cartelle-Commesse-Server-Setup-2.5.0.exe)
+- [Scarica installatore Client 2.5.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.5.0/TA-Gestione-Cartelle-Commesse-Setup-2.5.0.exe)
 
 Il server verifica commesse e gare ogni minuto, senza sovrapporre scansioni della stessa categoria, e invia notifiche push ai client. Il menu Aiuto > Informazioni mostra la versione client e, quando disponibile, quella server. Resta necessario configurare account, gruppo AD e SPN seguendo la guida.
 
@@ -19,6 +19,10 @@ Il server verifica commesse e gare ogni minuto, senza sovrapporre scansioni dell
 [Release pubblicate](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases). I setup includono il runtime e non sono firmati digitalmente; le impronte sono in `SHA256SUMS.txt`.
 
 **[Guida di installazione e configurazione server-client](deployment/SERVER-CLIENT.md)**
+
+## Notifiche dettagliate
+
+Il push segnala le modifiche e il client recupera automaticamente lo stato aggiornato. Gli avvisi indicano la cartella aggiunta, rimossa o modificata e i dati cambiati. Visualizza > Modifiche ricevute conserva le ultime 200 segnalazioni per categoria nella sessione. Il confronto esclude la sola ora di scansione, ma rileva anche cartelle vuote e rinomine tramite la firma dei metadati. Un cambio di percorso viene mostrato come rimozione e aggiunta; non e uno storico completo delle operazioni sui singoli file.
 
 ## Nuova commessa da modello
 

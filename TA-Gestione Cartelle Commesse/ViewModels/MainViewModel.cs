@@ -22,6 +22,7 @@ public sealed class MainViewModel : Observable
     public string ServerPort { get => port; set { port = value; Notify(); } }
     public string ReportStatus { get => reportStatus; private set { reportStatus = value; Notify(); } }
     public string ArchiveLocation => "Archivio e scansioni gestiti dal servizio Windows; trasporto TCP/Kerberos con account di dominio.";
+    public Command ChangesCommand { get; }
     public Command CreateJobCommand { get; }
     public Command UpdateCommand { get; }
     public Command AboutCommand { get; }
@@ -29,6 +30,7 @@ public sealed class MainViewModel : Observable
     public Command ReportCommand { get; }
     public MainViewModel()
     {
+        ChangesCommand = new(ShowChanges);
         CreateJobCommand = new(CreateJob, () => connection != null);
         UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
         AboutCommand = new(() => _ = ShowAboutAsync());
@@ -90,7 +92,7 @@ public sealed class MainViewModel : Observable
         {
             try
             {
-                await current.WatchAsync(async () =>
+                await current.WatchAsync(async notice =>
                 {
                     if (token.IsCancellationRequested || !ReferenceEquals(current, connection)) return;
                     await PollAsync();
@@ -130,6 +132,17 @@ public sealed class MainViewModel : Observable
     public void Stop() => pushCancellation?.Cancel();
 
 
+    private void ShowChanges()
+    {
+        var tabs = new System.Windows.Controls.TabControl();
+        foreach (var category in new[] { Commesse, Gare })
+        {
+            var list = new System.Windows.Controls.ListBox { ItemsSource = category.ChangesLog };
+            tabs.Items.Add(new System.Windows.Controls.TabItem { Header = category.Title, Content = list });
+        }
+        new System.Windows.Window { Title = "Modifiche ricevute - ultime 200 per categoria nella sessione", Width = 1000, Height = 520,
+            Owner = System.Windows.Application.Current.MainWindow, Content = tabs, WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner }.Show();
+    }
     private void CreateJob()
     {
         if (connection == null) return;

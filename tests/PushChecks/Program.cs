@@ -48,8 +48,9 @@ using (var sessionStop = CancellationTokenSource.CreateLinkedTokenSource(token))
     var stream = client.GetStream();
     Check((await WireProtocol.ReadAsync<Reply>(stream, token)).Success, "Sottoscrizione confermata");
     Check((await WireProtocol.ReadAsync<PushNotice>(stream, token)).Kind == "Changed", "Stato iniziale notificato senza richiesta periodica");
-    hub.Publish();
-    Check((await WireProtocol.ReadAsync<PushNotice>(stream, token)).Revision == 1001, "Modifica inviata al client sulla connessione persistente");
+    hub.Publish("Aggiunta: C26001 - Cliente - Progetto");
+    var notice = await WireProtocol.ReadAsync<PushNotice>(stream, token);
+    Check(notice.Revision == 1001 && notice.Summary == "Aggiunta: C26001 - Cliente - Progetto", "Push trasmette al client il dettaglio della modifica");
     Check((await WireProtocol.ReadAsync<PushNotice>(stream, token)).Kind == "Heartbeat", "Connessione inattiva mantenuta con heartbeat");
     sessionStop.Cancel(); await serving.WaitAsync(token);
 }

@@ -328,6 +328,7 @@
         <!-- Definisce la barra dei menu nella parte superiore della finestra. -->
         <Menu DockPanel.Dock="Top" Margin="0,0,0,14" Padding="4" Background="White">
             <!-- Definisce MenuItem con intestazione _Apri e gli eventuali comandi o contenuti associati. -->
+            <MenuItem Header="_Visualizza"><MenuItem Header="Modifiche ricevute" Command="{Binding ChangesCommand}"/></MenuItem>
             <MenuItem Header="_Nuovo"><MenuItem Header="Commessa da modello..." Command="{Binding CreateJobCommand}"/></MenuItem>
             <MenuItem Header="_Apri">
                 <!-- Definisce MenuItem con intestazione Apri cartella in Esplora file e gli eventuali comandi o contenuti associati. -->

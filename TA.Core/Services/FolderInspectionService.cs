@@ -35,6 +35,8 @@ public static class FolderInspectionService
     // Lettore separato per riprodurre nei test date Win32 non rappresentabili in .NET.
     internal static FolderInspection Inspect(string root, CancellationToken token, Func<FileInfo, DateTime> readModified)
     {
+        using var signature = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        void Hash(object value) => signature.AppendData(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(value));
         long bytes = 0, count = 0;
         DateTime? latest = null;
         var issues = new List<string>();
@@ -53,7 +55,7 @@ public static class FolderInspectionService
                     issues.Add("Collegamento escluso: " + item.Path);
                     continue;
                 }
-                foreach (var entry in Directory.EnumerateFileSystemEntries(item.Path))
+                foreach (var entry in Directory.EnumerateFileSystemEntries(item.Path).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
                 {
                     token.ThrowIfCancellationRequested();
                     if (FolderReader.IsExcluded(entry)) continue;
@@ -67,6 +69,7 @@ public static class FolderInspectionService
                         }
                         if ((attributes & FileAttributes.Directory) != 0)
                         {
+                            Hash(new { Type = "Directory", Path = Path.GetRelativePath(root, entry) });
                             bool isAdmin = AdministrationNames.Contains(Path.GetFileName(entry));
                             administrationFound |= isAdmin;
                             pending.Push((entry, item.Administration || isAdmin));
@@ -80,11 +83,13 @@ public static class FolderInspectionService
                         try
                         {
                             var modified = readModified(file);
+                            Hash(new { Type = "File", Path = Path.GetRelativePath(root, entry), Length = length, Modified = modified });
                             if (latest == null || modified > latest) latest = modified;
                         }
                         catch (ArgumentOutOfRangeException)
                         {
                             // Conserva dimensione e nome del file; la data sconosciuta rende i metadati parziali.
+                            Hash(new { Type = "File", Path = Path.GetRelativePath(root, entry), Length = length, Modified = "invalid" });
                             issues.Add("Data ultima modifica non valida: " + entry);
                         }
                         // Un preventivo fuori dall'amministrazione non soddisfa il controllo richiesto.
@@ -115,7 +120,7 @@ public static class FolderInspectionService
             : administrationFound ? "Non trovato nei nomi" : "Cartella amministrazione non trovata";
         return new FolderInspection
         {
-            TotalBytes = bytes, FileCount = count, LastFileWriteUtc = latest, CheckedUtc = DateTime.UtcNow,
+            ContentSignature = Convert.ToHexString(signature.GetHashAndReset()), TotalBytes = bytes, FileCount = count, LastFileWriteUtc = latest, CheckedUtc = DateTime.UtcNow,
             Complete = issues.Count == 0, QuoteStatus = status, QuoteFiles = candidates.OrderBy(p => p).ToList(), Issues = issues
         };
     }

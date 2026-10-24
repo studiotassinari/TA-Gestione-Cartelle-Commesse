@@ -14,7 +14,7 @@ public sealed class CategoryViewModel : Observable
     private readonly SemaphoreSlim polling = new(1);
     private List<FolderRecord> all = [];
     private DateTime? snapshotTime;
-    private string? dataFingerprint;
+    public ObservableCollection<string> ChangesLog { get; } = [];
     public event Action<string>? DataChanged;
     private string rootPath = "Configurato sul server", filter = "", status = "Connettere il server.", archiveStatus = "";
     private bool busy, connected;
@@ -52,7 +52,7 @@ public sealed class CategoryViewModel : Observable
     }
     public void Connect(ServerConnection server)
     {
-        dataFingerprint = null; ConnectionFailed = false; connection = server; snapshotTime = null; connected = false; busy = false;
+        ChangesLog.Clear(); ConnectionFailed = false; connection = server; snapshotTime = null; connected = false; busy = false;
         all = []; ApplyFilter(); Warnings.Clear(); UpdateCommands();
     }
     // Una sola richiesta di stato per categoria; mantiene la selezione se la fotografia non cambia.
@@ -69,18 +69,15 @@ public sealed class CategoryViewModel : Observable
             ArchiveStatus = state.ArchiveStatus;
             if (state.Snapshot is { } snapshot && snapshot.SavedUtc != snapshotTime)
             {
-                // Ignora l'ora della scansione: notifica solo differenze nei dati effettivi.
-                var fingerprint = System.Text.Json.JsonSerializer.Serialize(snapshot.Records.OrderBy(r => r.Path).Select(r => new
+                var differences = snapshotTime.HasValue ? FolderChanges.Compare(all, snapshot.Records) : [];
+                foreach (var difference in differences)
                 {
-                    r.Path, r.Code, r.Client, r.Subject, r.Status,
-                    r.Inspection?.TotalBytes, r.Inspection?.FileCount, r.Inspection?.LastFileWriteUtc,
-                    r.Inspection?.QuoteStatus, r.Inspection?.Complete, r.Inspection?.QuoteFiles, r.Inspection?.Issues
-                }));
-                if (dataFingerprint != null && dataFingerprint != fingerprint)
-                    DataChanged?.Invoke("Il server ha rilevato modifiche. Apri l'applicazione per consultare l'elenco aggiornato.");
-                dataFingerprint = fingerprint;
+                    ChangesLog.Insert(0, DateTime.Now.ToString("dd/MM HH:mm:ss") + " — " + difference);
+                    if (ChangesLog.Count > 200) ChangesLog.RemoveAt(ChangesLog.Count - 1);
+                }
                 snapshotTime = snapshot.SavedUtc; all = snapshot.Records; ApplyFilter(); Warnings.Clear();
                 foreach (var warning in snapshot.Warnings) Warnings.Add(warning);
+                if (differences.Count > 0) DataChanged?.Invoke(FolderChanges.Summary(differences));
             }
         }
         catch (Exception ex)

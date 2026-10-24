@@ -6,6 +6,8 @@ public sealed class ChangeHub
     private readonly object gate = new();
     private readonly HashSet<Subscription> subscribers = [];
     private long revision;
+    private string? summary;
+    public string? Summary { get { lock (gate) return summary; } }
     public Subscription Subscribe()
     {
         lock (gate)
@@ -16,10 +18,11 @@ public sealed class ChangeHub
             return subscription;
         }
     }
-    public void Publish()
+    public void Publish(string? message = null)
     {
         lock (gate)
         {
+            if (message != null) summary = message;
             revision++;
             foreach (var subscriber in subscribers) subscriber.Queue.Writer.TryWrite(revision);
         }

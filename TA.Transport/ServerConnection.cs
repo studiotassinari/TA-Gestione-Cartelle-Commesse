@@ -30,7 +30,7 @@ public sealed class ServerConnection(string host, int port, NetworkCredential? c
         return reply.Data.Deserialize<T>() ?? throw new InvalidDataException("Risposta del server vuota.");
     }
     // Connessione persistente separata dai comandi, sulla stessa porta e con gli stessi controlli AD.
-    public async Task WatchAsync(Func<Task> changed, Action ready, CancellationToken token)
+    public async Task WatchAsync(Func<PushNotice, Task> changed, Action ready, CancellationToken token)
     {
         using var tcp = new TcpClient();
         using var startup = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -54,7 +54,7 @@ public sealed class ServerConnection(string host, int port, NetworkCredential? c
             using var read = CancellationTokenSource.CreateLinkedTokenSource(token);
             read.CancelAfter(TimeSpan.FromSeconds(60));
             var notice = await WireProtocol.ReadAsync<PushNotice>(authenticated, read.Token);
-            if (notice.Kind == "Changed") await changed();
+            if (notice.Kind == "Changed") await changed(notice);
             else if (notice.Kind != "Heartbeat") throw new InvalidDataException("Notifica push non riconosciuta.");
         }
     }

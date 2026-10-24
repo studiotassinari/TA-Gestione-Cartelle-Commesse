@@ -15,7 +15,7 @@ public static class PushSession
             using (var heartbeat = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token))
             {
                 heartbeat.CancelAfter(TimeSpan.FromSeconds(20));
-                try { notice = new("Changed", await subscription.ReadAsync(heartbeat.Token)); }
+                try { notice = new("Changed", await subscription.ReadAsync(heartbeat.Token), hub.Summary); }
                 catch (OperationCanceledException) when (!lifetime.IsCancellationRequested) { notice = new("Heartbeat", 0); }
             }
             using var write = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);

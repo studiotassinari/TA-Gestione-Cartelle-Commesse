@@ -54,6 +54,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
     private void Scan(CancellationTokenSource source)
     {
         var started = DateTime.UtcNow;
+        string? changeSummary = null;
         try
         {
             var result = FolderReader.Scan(root, prefix, source.Token);
@@ -73,7 +74,15 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { saved = "Dati verificati, salvataggio fallito: " + ex.Message; logger.LogWarning(ex, "Salvataggio fallito"); }
-            lock (gate) state = state with { Snapshot = snapshot, ArchiveStatus = saved, Message = $"{snapshot.Records.Count} cartelle verificate" };
+            lock (gate)
+            {
+                if (state.Snapshot is { } previous)
+                {
+                    var differences = FolderChanges.Compare(previous.Records, snapshot.Records);
+                    if (differences.Count > 0) changeSummary = prefix + ": " + FolderChanges.Summary(differences);
+                }
+                state = state with { Snapshot = snapshot, ArchiveStatus = saved, Message = $"{snapshot.Records.Count} cartelle verificate" };
+            }
         }
         catch (OperationCanceledException) { lock (gate) state = state with { Message = "Verifica annullata; dati precedenti conservati" }; }
         catch (Exception ex)
@@ -84,7 +93,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
         finally
         {
             lock (gate) { state = state with { Busy = false }; cancellation = null; source.Dispose(); }
-            changes.Publish();
+            changes.Publish(changeSummary);
         }
     }
 }
