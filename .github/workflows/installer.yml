@@ -19,6 +19,7 @@ on:
       - 'TA.Core/**'
       - 'TA.Transport/**'
       - 'TA.Server/**'
+      - 'TA.Desktop/**'
       - 'TA.ServiceManager/**'
       - 'deployment/**'
       - 'tests/**'
@@ -63,7 +64,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Deriva una versione univoca dal numero progressivo di esecuzione del workflow.
-          $version = "2.2.$env:GITHUB_RUN_NUMBER"
+          $version = "2.3.$env:GITHUB_RUN_NUMBER"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -81,6 +82,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Test archivio fallito' }
           dotnet run --project tests/TransportChecks/TransportChecks.csproj -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Test trasporto fallito' }
+      - name: Verifica area di notifica
+        run: |
+          dotnet run --project tests/DesktopChecks/DesktopChecks.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Test desktop fallito' }
       - name: Verifica notifiche push
         run: |
           dotnet run --project tests/PushChecks/PushChecks.csproj -c Release

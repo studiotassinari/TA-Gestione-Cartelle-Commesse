@@ -15,9 +15,11 @@ public sealed class ManagerWindow : Window
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private string history = "", lastLog = "";
     private bool busy, polling;
+    private readonly TA.Desktop.TrayLifetime tray;
     private static string ServerFolder => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, ".."));
     public ManagerWindow()
     {
+        tray = new TA.Desktop.TrayLifetime(this, "TA - Gestore server", "Server");
         Title = "TA - Gestione servizio e diagnostica"; Width = 1000; Height = 720; MinWidth = 750; MinHeight = 500;
         Background = new SolidColorBrush(Color.FromRgb(241, 246, 246));
         var root = new DockPanel { Margin = new Thickness(22) }; Content = root;
@@ -31,9 +33,10 @@ public sealed class ManagerWindow : Window
         Add(buttons, "Configura", () => LaunchConfiguration());
         Add(buttons, "Account del servizio", () => Open("services.msc"));
         Add(buttons, "Esporta registro", Export);
+        Add(buttons, "Aggiornamenti", () => { TA.Desktop.UpdateLauncher.Check("Server", true); return Task.CompletedTask; });
         root.Children.Add(output);
         timer.Tick += async (_, _) => await Refresh();
-        Loaded += async (_, _) => { Note("Utilita pronta. Configurare account e gruppo prima dell'avvio."); await Refresh(); timer.Start(); };
+        Loaded += async (_, _) => { TA.Desktop.UpdateLauncher.Check("Server"); Note("Utilita pronta. Configurare account e gruppo prima dell'avvio."); await Refresh(); timer.Start(); };
         Closed += (_, _) => timer.Stop();
     }
     private void Add(Panel panel, string label, Func<Task> action)
@@ -58,7 +61,13 @@ public sealed class ManagerWindow : Window
                 return (state, log);
             });
             status.Text = result.state;
-            if (lastLog != result.log) { lastLog = result.log; Render(); }
+            if (lastLog != result.log)
+            {
+                var added = result.log.StartsWith(lastLog) ? result.log[lastLog.Length..] : result.log;
+                if (lastLog.Length > 0 && (added.Contains("Evento filesystem ricevuto") || added.Contains("Warning") || added.Contains("ERRORE FATALE")))
+                    tray.Notify("Novita dal server", "Rilevate modifiche alle cartelle o segnalazioni da verificare. Apri il gestore per i dettagli.");
+                lastLog = result.log; Render();
+            }
         }
         finally { polling = false; }
     }

@@ -340,7 +340,7 @@
             <!-- Conclude lʼelemento MenuItem e il suo contenuto. -->
             </MenuItem>
         <!-- Conclude lʼelemento Menu e il suo contenuto. -->
-            <MenuItem Header="_Aiuto"><MenuItem Header="_Informazioni" Command="{Binding AboutCommand}"/></MenuItem>
+            <MenuItem Header="_Aiuto"><MenuItem Header="_Informazioni" Command="{Binding AboutCommand}"/><MenuItem Header="Verifica aggiornamenti" Command="{Binding UpdateCommand}"/></MenuItem>
         </Menu>
         <!-- Disegna lo sfondo e il bordo del contenuto usando colori, spessori e spaziature dichiarati. -->
         <Border DockPanel.Dock="Top" Background="White" Margin="0,0,0,16" BorderBrush="#135F6E" BorderThickness="0,0,0,3">

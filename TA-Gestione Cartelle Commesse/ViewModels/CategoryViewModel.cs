@@ -14,6 +14,8 @@ public sealed class CategoryViewModel : Observable
     private readonly SemaphoreSlim polling = new(1);
     private List<FolderRecord> all = [];
     private DateTime? snapshotTime;
+    private string? dataFingerprint;
+    public event Action<string>? DataChanged;
     private string rootPath = "Configurato sul server", filter = "", status = "Connettere il server.", archiveStatus = "";
     private bool busy, connected;
     private FolderRecord? selected;
@@ -50,7 +52,7 @@ public sealed class CategoryViewModel : Observable
     }
     public void Connect(ServerConnection server)
     {
-        ConnectionFailed = false; connection = server; snapshotTime = null; connected = false; busy = false;
+        dataFingerprint = null; ConnectionFailed = false; connection = server; snapshotTime = null; connected = false; busy = false;
         all = []; ApplyFilter(); Warnings.Clear(); UpdateCommands();
     }
     // Una sola richiesta di stato per categoria; mantiene la selezione se la fotografia non cambia.
@@ -67,6 +69,16 @@ public sealed class CategoryViewModel : Observable
             ArchiveStatus = state.ArchiveStatus;
             if (state.Snapshot is { } snapshot && snapshot.SavedUtc != snapshotTime)
             {
+                // Ignora l'ora della scansione: notifica solo differenze nei dati effettivi.
+                var fingerprint = System.Text.Json.JsonSerializer.Serialize(snapshot.Records.OrderBy(r => r.Path).Select(r => new
+                {
+                    r.Path, r.Code, r.Client, r.Subject, r.Status,
+                    r.Inspection?.TotalBytes, r.Inspection?.FileCount, r.Inspection?.LastFileWriteUtc,
+                    r.Inspection?.QuoteStatus, r.Inspection?.Complete, r.Inspection?.QuoteFiles, r.Inspection?.Issues
+                }));
+                if (dataFingerprint != null && dataFingerprint != fingerprint)
+                    DataChanged?.Invoke("Il server ha rilevato modifiche. Apri l'applicazione per consultare l'elenco aggiornato.");
+                dataFingerprint = fingerprint;
                 snapshotTime = snapshot.SavedUtc; all = snapshot.Records; ApplyFilter(); Warnings.Clear();
                 foreach (var warning in snapshot.Warnings) Warnings.Add(warning);
             }

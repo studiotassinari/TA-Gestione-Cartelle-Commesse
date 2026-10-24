@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "2.2.1"
+  #define AppVersion "2.3.0"
 #endif
 #ifndef PublishDir
   #define PublishDir "artifacts\server"
@@ -38,6 +38,7 @@ Source: "deployment\Service-Manage.ps1"; DestDir: "{app}"
 Source: "deployment\Configure-Server.ps1"; DestDir: "{app}"
 Source: "deployment\SERVER-CLIENT.md"; DestDir: "{app}"
 Source: "artifacts\manager\*"; DestDir: "{app}\Manager"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "deployment\Update-Application.ps1"; DestDir: "{app}"
 [Icons]
 Name: "{group}\Gestione servizio e diagnostica"; Filename: "{app}\Manager\TA.ServiceManager.exe"
 Name: "{group}\Guida configurazione"; Filename: "{app}\SERVER-CLIENT.md"

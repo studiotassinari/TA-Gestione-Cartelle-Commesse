@@ -1,7 +1,7 @@
 ; Verifica se il parametro AppVersion non è stato fornito al compilatore.
 #ifndef AppVersion
 ; Definisce il valore predefinito del parametro quando manca un valore esterno.
-  #define AppVersion "2.2.1"
+  #define AppVersion "2.3.0"
 ; Termina la definizione condizionale del parametro.
 #endif
 ; Verifica se il parametro PublishDir non è stato fornito al compilatore.
@@ -78,7 +78,9 @@ Name: "desktopicon"; Description: "Crea un collegamento sul desktop"; Flags: unc
 [Files]
 ; Copia ricorsivamente tutti i file pubblicati nella cartella dellʼapplicazione sostituendo quelli precedenti.
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Apre la sezione [Icons] della configurazione Inno Setup.
+; Apre la sezione Source: "deployment\Update-Application.ps1"; DestDir: "{app}"
+; Collegamenti del menu Start.
+Source: "deployment\Update-Application.ps1"; DestDir: "{app}"
 [Icons]
 ; Crea il collegamento del menu Start puntando allʼeseguibile installato.
 Name: "{group}\TA-Gestione Cartelle Commesse"; Filename: "{app}\TA-Gestione Cartelle Commesse.exe"

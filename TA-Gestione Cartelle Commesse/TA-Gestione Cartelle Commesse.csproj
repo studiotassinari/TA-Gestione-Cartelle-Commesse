@@ -27,4 +27,4 @@
 	<!-- Conclude lʼelemento ItemGroup e il suo contenuto. -->
 	</ItemGroup>
 <!-- Conclude lʼelemento Project e il suo contenuto. -->
-<ItemGroup><ProjectReference Include="../TA.Transport/TA.Transport.csproj" /></ItemGroup></Project>
+<ItemGroup><ProjectReference Include="../TA.Transport/TA.Transport.csproj" /></ItemGroup><PropertyGroup><UseWindowsForms>true</UseWindowsForms></PropertyGroup><ItemGroup><Using Remove="System.Windows.Forms"/><Using Remove="System.Drawing"/><Compile Include="../TA.Desktop/*.cs" Link="Desktop/%(Filename)%(Extension)"/></ItemGroup></Project>

@@ -17,15 +17,23 @@ public partial class MainWindow : Window
 // Inizio del blocco di istruzioni o della definizione precedente.
 {
     // Inizializza i controlli, le risorse e i binding dichiarati nel file XAML.
+    private TA.Desktop.TrayLifetime? tray;
     public MainWindow()
     {
         InitializeComponent();
+        tray = new TA.Desktop.TrayLifetime(this, "TA - Commesse", "Client");
+        if (DataContext is MainViewModel model)
+        {
+            model.Commesse.DataChanged += message => tray.Notify("Commesse aggiornate", message);
+            model.Gare.DataChanged += message => tray.Notify("Gare aggiornate", message);
+        }
         Closed += (_, _) => { if (DataContext is MainViewModel viewModel) viewModel.Stop(); };
     }
 
     // Avvia il caricamento dell'archivio solo quando la vista è pronta a ricevere le notifiche.
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        TA.Desktop.UpdateLauncher.Check("Client");
         if (DataContext is MainViewModel viewModel) await viewModel.InitializeAsync();
     }
 

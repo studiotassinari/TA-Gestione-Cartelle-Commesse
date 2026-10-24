@@ -2,12 +2,12 @@
 
 Applicazione .NET 10 con client WPF/MVVM e servizio Windows per Windows Server 2022 nel dominio aziendale.
 
-## Scarica e installa - versione 2.2.1
+## Scarica e installa - versione 2.3.0
 
 Aggiornare prima il server e poi i client.
 
-- [Scarica installatore Server 2.2.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.2.1/TA-Gestione-Cartelle-Commesse-Server-Setup-2.2.1.exe)
-- [Scarica installatore Client 2.2.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.2.1/TA-Gestione-Cartelle-Commesse-Setup-2.2.1.exe)
+- [Scarica installatore Server 2.3.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.3.0/TA-Gestione-Cartelle-Commesse-Server-Setup-2.3.0.exe)
+- [Scarica installatore Client 2.3.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.3.0/TA-Gestione-Cartelle-Commesse-Setup-2.3.0.exe)
 
 Il server verifica commesse e gare ogni minuto, senza sovrapporre scansioni della stessa categoria, e invia notifiche push ai client. Il menu Aiuto > Informazioni mostra la versione client e, quando disponibile, quella server. Resta necessario configurare account, gruppo AD e SPN seguendo la guida.
 
@@ -19,6 +19,12 @@ Il server verifica commesse e gare ogni minuto, senza sovrapporre scansioni dell
 [Release pubblicate](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases). I setup includono il runtime e non sono firmati digitalmente; le impronte sono in `SHA256SUMS.txt`.
 
 **[Guida di installazione e configurazione server-client](deployment/SERVER-CLIENT.md)**
+
+## Area di notifica e aggiornamenti
+
+Client e gestore server restano attivi nell'area di notifica quando vengono minimizzati o chiusi. Dall'icona si puo riaprire la finestra o scegliere Esci; uscire dal gestore non arresta il servizio Windows. Le notifiche Windows segnalano modifiche effettive, senza ripetersi per scansioni identiche; la loro visualizzazione dipende dalle impostazioni di notifica di Windows.
+
+Gli aggiornamenti vengono controllati solo all'avvio del client o del gestore, oppure con Verifica aggiornamenti. Nessuna attivita pianificata, controllo periodico o controllo in chiusura. I pacchetti vengono scaricati dalla release pubblica di questo repository e verificati con dimensione e digest SHA-256 di GitHub; l'interfaccia viene chiusa senza forzarla e riaperta dopo l'installazione. Il server si aggiorna soltanto quando viene aperto il gestore con privilegi amministrativi. Nessun riavvio automatico di Windows. Non sono supportati aggiornamenti automatici tra versioni principali diverse.
 
 ## Comunicazione dedicata
 

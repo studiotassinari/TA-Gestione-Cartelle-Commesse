@@ -22,11 +22,13 @@ public sealed class MainViewModel : Observable
     public string ServerPort { get => port; set { port = value; Notify(); } }
     public string ReportStatus { get => reportStatus; private set { reportStatus = value; Notify(); } }
     public string ArchiveLocation => "Archivio e scansioni gestiti dal servizio Windows; trasporto TCP/Kerberos con account di dominio.";
+    public Command UpdateCommand { get; }
     public Command AboutCommand { get; }
     public Command ConnectCommand { get; }
     public Command ReportCommand { get; }
     public MainViewModel()
     {
+        UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
         AboutCommand = new(() => _ = ShowAboutAsync());
         ConnectCommand = new(() => _ = ConnectAsync(), () => !connecting);
         ReportCommand = new(() => _ = CreateReport(), () => connection != null && !reporting);
