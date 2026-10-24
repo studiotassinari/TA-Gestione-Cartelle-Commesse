@@ -63,7 +63,7 @@ Check(File.ReadAllText(json) == before, "Lock e annullamento preservano archivio
 File.WriteAllText(json, "{ JSON non valido");
 Expect<JsonException>(() => SharedArchiveService.Save(archive, first, default), "Archivio corrotto non sovrascritto");
 Check(File.ReadAllText(json) == "{ JSON non valido", "Preserva il file corrotto per recupero");
-File.WriteAllText(json, before.Replace("\"SchemaVersion\": 1", "\"SchemaVersion\": 999"));
+File.WriteAllText(json, before.Replace("\"SchemaVersion\": 2", "\"SchemaVersion\": 999"));
 Expect<InvalidDataException>(() => SharedArchiveService.Load(archive, root, 'C'), "Rifiuta schema sconosciuto");
 File.WriteAllText(json, before);
 Console.WriteLine("TUTTI I CONTROLLI SUPERATI");

@@ -24,13 +24,16 @@ public sealed class ServerConnection(string host, int port, NetworkCredential? c
         // L'SPN deve essere registrato sull'account di servizio: un ripiego non mutuo viene rifiutato.
         if (!authenticated.IsMutuallyAuthenticated || !authenticated.IsEncrypted || !authenticated.IsSigned)
             throw new AuthenticationException("Autenticazione mutua non riuscita. Verificare SPN e account del servizio.");
+        request = Identify(request);
         await WireProtocol.WriteAsync(authenticated, request, ct);
         var reply = await WireProtocol.ReadAsync<Reply>(authenticated, ct);
         if (!reply.Success) throw new ServerRejectedException(reply.Error ?? "Richiesta rifiutata dal server.");
         return reply.Data.Deserialize<T>() ?? throw new InvalidDataException("Risposta del server vuota.");
     }
+    private static Request Identify(Request request) => request with { ClientMachine = Environment.MachineName,
+        ClientVersion = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(), CorrelationId = request.CorrelationId ?? Guid.NewGuid().ToString("N") };
     // Connessione persistente separata dai comandi, sulla stessa porta e con gli stessi controlli AD.
-    public async Task WatchAsync(Func<PushNotice, Task> changed, Action ready, CancellationToken token)
+    public async Task WatchAsync(Func<PushNotice, Task> changed, Action ready, CancellationToken token, Action<PushNotice>? observed = null)
     {
         using var tcp = new TcpClient();
         using var startup = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -43,11 +46,11 @@ public sealed class ServerConnection(string host, int port, NetworkCredential? c
                 "TACommesse/" + host, ProtectionLevel.EncryptAndSign, TokenImpersonationLevel.Identification).WaitAsync(startup.Token);
             if (!authenticated.IsMutuallyAuthenticated || !authenticated.IsEncrypted || !authenticated.IsSigned)
                 throw new AuthenticationException("Autenticazione mutua push non riuscita. Verificare SPN e account.");
-            await WireProtocol.WriteAsync(authenticated, new Request("Subscribe"), startup.Token);
+            await WireProtocol.WriteAsync(authenticated, Identify(new Request("Subscribe", SupportsAcknowledgements: true)), startup.Token);
             var reply = await WireProtocol.ReadAsync<Reply>(authenticated, startup.Token);
             if (!reply.Success) throw new AuthenticationException(reply.Error ?? "Sottoscrizione rifiutata.");
         }
-        catch (IOException ex) { throw new AuthenticationException("Sottoscrizione non accettata; verificare registro server e versione installata.", ex); }
+        catch (IOException ex) { throw new IOException("Canale push interrotto durante la sottoscrizione; verra ritentato.", ex); }
         ready();
         while (true)
         {
@@ -56,6 +59,13 @@ public sealed class ServerConnection(string host, int port, NetworkCredential? c
             var notice = await WireProtocol.ReadAsync<PushNotice>(authenticated, read.Token);
             if (notice.Kind == "Changed") await changed(notice);
             else if (notice.Kind != "Heartbeat") throw new InvalidDataException("Notifica push non riconosciuta.");
+            if (notice.ProbeId != null)
+            {
+                using var reply = CancellationTokenSource.CreateLinkedTokenSource(token);
+                reply.CancelAfter(TimeSpan.FromSeconds(15));
+                await WireProtocol.WriteAsync(authenticated, new PushAcknowledgement(notice.ProbeId, notice.Kind, notice.Revision, notice.Kind == "Changed"), reply.Token);
+            }
+            observed?.Invoke(notice);
         }
     }
 

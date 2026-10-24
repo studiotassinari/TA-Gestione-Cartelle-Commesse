@@ -2,12 +2,12 @@
 
 Applicazione .NET 10 con client WPF/MVVM e servizio Windows per Windows Server 2022 nel dominio aziendale.
 
-## Scarica e installa - versione 2.5.0
+## Scarica e installa - versione 2.6.0
 
 Aggiornare prima il server e poi i client.
 
-- [Scarica installatore Server 2.5.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.5.0/TA-Gestione-Cartelle-Commesse-Server-Setup-2.5.0.exe)
-- [Scarica installatore Client 2.5.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.5.0/TA-Gestione-Cartelle-Commesse-Setup-2.5.0.exe)
+- [Scarica installatore Server 2.6.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.6.0/TA-Gestione-Cartelle-Commesse-Server-Setup-2.6.0.exe)
+- [Scarica installatore Client 2.6.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.6.0/TA-Gestione-Cartelle-Commesse-Setup-2.6.0.exe)
 
 Il server verifica commesse e gare ogni minuto, senza sovrapporre scansioni della stessa categoria, e invia notifiche push ai client. Il menu Aiuto > Informazioni mostra la versione client e, quando disponibile, quella server. Resta necessario configurare account, gruppo AD e SPN seguendo la guida.
 
@@ -76,3 +76,21 @@ dotnet run --project tests/PushChecks/PushChecks.csproj -c Release
 I test usano dati sintetici e un listener di prova su loopback. Verificano metadati, archivio, limiti delle scansioni, framing, rifiuto delle richieste HTTP, percorsi fuori radice e server non autenticati. Il collaudo reale Kerberos, avvio del servizio e permessi sulla rete deve essere eseguito sulla VM configurata.
 
 Il workflow Installer Windows costruisce entrambi i pacchetti, verifica il client in aggiornamento dalla 1.0.2 e pubblica setup e impronte. La versione del workflow è `2.2.<numero esecuzione>`. I dati di rete e le credenziali non sono inclusi nei pacchetti.
+
+## Versione 2.6.0: elenchi, comunicazioni e archivi annuali
+
+Il server verifica l'elenco di tutte le commesse e gare ogni minuto, indipendentemente dalla lettura ricorsiva dei file. Nessuna differenza di frequenza fra gli anni. Le scansioni dei metadati non si sovrappongono: se una lettura dura oltre un minuto, prosegue fino al termine. I risultati vengono pubblicati progressivamente; una cartella nuova compare prima della verifica delle sue dimensioni.
+
+Il JSON generale diventa un indice (schema 2) e i dati si trovano nella directory omonima con suffisso .years, in file con anno e impronta del contenuto. Gli anni invariati riusano il file. La prima migrazione conserva il JSON precedente come .legacy-v1.bak. Non ripristinare un server precedente dopo la migrazione senza recuperare il backup. Indice e file annuali vanno conservati insieme; un file mancante o alterato viene segnalato senza sovrascrivere l'archivio. Per le commesse l'anno e quello del contenitore; per le gare e il codice a due cifre interpretato come 20XX. I dati privi di anno vengono salvati in senza-anno. Il salvataggio usa una coda seriale; gli errori di rete sono mostrati nello stato e nei log.
+
+Ogni nuova notifica push richiede un riscontro sullo stesso canale Windows autenticato. Il client lo invia dopo aver applicato entrambe le viste. Un heartbeat verifica il collegamento durante l'inattivita; un riscontro mancante entro 90 secondi chiude la sessione e viene registrato. I client precedenti restano compatibili, ma non producono questi riscontri. Aiuto > Verifica comunicazione controlla comando e risposta con un identificativo univoco. Gli errori di rete temporanei attivano la riconnessione; gli errori di autenticazione richiedono intervento.
+
+Il gestore mostra due controlli WPF separati: debug del servizio e comunicazioni dei client. I registri sono service.log e communications.jsonl nella directory Logs di ProgramData/Tassinari/CommesseServer. Le comunicazioni identificano PC dichiarato, indirizzo remoto, utente Windows autenticato, azione, esito e identificativo della prova. Il nome PC e un dato dichiarato dal client, non una credenziale. I registri ruotano e la tabella mostra al massimo 500 righe recenti.
+
+Il client scrive un log operativo nella destinazione di rete aziendale configurata nell'applicazione; se la rete fallisce, usa LocalAppData/Tassinari/CommesseClient/Logs e ritenta la rete dopo un minuto. Nessuna password viene registrata. I log sono separati per PC/processo/giorno e ruotano a 10 MiB; la scrittura non blocca l'interfaccia e la coda conserva fino a 1000 messaggi.
+
+Server > Gestione servizio permette stato, avvio, arresto, riavvio e consultazione/esportazione dei registri solo con il token Windows di un amministratore di dominio. Se il token e filtrato da UAC, avviare il client come amministratore. I registri amministrativi sono autorizzati nuovamente dal server contro il gruppo Domain Admins (SID del dominio dell'account di servizio, suffisso 512). La gestione usa l'account Windows corrente, non credenziali alternative inserite nel client.
+
+Avvio/arresto/riavvio usano il gestore servizi remoto di Windows (RPC/SCM), necessario anche quando il servizio applicativo e fermo. La VM deve permettere la gestione remota dei servizi e i relativi permessi Windows. Nessuna regola firewall aggiuntiva viene aperta automaticamente. I log e la verifica applicativa usano invece la porta TCP dedicata. Non sono disponibili modifica remota di account/configurazione o elevazione automatica dei privilegi. Non vengono create attivita pianificate.
+
+Verifiche locali: cartella C26198 con metadati bloccati, aggiornamento griglie WPF prima dell'avviso, salvataggio durante scansione, migrazione annuale, integrita dei JSON, riscontri corretti/errati e diniego dei comandi amministrativi agli utenti ordinari. La gestione SCM con account amministrativo richiede collaudo sulla VM.

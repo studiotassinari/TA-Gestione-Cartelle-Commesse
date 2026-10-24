@@ -22,6 +22,11 @@ public sealed class MainViewModel : Observable
     public string ServerPort { get => port; set { port = value; Notify(); } }
     public string ReportStatus { get => reportStatus; private set { reportStatus = value; Notify(); } }
     public string ArchiveLocation => "Archivio e scansioni gestiti dal servizio Windows; trasporto TCP/Kerberos con account di dominio.";
+    public string CommunicationStatus { get => communicationStatus; private set { communicationStatus = value; Notify(); } }
+    private string communicationStatus = "Comunicazione non ancora verificata.";
+    public bool CanManageServer => DomainAdministration.IsEnabled;
+    public Command ManageServerCommand { get; }
+    public Command CheckCommunicationCommand { get; }
     public Command ChangesCommand { get; }
     public Command CreateJobCommand { get; }
     public Command UpdateCommand { get; }
@@ -30,7 +35,7 @@ public sealed class MainViewModel : Observable
     public Command ReportCommand { get; }
     public MainViewModel()
     {
-        ChangesCommand = new(ShowChanges);
+        ManageServerCommand = new(ShowServerManagement, () => CanManageServer); CheckCommunicationCommand = new(() => _ = CheckCommunicationAsync()); ChangesCommand = new(ShowChanges);
         CreateJobCommand = new(CreateJob, () => connection != null);
         UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
         AboutCommand = new(() => _ = ShowAboutAsync());
@@ -49,7 +54,6 @@ public sealed class MainViewModel : Observable
     {
         if (Uri.CheckHostName(host.Trim()) != UriHostNameType.Dns || !int.TryParse(port, out var number) || number is < 1024 or > 65535 or 8080 or 8443)
         { ReportStatus = "Indicare il nome DNS del server (senza http/https) e una porta TCP dedicata, per esempio 5443."; return; }
-        pushCancellation?.Cancel();
         System.Net.NetworkCredential? credentials = null;
         if (!UseCurrentAccount)
         {
@@ -57,8 +61,8 @@ public sealed class MainViewModel : Observable
             if (dialog.ShowDialog() != true) return;
             credentials = dialog.Credential;
         }
-        connecting = true; ConnectCommand.Refresh();
-        connection = new ServerConnection(host.Trim(), number, credentials);
+        pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
+        ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
         Commesse.Connect(connection); Gare.Connect(connection); ReportCommand.Refresh(); CreateJobCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
@@ -66,7 +70,7 @@ public sealed class MainViewModel : Observable
         try
         {
             await PollAsync();
-            if (!Commesse.ConnectionFailed && !Gare.ConnectionFailed)
+            if (Commesse.LastConnectionError is not System.Security.Authentication.AuthenticationException and not ServerRejectedException && Gare.LastConnectionError is not System.Security.Authentication.AuthenticationException and not ServerRejectedException)
             {
                 pushCancellation = new CancellationTokenSource();
                 _ = WatchLoopAsync(connection, pushCancellation.Token);
@@ -78,21 +82,21 @@ public sealed class MainViewModel : Observable
     private async Task PollAsync()
     {
         await Commesse.PollAsync();
-        if (!Commesse.ConnectionFailed) await Gare.PollAsync();
+        await Gare.PollAsync();
         if (Commesse.ConnectionFailed || Gare.ConnectionFailed)
         {
-            ReportStatus = "Connessione interrotta. Verificare server e credenziali, poi premere Connetti. Nessun nuovo tentativo automatico.";
+            ReportStatus = "Recupero dati non riuscito. Verifica della connessione in corso.";
         }
     }
     private async Task WatchLoopAsync(ServerConnection current, CancellationToken token)
     {
-        bool established = false;
+        // Errori di rete temporanei vengono ritentati anche al primo collegamento.
         int delay = 5;
         while (!token.IsCancellationRequested)
         {
             try
             {
-                await current.WatchAsync(async notice =>
+                await current.WatchAsync(notice => System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
                     if (token.IsCancellationRequested || !ReferenceEquals(current, connection)) return;
                     await PollAsync();
@@ -104,15 +108,19 @@ public sealed class MainViewModel : Observable
                             throw new System.Security.Authentication.AuthenticationException("Richiesta rifiutata: " + error.Message);
                         throw new IOException("Recupero dati interrotto.", error);
                     }
-                    ReportStatus = "Dati aggiornati dal server alle " + DateTime.Now.ToString("HH:mm:ss") + ". Notifiche push attive.";
-                }, () => { established = true; delay = 5; }, token);
+                    ClientLog.Write($"Push ricevuto: revisione={notice.Revision}; dettaglio={notice.Summary}; righe C={Commesse.Records.Count}, G={Gare.Records.Count}"); ReportStatus = "Dati aggiornati dal server alle " + DateTime.Now.ToString("HH:mm:ss") + ". Notifiche push attive.";
+                }).Task.Unwrap(), () => { delay = 5; ClientLog.Write("Sottoscrizione push accettata."); }, token, notice =>
+                {
+                    CommunicationStatus = $"Canale verificato alle {DateTime.Now:HH:mm:ss}: {notice.Kind}; " + (notice.ProbeId != null ? "riscontro inviato al server." : "server precedente senza riscontro.");
+                    ClientLog.Write(CommunicationStatus);
+                });
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
             catch (System.Security.Authentication.AuthenticationException ex)
             {
                 if (!token.IsCancellationRequested && ReferenceEquals(current, connection))
                 {
-                    ReportStatus = "Push interrotto: " + ex.Message + " Premere Connetti dopo la verifica; nessun tentativo automatico.";
+                    ClientLog.Write("Push rifiutato: controllo credenziali/gruppo richiesto.", ex); ReportStatus = "Push interrotto: " + ex.Message + " Premere Connetti dopo la verifica; nessun tentativo automatico.";
                     Commesse.Disconnected(); Gare.Disconnected();
                 }
                 return;
@@ -121,7 +129,7 @@ public sealed class MainViewModel : Observable
             {
                 if (token.IsCancellationRequested || !ReferenceEquals(current, connection)) return;
                 Commesse.Disconnected(); Gare.Disconnected();
-                if (!established) { ReportStatus = "Push non disponibile: " + ex.Message + " Verificare il server e premere Connetti."; return; }
+                CommunicationStatus = "Canale interrotto; riconnessione in corso."; ClientLog.Write("Push interrotto; riconnessione automatica.", ex);
                 ReportStatus = $"Connessione push interrotta; dati conservati. Riconnessione tra {delay} secondi.";
                 try { await Task.Delay(TimeSpan.FromSeconds(delay), token); }
                 catch (OperationCanceledException) { return; }
@@ -129,9 +137,32 @@ public sealed class MainViewModel : Observable
             }
         }
     }
-    public void Stop() => pushCancellation?.Cancel();
+    public void Stop() { ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
 
 
+    private void ShowServerManagement()
+    {
+        if (!CanManageServer) return;
+        if (!UseCurrentAccount) { ReportStatus = "La gestione del servizio richiede l'account Windows corrente di un amministratore di dominio."; return; }
+        if (Uri.CheckHostName(host.Trim()) != UriHostNameType.Dns || !int.TryParse(port, out var number)) { ReportStatus = "Configurare prima il server."; return; }
+        var panel = new Views.ServerManagementView(host.Trim(), new ServerConnection(host.Trim(), number));
+        var window = new System.Windows.Window { Title = "Gestione server — " + host.Trim(), Width = 1200, Height = 800, Content = panel, Owner = System.Windows.Application.Current.MainWindow };
+        window.Closed += (_, _) => panel.Dispose(); window.Show();
+    }
+    private async Task CheckCommunicationAsync()
+    {
+        if (connection == null) { CommunicationStatus = "Collegare prima il server."; return; }
+        var id = Guid.NewGuid().ToString("N");
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            var reply = await connection.SendAsync<string>(new("Ping", CorrelationId: id));
+            if (reply != id) throw new IOException("Riscontro della prova non corrispondente.");
+            CommunicationStatus = $"Comando e risposta verificati in {elapsed.ElapsedMilliseconds} ms. Prova {id}.";
+            ClientLog.Write(CommunicationStatus);
+        }
+        catch (Exception ex) { CommunicationStatus = "Verifica comunicazione fallita: " + ex.Message; ClientLog.Write(CommunicationStatus, ex); }
+    }
     private void ShowChanges()
     {
         var tabs = new System.Windows.Controls.TabControl();

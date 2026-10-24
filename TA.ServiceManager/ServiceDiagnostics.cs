@@ -8,10 +8,10 @@ internal static class ServiceDiagnostics
 {
     public static readonly string Data = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Tassinari", "CommesseServer");
     public static string LogFile => Path.Combine(Data, "Logs", "service.log");
-    public static string Tail()
+    public static string Tail(string? path = null)
     {
-        if (!File.Exists(LogFile)) return "Il servizio non ha ancora scritto messaggi di avvio.";
-        using var file = new FileStream(LogFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        path ??= LogFile; if (!File.Exists(path)) return "Il servizio non ha ancora scritto messaggi di avvio.";
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         file.Seek(Math.Max(0, file.Length - 65536), SeekOrigin.Begin);
         using var reader = new StreamReader(file);
         return reader.ReadToEnd();

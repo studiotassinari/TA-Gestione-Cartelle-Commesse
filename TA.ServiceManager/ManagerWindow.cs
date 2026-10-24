@@ -10,7 +10,10 @@ namespace TA.ServiceManager;
 public sealed class ManagerWindow : Window
 {
     private readonly TextBlock status = new() { FontSize = 18, Margin = new Thickness(0, 8, 0, 12) };
-    private readonly TextBox output = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, FontFamily = new FontFamily("Consolas") };
+    private readonly ServiceLogView serviceLog = new();
+    private readonly CommunicationLogView communications = new();
+    private TextBox output => serviceLog.Output;
+    private string lastCommunications = "";
     private readonly List<Button> actions = new();
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private string history = "", lastLog = "";
@@ -34,7 +37,11 @@ public sealed class ManagerWindow : Window
         Add(buttons, "Account del servizio", () => Open("services.msc"));
         Add(buttons, "Esporta registro", Export);
         Add(buttons, "Aggiornamenti", () => { TA.Desktop.UpdateLauncher.Check("Server", true); return Task.CompletedTask; });
-        root.Children.Add(output);
+        var logs = new Grid();
+        logs.RowDefinitions.Add(new RowDefinition()); logs.RowDefinitions.Add(new RowDefinition { Height = new GridLength(6) }); logs.RowDefinitions.Add(new RowDefinition());
+        logs.Children.Add(serviceLog);
+        var splitter = new GridSplitter { Height = 6, HorizontalAlignment = HorizontalAlignment.Stretch }; Grid.SetRow(splitter, 1); logs.Children.Add(splitter);
+        Grid.SetRow(communications, 2); logs.Children.Add(communications); root.Children.Add(logs);
         timer.Tick += async (_, _) => await Refresh();
         Loaded += async (_, _) => { TA.Desktop.UpdateLauncher.Check("Server"); Note("Utilita pronta. Configurare account e gruppo prima dell'avvio."); await Refresh(); timer.Start(); };
         Closed += (_, _) => timer.Stop();
@@ -58,9 +65,12 @@ public sealed class ManagerWindow : Window
                 try { using var service = new ServiceController("TACommesseServer"); state = service.Status switch { ServiceControllerStatus.Running => "In esecuzione", ServiceControllerStatus.Stopped => "Arrestato", ServiceControllerStatus.StartPending => "Avvio in corso", ServiceControllerStatus.StopPending => "Arresto in corso", var other => other.ToString() }; }
                 catch (Exception ex) { state = "Servizio non disponibile: " + ex.GetBaseException().Message; }
                 string log; try { log = ServiceDiagnostics.Tail(); } catch (Exception ex) { log = "Registro non leggibile: " + ex.Message; }
-                return (state, log);
+                string communicationLog;
+                try { communicationLog = ServiceDiagnostics.Tail(Path.Combine(ServiceDiagnostics.Data, "Logs", "communications.jsonl")); }
+                catch (Exception ex) { communicationLog = "Registro comunicazioni non leggibile: " + ex.Message; }
+                return (state, log, communicationLog);
             });
-            status.Text = result.state;
+            status.Text = result.state; lastCommunications = result.communicationLog; communications.Update(lastCommunications);
             if (lastLog != result.log)
             {
                 var added = result.log.StartsWith(lastLog) ? result.log[lastLog.Length..] : result.log;
@@ -113,6 +123,6 @@ public sealed class ManagerWindow : Window
         await Diagnose();
         await Refresh();
         var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Registro testo|*.txt", FileName = "Diagnosi-TACommesse-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".txt" };
-        if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, output.Text);
+        if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, output.Text + "\n--- Comunicazioni client ---\n" + lastCommunications);
     }
 }

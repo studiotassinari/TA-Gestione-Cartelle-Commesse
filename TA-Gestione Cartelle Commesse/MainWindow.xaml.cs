@@ -20,7 +20,7 @@ public partial class MainWindow : Window
     private TA.Desktop.TrayLifetime? tray;
     public MainWindow()
     {
-        InitializeComponent();
+        InitializeComponent(); TA_Gestione_Cartelle_Commesse.Services.ClientLog.Write("Avvio client " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
         tray = new TA.Desktop.TrayLifetime(this, "TA - Commesse", "Client");
         if (DataContext is MainViewModel model)
         {

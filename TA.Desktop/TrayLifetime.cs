@@ -8,9 +8,11 @@ public sealed class TrayLifetime : IDisposable
     private readonly Forms.NotifyIcon icon;
     private bool exit;
     private DateTime lastNotice;
+    private (string Title, string Message)? pending;
+    private readonly System.Windows.Threading.DispatcherTimer notices = new() { Interval = TimeSpan.FromSeconds(10) };
     public TrayLifetime(Window window, string title, string component)
     {
-        this.window = window;
+        this.window = window; notices.Tick += (_, _) => { notices.Stop(); if (pending is { } next) { pending = null; Notify(next.Title, next.Message); } };
         icon = new Forms.NotifyIcon { Text = title, Icon = System.Drawing.SystemIcons.Application, Visible = true };
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Apri", null, (_, _) => Open());
@@ -35,9 +37,9 @@ public sealed class TrayLifetime : IDisposable
     public void Notify(string title, string message)
     {
         // Non disturba con una notifica per ogni file o per ogni scansione periodica.
-        if (DateTime.UtcNow - lastNotice < TimeSpan.FromSeconds(10)) return;
+        if (DateTime.UtcNow - lastNotice < TimeSpan.FromSeconds(10)) { pending = (title, message); notices.Start(); return; }
         lastNotice = DateTime.UtcNow;
         icon.ShowBalloonTip(6000, title, message.Length > 240 ? message[..240] : message, Forms.ToolTipIcon.Info);
     }
-    public void Dispose() { icon.Visible = false; icon.Dispose(); }
+    public void Dispose() { notices.Stop(); icon.Visible = false; icon.Dispose(); }
 }

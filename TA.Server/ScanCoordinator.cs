@@ -11,7 +11,12 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     private CancellationToken shutdown;
     public CategoryWorker Get(string category) => category.ToUpperInvariant() switch
     { "C" => workers['C'], "G" => workers['G'], _ => throw new ArgumentException("Categoria non valida") };
-    public bool Refresh(string category) => Get(category).Start(shutdown);
+    public bool Refresh(string category)
+    {
+        var worker = Get(category);
+        _ = worker.RefreshIndexAsync(shutdown);
+        return worker.Start(shutdown);
+    }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         shutdown = stoppingToken;
@@ -21,7 +26,11 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
         {
             do
             {
-                foreach (var worker in workers.Values) worker.Start(stoppingToken);
+                foreach (var worker in workers.Values)
+                {
+                    _ = worker.RefreshIndexAsync(stoppingToken);
+                    worker.Start(stoppingToken);
+                }
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             } while (!stoppingToken.IsCancellationRequested);
         }

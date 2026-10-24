@@ -1,3 +1,4 @@
+using TA_Gestione_Cartelle_Commesse.Services;
 using System.Collections.ObjectModel;
 using System.IO;
 using TA.Transport;
@@ -65,6 +66,16 @@ public sealed class CategoryViewModel : Observable
         {
             var state = await current.SendAsync<CategoryState>(new("State", prefix.ToString()));
             if (!ReferenceEquals(current, connection)) return;
+            ApplyState(state);
+        }
+        catch (Exception ex)
+        {
+            if (ReferenceEquals(current, connection)) { ClientLog.Write("Recupero vista " + Title + " fallito", ex); LastConnectionError = ex; ConnectionFailed = true; connected = false; Status = "Server non disponibile; dati precedenti conservati: " + ex.Message; }
+        }
+        finally { UpdateCommands(); polling.Release(); }
+    }
+    internal void ApplyState(CategoryState state)
+    {
             LastConnectionError = null; ConnectionFailed = false; connected = true; busy = state.Busy; RootPath = state.Root; Status = state.Message;
             ArchiveStatus = state.ArchiveStatus;
             if (state.Snapshot is { } snapshot && snapshot.SavedUtc != snapshotTime)
@@ -77,14 +88,8 @@ public sealed class CategoryViewModel : Observable
                 }
                 snapshotTime = snapshot.SavedUtc; all = snapshot.Records; ApplyFilter(); Warnings.Clear();
                 foreach (var warning in snapshot.Warnings) Warnings.Add(warning);
-                if (differences.Count > 0) DataChanged?.Invoke(FolderChanges.Summary(differences));
+                ClientLog.Write($"Vista {Title} aggiornata: revisione={snapshot.SavedUtc:O}, totali={all.Count}, visibili={Records.Count}, differenze={differences.Count}"); foreach (var difference in differences) ClientLog.Write(Title + ": " + difference); if (differences.Count > 0) DataChanged?.Invoke(FolderChanges.Summary(differences));
             }
-        }
-        catch (Exception ex)
-        {
-            if (ReferenceEquals(current, connection)) { LastConnectionError = ex; ConnectionFailed = true; connected = false; Status = "Server non disponibile; dati precedenti conservati: " + ex.Message; }
-        }
-        finally { UpdateCommands(); polling.Release(); }
     }
     public void Disconnected() { connected = false; ConnectionFailed = true; Status = "Connessione interrotta; dati precedenti conservati."; UpdateCommands(); }
     private async Task SendCommand(string operation)

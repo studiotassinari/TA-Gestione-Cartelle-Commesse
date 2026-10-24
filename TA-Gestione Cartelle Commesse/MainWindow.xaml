@@ -342,7 +342,7 @@
             <!-- Conclude lʼelemento MenuItem e il suo contenuto. -->
             </MenuItem>
         <!-- Conclude lʼelemento Menu e il suo contenuto. -->
-            <MenuItem Header="_Aiuto"><MenuItem Header="_Informazioni" Command="{Binding AboutCommand}"/><MenuItem Header="Verifica aggiornamenti" Command="{Binding UpdateCommand}"/></MenuItem>
+            <MenuItem Header="_Server"><MenuItem Header="Gestione servizio (amministratori di dominio)" Command="{Binding ManageServerCommand}"/></MenuItem><MenuItem Header="_Aiuto"><MenuItem Header="Verifica comunicazione" Command="{Binding CheckCommunicationCommand}"/><MenuItem Header="_Informazioni" Command="{Binding AboutCommand}"/><MenuItem Header="Verifica aggiornamenti" Command="{Binding UpdateCommand}"/></MenuItem>
         </Menu>
         <!-- Disegna lo sfondo e il bordo del contenuto usando colori, spessori e spaziature dichiarati. -->
         <Border DockPanel.Dock="Top" Background="White" Margin="0,0,0,16" BorderBrush="#135F6E" BorderThickness="0,0,0,3">
@@ -371,7 +371,7 @@
         <!-- Conclude lʼelemento Border e il suo contenuto. -->
         </Border>
         <!-- Mostra il testo {Binding ReportStatus} con lo stile e gli allineamenti specificati. -->
-        <TextBlock DockPanel.Dock="Top" Text="{Binding ReportStatus}" Foreground="#536775" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding CommunicationStatus}" Margin="0,0,0,6" TextWrapping="Wrap"/><TextBlock DockPanel.Dock="Top" Text="{Binding ReportStatus}" Foreground="#536775" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
         <!-- Sincronizza in entrambe le direzioni la scheda selezionata con ActiveTabIndex. -->
         <!-- Percorso noto dell'archivio condiviso, consultabile direttamente dalla finestra. -->
         <TextBlock DockPanel.Dock="Top" Text="{Binding ArchiveLocation, StringFormat=Archivio JSON: {0}}" Margin="0,0,0,8" TextWrapping="Wrap"/>

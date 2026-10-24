@@ -44,6 +44,10 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, C
             timeout.CancelAfter(TimeSpan.FromSeconds(30));
             var ct = timeout.Token;
             bool commandSlot = true, pushSlot = false;
+            var remote = tcp.Client.RemoteEndPoint?.ToString() ?? "Sconosciuto";
+            string user = "Non autenticato";
+            Request? received = null;
+            void Trace(string action, string outcome, string detail) => CommunicationLog.Write(received?.ClientMachine, remote, user, action, outcome, detail, received?.CorrelationId);
             try
             {
                 using var authenticated = new NegotiateStream(tcp.GetStream(), false);
@@ -52,25 +56,28 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, C
                     throw new AuthenticationException($"Protezione Windows insufficiente: cifrata={authenticated.IsEncrypted}, firmata={authenticated.IsSigned}, mutua={authenticated.IsMutuallyAuthenticated}. Verificare SPN e account del servizio.");
                 if (authenticated.RemoteIdentity is not WindowsIdentity identity)
                     throw new AuthenticationException("Identita remota non Windows: " + authenticated.RemoteIdentity?.GetType().Name);
+                user = identity.Name;
+                using var serviceIdentity = WindowsIdentity.GetCurrent();
+                var domainSid = serviceIdentity.User?.AccountDomainSid;
+                bool domainAdmin = domainSid != null && new WindowsPrincipal(identity).IsInRole(new SecurityIdentifier(domainSid.Value + "-512"));
                 // Risolve esplicitamente il gruppo per distinguere configurazione errata da utente escluso.
                 SecurityIdentifier groupSid;
                 try { groupSid = (SecurityIdentifier)new NTAccount(settings.AllowedGroup).Translate(typeof(SecurityIdentifier)); }
                 catch (IdentityNotMappedException)
                 {
                     logger.LogWarning("Gruppo configurato non risolto: {Group}; utente {User}", settings.AllowedGroup, identity.Name);
-                    await WireProtocol.ReadAsync<Request>(authenticated, ct);
+                    received = await WireProtocol.ReadAsync<Request>(authenticated, ct);
                     await WireProtocol.WriteAsync(authenticated, Reply.Fail("Gruppo autorizzato non risolvibile sul server. Contattare l'amministratore."), ct);
                     return;
                 }
-                if (!new WindowsPrincipal(identity).IsInRole(groupSid))
+                if (!new WindowsPrincipal(identity).IsInRole(groupSid) && !domainAdmin)
                 {
-                    logger.LogWarning("Accesso negato per gruppo: utente={User}; autenticazione={Authentication}; gruppo={Group}; SID={Sid}; livello={Level}", identity.Name, identity.AuthenticationType, settings.AllowedGroup, groupSid.Value, identity.ImpersonationLevel);
                     // Il canale e gia autenticato e cifrato: risponde senza eseguire il comando.
-                    await WireProtocol.ReadAsync<Request>(authenticated, ct);
-                    await WireProtocol.WriteAsync(authenticated, Reply.Fail("Il tuo account Windows non risulta nel gruppo autorizzato dal server. Verificare il gruppo e rinnovare l'accesso Windows."), ct);
+                    received = await WireProtocol.ReadAsync<Request>(authenticated, ct);
+                    Trace("Autorizzazione", "Negata", "Account escluso dal gruppo autorizzato"); await WireProtocol.WriteAsync(authenticated, Reply.Fail("Il tuo account Windows non risulta nel gruppo autorizzato dal server. Verificare il gruppo e rinnovare l'accesso Windows."), ct);
                     return;
                 }
-                var request = await WireProtocol.ReadAsync<Request>(authenticated, ct);
+                var request = received = await WireProtocol.ReadAsync<Request>(authenticated, ct); Trace(request.Operation, "Ricevuta", "Categoria=" + request.Category + "; client=" + request.ClientVersion + (request.Operation == "AdminAudit" ? "; azione dichiarata=" + request.RelativePath : ""));
                 if (request.Operation == "Subscribe" && request.Version == 2)
                 {
                     if (!await pushSlots.WaitAsync(0, ct))
@@ -78,17 +85,25 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, C
                     pushSlot = true;
                     slots.Release(); commandSlot = false;
                     timeout.CancelAfter(Timeout.InfiniteTimeSpan);
-                    await PushSession.RunAsync(authenticated, changes, shutdown);
+                    Trace("Subscribe", "Accettata", request.SupportsAcknowledgements ? "Riscontro viste e heartbeat richiesto" : "Client precedente: riscontro non disponibile");
+                    await PushSession.RunAsync(authenticated, changes, shutdown, request.SupportsAcknowledgements,
+                        (notice, acknowledged) => Trace(notice.Kind, acknowledged ? "Riscontro ricevuto" : "Inviata",
+                            "Revisione=" + notice.Revision + "; prova=" + notice.ProbeId + (acknowledged && notice.Kind == "Changed" ? "; viste applicate dal client" : "")));
                     return;
                 }
                 Reply reply;
-                try { reply = Dispatch(request); }
+                try
+                {
+                    reply = AdministrativeCommands.Handle(request, domainAdmin, () => new(
+                        CommunicationLog.Tail(Path.Combine(CommunicationLog.DirectoryPath, "service.log")),
+                        CommunicationLog.Tail(CommunicationLog.FilePath))) ?? Dispatch(request);
+                }
                 catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or KeyNotFoundException)
                 { reply = Reply.Fail(ex.Message); }
-                await WireProtocol.WriteAsync(authenticated, reply, ct);
+                await WireProtocol.WriteAsync(authenticated, reply, ct); Trace(request.Operation, reply.Success ? "Risposta inviata" : "Rifiutata", reply.Error ?? "Comando completato");
             }
-            catch (OperationCanceledException) { }
-            catch (Exception ex) { logger.LogWarning("Sessione TCP terminata: {Reason}", ex.Message); }
+            catch (OperationCanceledException) { Trace(received?.Operation ?? "Connessione", "Terminata", shutdown.IsCancellationRequested ? "Arresto servizio" : "Timeout o rinnovo sessione push (5 minuti)"); }
+            catch (Exception ex) { Trace(received?.Operation ?? "Connessione", "Errore", ex.Message); }
             finally { if (commandSlot) slots.Release(); if (pushSlot) pushSlots.Release(); }
         }
     }
