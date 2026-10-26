@@ -9,7 +9,7 @@ public sealed record FolderRecord(string Code, string Year, string Number, strin
     public long? ArchiveBytes { get; init; }
     public DateTime? ArchiveModifiedUtc { get; init; }
     [System.Text.Json.Serialization.JsonIgnore]
-    public string SizeText => ArchiveBytes is { } size ? FolderInspection.FormatBytes(size) + " (compresso)" : Inspection?.SizeText ?? "In verifica...";
+    public string SizeText => ArchiveBytes is { } size ? FolderInspection.FormatBytes(size) + " (compresso)" : Inspection?.SizeText ?? "In attesa del report delle 23:00";
     // Identificatore stabile: il server risolve il percorso esclusivamente dal proprio archivio.
     public string Id => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Path.ToUpperInvariant())));
 }

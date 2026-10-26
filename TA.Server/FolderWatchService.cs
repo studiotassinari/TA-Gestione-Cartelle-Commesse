@@ -45,7 +45,7 @@ public sealed class FolderWatchService(ServerSettings settings, ScanCoordinator 
             watcher = new FileSystemWatcher(watch.Root)
             {
                 IncludeSubdirectories = true, InternalBufferSize = 32768,
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.Attributes | NotifyFilters.Security
+                NotifyFilter = watch.Category == "A" ? NotifyFilters.FileName | NotifyFilters.DirectoryName : NotifyFilters.DirectoryName
             };
             void Detected()
             {
@@ -59,7 +59,7 @@ public sealed class FolderWatchService(ServerSettings settings, ScanCoordinator 
             {
                 if (Relevant(watch.Category, watch.Root, args.FullPath)) Detected();
             }
-            watcher.Created += Changed; watcher.Deleted += Changed; watcher.Changed += Changed;
+            watcher.Created += Changed; watcher.Deleted += Changed;
             watcher.Renamed += (sender, args) =>
             {
                 if (Relevant(watch.Category, watch.Root, args.FullPath) || Relevant(watch.Category, watch.Root, args.OldFullPath)) Detected();

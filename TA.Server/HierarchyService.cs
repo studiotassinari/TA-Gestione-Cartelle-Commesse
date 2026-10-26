@@ -11,24 +11,11 @@ public static class HierarchyService
         relative ??= "";
         if (Path.IsPathRooted(relative) || relative.Contains(':') || relative.Split(['/', '\\']).Any(p => p is ".." or "."))
             throw new ArgumentException("Percorso relativo non valido");
-        if (state.Prefix == 'A')
-        {
-            var parent = relative.Replace('\\', '/').Trim('/');
-            var metadata = ArchivedJobsReader.Inspect(record.Path, CancellationToken.None, true);
-            if (!metadata.Complete && metadata.ArchiveDirectories.Count == 0) throw new IOException(string.Join("; ", metadata.Issues));
-            return metadata.ArchiveDirectories.Where(p => (p.Contains('/') ? p[..p.LastIndexOf('/')] : "") == parent)
-                .Select(p => new FolderEntry(p.Split('/').Last(), record.Path + "\\" + p.Replace('/', '\\'), p)).ToArray();
-        }
-        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(record.Path));
-        var target = Path.GetFullPath(Path.Combine(root, relative));
-        if (target != root && !target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Percorso fuori dalla cartella");
-        // Controlla ogni segmento: anche un collegamento intermedio potrebbe uscire dalla radice.
-        var cursor = root;
-        Check(cursor);
-        foreach (var segment in relative.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)) { cursor = Path.Combine(cursor, segment); Check(cursor); }
-        return Directory.EnumerateDirectories(target).Where(p => !FolderReader.IsExcluded(p) && (File.GetAttributes(p) & FileAttributes.ReparsePoint) == 0)
-            .OrderBy(p => p).Select(p => new FolderEntry(Path.GetFileName(p), p, Path.GetRelativePath(root, p))).ToArray();
+        var metadata = record.Inspection;
+        if (metadata?.HierarchyCaptured != true) throw new IOException("Gerarchia non ancora disponibile: attendere il report giornaliero delle 23:00.");
+        var parent = relative.Replace(Path.DirectorySeparatorChar, '/').Trim('/');
+        return metadata.ArchiveDirectories.Where(p => (p.Contains('/') ? p[..p.LastIndexOf('/')] : "") == parent)
+            .OrderBy(p => p).Select(p => new FolderEntry(p.Split('/').Last(), record.Path + "\\" + p.Replace('/', Path.DirectorySeparatorChar), p)).ToArray();
     }
     private static void Check(string path)
     {

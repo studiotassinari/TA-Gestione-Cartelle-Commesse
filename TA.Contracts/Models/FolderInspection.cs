@@ -4,7 +4,8 @@ namespace TA_Gestione_Cartelle_Commesse.Models;
 public sealed record FolderInspection
 {
     // Somma delle dimensioni logiche dei file letti, in byte (non spazio occupato sul disco).
-    [System.Text.Json.Serialization.JsonIgnore] public List<string> ArchiveDirectories { get; init; } = []; public string? ContentSignature { get; init; }
+    public bool HierarchyCaptured { get; init; }
+    public List<string> ArchiveDirectories { get; init; } = []; public string? ContentSignature { get; init; }
     public long TotalBytes { get; init; }
     // Numero dei file inclusi nel calcolo.
     public long FileCount { get; init; }

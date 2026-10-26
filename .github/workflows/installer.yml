@@ -65,7 +65,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Deriva una versione univoca dal numero progressivo di esecuzione del workflow.
-          $version = "2.7.$env:GITHUB_RUN_NUMBER"
+          $version = "2.8.$env:GITHUB_RUN_NUMBER"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -90,7 +90,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Test trasporto fallito' }
       - name: Verifica aggiornamento viste, archivio annuale e riscontri
         run: |
-          foreach ($test in @('ClientChecks','LiveIndexChecks','AnnualArchiveChecks','AcknowledgementChecks','PrioritySizeChecks','ArchiveSourceChecks','UpdaterChecks')) {
+          foreach ($test in @('ClientChecks','LiveIndexChecks','AnnualArchiveChecks','AcknowledgementChecks','NightlyChecks','ArchiveSourceChecks','UpdaterChecks')) {
             dotnet run --project "tests/$test" -c Release
             if ($LASTEXITCODE -ne 0) { throw "Test fallito: $test" }
           }
@@ -252,8 +252,8 @@ jobs:
           $notes = @'
           Aggiornamento diretto: eseguire una volta TA-Commesse-Aggiornatore sulla VM (Server) e poi sui PC (Client). I file Installazione-Iniziale servono alle nuove installazioni.
           Il programma scarica pacchetti ZIP, verifica le impronte, sostituisce soltanto i file diversi e conserva configurazioni e backup. Il server viene riavviato solo se prima era attivo. Nessuna attivita pianificata: controlli all'apertura o manuali.
-          Scheda Archivio: censimento ricorsivo ZIP e 7z esclusivamente in lettura, senza estrazione o modifica degli originali. Verifica ogni minuto e notifiche push.
-          Colonne: Codice, Anno, Numero, Committente, Argomento, Dimensione. Calcolo prioritario delle dimensioni delle nuove commesse e successivo aggiornamento della vista.
+          Scheda Archivio: censimento ricorsivo ZIP e 7z esclusivamente in lettura, senza estrazione o modifica degli originali. Elenco verificato ogni minuto; metadati alle 23 e notifiche push.
+          Colonne: Codice, Anno, Numero, Committente, Argomento, Dimensione. Elenco continuo; dimensioni e gerarchie solo nel report giornaliero delle 23 italiane.
           Runtime .NET incluso. Pacchetti non firmati digitalmente; impronte SHA256 allegate. Consultare README e guida per configurazione AD e permessi di lettura.
           '@
           # Salva le note UTF-8 in un file per preservare accenti e interruzioni di riga.

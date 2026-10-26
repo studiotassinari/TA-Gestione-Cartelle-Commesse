@@ -272,6 +272,7 @@
                             <DataGridTextColumn Header="Committente" Binding="{Binding Client}" Width="180" MinWidth="150"/>
                             <DataGridTextColumn Header="Argomento" Binding="{Binding Subject}" Width="260" MinWidth="200"/>
                             <DataGridTextColumn Header="Dimensione" Binding="{Binding SizeText}" Width="160"/>
+                            <DataGridTextColumn Header="Verifica dimensioni (UTC)" Binding="{Binding Inspection.CheckedUtc, StringFormat=dd/MM/yyyy HH:mm}" Width="165"/>
                             <DataGridTextColumn Header="Esito" Binding="{Binding Status}" Width="100"/>
                             <DataGridTextColumn Header="Ultima modifica file" Binding="{Binding Inspection.LastWriteText}" Width="160"/>
                             <DataGridTextColumn Header="Preventivo" Binding="{Binding Inspection.QuoteStatus}" Width="210"/>
@@ -322,6 +323,7 @@
             <!-- Definisce MenuItem con intestazione _Export e gli eventuali comandi o contenuti associati. -->
             <MenuItem Header="_Export">
                 <!-- Definisce MenuItem con intestazione Crea report cartelle e non conformità e gli eventuali comandi o contenuti associati. -->
+                <MenuItem Header="Scarica ultimo report giornaliero (23:00)" Command="{Binding DailyReportCommand}"/>
                 <MenuItem Header="Crea report cartelle e non conformità" Command="{Binding ReportCommand}"/>
             <!-- Conclude lʼelemento MenuItem e il suo contenuto. -->
             </MenuItem>

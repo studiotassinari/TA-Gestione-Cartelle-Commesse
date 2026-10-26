@@ -32,6 +32,7 @@ public sealed class MainViewModel : Observable
     public Command UpdateCommand { get; }
     public Command AboutCommand { get; }
     public Command ConnectCommand { get; }
+    public Command DailyReportCommand { get; }
     public Command ReportCommand { get; }
     public MainViewModel()
     {
@@ -40,6 +41,7 @@ public sealed class MainViewModel : Observable
         UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
         AboutCommand = new(() => _ = ShowAboutAsync());
         ConnectCommand = new(() => _ = ConnectAsync(), () => !connecting);
+        DailyReportCommand = new(() => _ = CreateReport(true), () => connection != null && !reporting);
         ReportCommand = new(() => _ = CreateReport(), () => connection != null && !reporting);
 
         try { var settings = ClientSettings.Load(); host = settings.Host; port = settings.Port.ToString(); }
@@ -63,7 +65,7 @@ public sealed class MainViewModel : Observable
         }
         pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); CreateJobCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); CreateJobCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";
@@ -193,19 +195,19 @@ public sealed class MainViewModel : Observable
         }
         System.Windows.MessageBox.Show($"TA-Gestione Cartelle Commesse\n\nClient: {version}\nServer: {serverVersion}\nConnessione: {ServerHost}:{ServerPort}\n\nScansione server di commesse e gare ogni minuto, senza sovrapporre scansioni. Aggiornamento client tramite notifiche push.\n\nStudio Tassinari", "Informazioni", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
-    private async Task CreateReport()
+    private async Task CreateReport(bool daily = false)
     {
         if (connection == null) return;
         var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Report HTML (*.html)|*.html", FileName = "Report-cartelle-" + DateTime.Now.ToString("yyyy-MM-dd-HHmm") + ".html" };
         if (dialog.ShowDialog() != true) return;
-        reporting = true; ReportCommand.Refresh(); ReportStatus = "Richiesta report al server...";
+        reporting = true; ReportCommand.Refresh(); DailyReportCommand.Refresh(); ReportStatus = "Richiesta report al server...";
         try
         {
-            var html = await connection.SendAsync<string>(new("Report"));
+            var html = await connection.SendAsync<string>(new(daily ? "DailyReport" : "Report"));
             await File.WriteAllTextAsync(dialog.FileName, html, new System.Text.UTF8Encoding(false));
             ReportStatus = "Report salvato: " + dialog.FileName;
         }
         catch (Exception ex) { ReportStatus = "Report non creato: " + ex.Message; }
-        finally { reporting = false; ReportCommand.Refresh(); }
+        finally { reporting = false; ReportCommand.Refresh(); DailyReportCommand.Refresh(); }
     }
 }

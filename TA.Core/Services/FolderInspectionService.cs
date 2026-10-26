@@ -39,7 +39,7 @@ public static class FolderInspectionService
         void Hash(object value) => signature.AppendData(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(value));
         long bytes = 0, count = 0;
         DateTime? latest = null;
-        var issues = new List<string>();
+        var issues = new List<string>(); var directories = new List<string>();
         var candidates = new List<string>();
         bool administrationFound = false, strongCandidate = false;
         var pending = new Stack<(string Path, bool Administration)>();
@@ -69,6 +69,7 @@ public static class FolderInspectionService
                         }
                         if ((attributes & FileAttributes.Directory) != 0)
                         {
+                            directories.Add(Path.GetRelativePath(root, entry).Replace(Path.DirectorySeparatorChar, '/'));
                             Hash(new { Type = "Directory", Path = Path.GetRelativePath(root, entry) });
                             bool isAdmin = AdministrationNames.Contains(Path.GetFileName(entry));
                             administrationFound |= isAdmin;
@@ -120,7 +121,7 @@ public static class FolderInspectionService
             : administrationFound ? "Non trovato nei nomi" : "Cartella amministrazione non trovata";
         return new FolderInspection
         {
-            ContentSignature = Convert.ToHexString(signature.GetHashAndReset()), TotalBytes = bytes, FileCount = count, LastFileWriteUtc = latest, CheckedUtc = DateTime.UtcNow,
+            HierarchyCaptured = true, ArchiveDirectories = directories, ContentSignature = Convert.ToHexString(signature.GetHashAndReset()), TotalBytes = bytes, FileCount = count, LastFileWriteUtc = latest, CheckedUtc = DateTime.UtcNow,
             Complete = issues.Count == 0, QuoteStatus = status, QuoteFiles = candidates.OrderBy(p => p).ToList(), Issues = issues
         };
     }

@@ -123,10 +123,13 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, C
                 scans.Get("C").NotifyChange();
                 scans.Refresh("C");
                 return Reply.Ok(created);
-            case "State": return Reply.Ok(scans.Get(request.Category).State);
+            case "State":
+                var state = scans.Get(request.Category).State;
+                return Reply.Ok(state with { Snapshot = state.Snapshot == null ? null : state.Snapshot with { Records = state.Snapshot.Records.Select(r => r.Inspection == null ? r : r with { Inspection = r.Inspection with { ArchiveDirectories = [] } }).ToList() } });
             case "Refresh": return Reply.Ok(scans.Refresh(request.Category));
             case "Cancel": scans.Get(request.Category).Cancel(); return Reply.Ok(true);
             case "Children": return Reply.Ok(HierarchyService.Children(scans.Get(request.Category).State, request.FolderId ?? "", request.RelativePath));
+            case "DailyReport": return Reply.Ok(scans.DailyReport());
             case "Report":
                 var jobs = scans.Get("C").State.Snapshot;
                 var bids = scans.Get("G").State.Snapshot;

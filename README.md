@@ -2,12 +2,24 @@
 
 Applicazione .NET 10 con client WPF/MVVM e servizio Windows per Windows Server 2022 nel dominio aziendale.
 
-## Scarica e installa - versione 2.7.0
+## Versione 2.8.0: elenco continuo, report alle 23
 
-**[Scarica il programma di aggiornamento diretto 2.7.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.7.0/TA-Commesse-Aggiornatore-2.7.0.exe)**. Eseguirlo prima sulla VM (Server), poi sui PC (Client). I setup sotto servono solo per installazioni iniziali.
+Il monitoraggio continuo riguarda la creazione, eliminazione e rinomina delle cartelle censite (e dei file ZIP/7z per l'Archivio). Il controllo di recupero ogni minuto aggiorna soltanto l'elenco. Le modifiche ai file non avviano piu analisi ricorsive; anche il comando Aggiorna aggiorna soltanto l'elenco. Nessuna commessa viene identificata nelle sottocartelle di una commessa.
 
-- [Scarica installatore Server 2.7.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.7.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.7.0.exe)
-- [Scarica installatore Client 2.7.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.7.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.7.0.exe)
+Dimensioni, date dei file, preventivi e gerarchie vengono elaborati una volta al giorno a partire dalle 23:00, ora italiana, con gestione dell'ora legale indipendente dal fuso della VM. Il calendario e interno al servizio: nessuna attivita pianificata Windows e nessuna dipendenza dall'apertura del client. Le letture possono durare oltre la mezzanotte e non si sovrappongono. Se il servizio riparte tra le 23 e mezzanotte e manca il report del giorno, ritenta; un avvio prima delle 23 attende le 23, senza recuperare i giorni in cui era spento.
+
+Il server conserva i report HTML datati nella sottocartella report-giornalieri dell'archivio JSON configurato. Export > Scarica ultimo report giornaliero (23:00) scarica dal server l'ultimo report completato. I report precedenti restano nella cartella condivisa; non vengono cancellati automaticamente. La consultazione della gerarchia usa esclusivamente l'ultima lettura salvata, anche dopo un riavvio. Il report indica avvio, fine, ultima verifica e dati precedenti/non verificati in caso di errori o accessi parziali. Non e una fotografia atomica del filesystem.
+
+Fino alla prima elaborazione, una nuova cartella mostra In attesa del report delle 23:00. Per le altre restano visibili i dati dell'ultima elaborazione, con la data di verifica. La sorgente viene sempre letta senza modifiche. Questa modalita sostituisce la verifica continua e la coda prioritaria delle versioni precedenti.
+
+Aggiornare prima Server e poi Client tramite il programma di aggiornamento diretto. Restano invariati autenticazione Windows, TCP dedicato, backup e aggiornamenti all'apertura senza attivita pianificate.
+
+## Scarica e installa - versione 2.8.0
+
+**[Scarica il programma di aggiornamento diretto 2.8.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.8.0/TA-Commesse-Aggiornatore-2.8.0.exe)**. Eseguirlo prima sulla VM (Server), poi sui PC (Client). I setup sotto servono solo per installazioni iniziali.
+
+- [Scarica installatore Server 2.8.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.8.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.8.0.exe)
+- [Scarica installatore Client 2.8.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.8.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.8.0.exe)
 
 Il server verifica commesse, gare e archivio ogni minuto, senza sovrapporre scansioni della stessa categoria, e invia notifiche push ai client. Il menu Aiuto > Informazioni mostra la versione client e, quando disponibile, quella server. Resta necessario configurare account, gruppo AD e SPN seguendo la guida.
 
@@ -95,11 +107,11 @@ Avvio/arresto/riavvio usano il gestore servizi remoto di Windows (RPC/SCM), nece
 
 Verifiche locali: cartella C26198 con metadati bloccati, aggiornamento griglie WPF prima dell'avviso, salvataggio durante scansione, migrazione annuale, integrita dei JSON, riscontri corretti/errati e diniego dei comandi amministrativi agli utenti ordinari. La gestione SCM con account amministrativo richiede collaudo sulla VM.
 
-## Versione 2.7.0: aggiornamento diretto e archivio compresso
+## Storico 2.7.0: aggiornamento diretto e archivio compresso
 
 ### Aggiornatore
 
-TA-Commesse-Aggiornatore-2.7.0.exe e un programma autonomo: scarica da GitHub il pacchetto ZIP del componente, verifica l'impronta pubblicata da GitHub e le impronte di ogni file, chiude l'interfaccia e sostituisce soltanto i file diversi. Non esegue un installatore. Configurazioni, dati, registrazione e account del servizio restano invariati. L'aggiornamento server richiede privilegi amministrativi e arresta/riavvia il servizio solo se prima era attivo; un servizio gia fermo resta fermo.
+TA-Commesse-Aggiornatore-2.8.0.exe e un programma autonomo: scarica da GitHub il pacchetto ZIP del componente, verifica l'impronta pubblicata da GitHub e le impronte di ogni file, chiude l'interfaccia e sostituisce soltanto i file diversi. Non esegue un installatore. Configurazioni, dati, registrazione e account del servizio restano invariati. L'aggiornamento server richiede privilegi amministrativi e arresta/riavvia il servizio solo se prima era attivo; un servizio gia fermo resta fermo.
 
 Per passare dalla 2.6.0 senza usare un installatore, scaricare una volta l'aggiornatore autonomo, eseguirlo sulla VM scegliendo Server e poi sui PC scegliendo Client. Dalla nuova versione il controllo automatico resta limitato all'apertura del client o del gestore, oltre al comando manuale. Nessuna attivita pianificata. I file Installazione-Iniziale servono solo per nuove installazioni; non sono il canale di aggiornamento.
 

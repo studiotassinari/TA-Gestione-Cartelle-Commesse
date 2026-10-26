@@ -9,7 +9,7 @@ namespace TA_Gestione_Cartelle_Commesse.Services;
 // Censimento in sola lettura: non estrae, rinomina, ripara o scrive negli archivi.
 public static class ArchivedJobsReader
 {
-    public static ScanResult Scan(string root, CancellationToken token)
+    public static ScanResult Scan(string root, CancellationToken token, bool readFileMetadata = true)
     {
         var records = new List<FolderRecord>(); var warnings = new List<string>();
         var pending = new Stack<string>(); pending.Push(root); bool incomplete = false;
@@ -31,11 +31,11 @@ public static class ArchivedJobsReader
                         var name = Path.GetFileNameWithoutExtension(path); var match = pattern.Match(name);
                         var code = Regex.Match(name, @"^C(?<year>\d{2})(?<number>\d{3})", RegexOptions.IgnoreCase);
                         var file = new FileInfo(path); DateTime? modified = null;
-                        try { modified = file.LastWriteTimeUtc; } catch (ArgumentOutOfRangeException) { warnings.Add("Data archivio non valida: " + path); }
+                        try { if (readFileMetadata) modified = file.LastWriteTimeUtc; } catch (ArgumentOutOfRangeException) { warnings.Add("Data archivio non valida: " + path); }
                         var row = match.Success
                             ? new FolderRecord(match.Groups["code"].Value.ToUpperInvariant(), match.Groups["year"].Value, match.Groups["number"].Value, match.Groups["client"].Value.Trim(), match.Groups["subject"].Value.Trim(), path, "Valido")
                             : new FolderRecord(code.Success ? code.Value.ToUpperInvariant() : "", code.Groups["year"].Value, code.Groups["number"].Value, "Da verificare", name, path, "Non conforme");
-                        records.Add(row with { ArchiveBytes = file.Length, ArchiveModifiedUtc = modified });
+                        records.Add(row with { ArchiveBytes = readFileMetadata ? file.Length : null, ArchiveModifiedUtc = modified });
                         if (!match.Success) warnings.Add("Nome archivio non conforme: " + path);
                     }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentOutOfRangeException)
@@ -91,7 +91,7 @@ public static class ArchivedJobsReader
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) { issues.Add("Archivio non completamente leggibile (danneggiato, protetto o formato non supportato): " + ex.Message); }
         return new FolderInspection { TotalBytes = bytes, FileCount = count, LastFileWriteUtc = latest, CheckedUtc = DateTime.UtcNow,
-            Complete = issues.Count == 0, Issues = issues, QuoteFiles = quotes, ArchiveDirectories = directories.OrderBy(x => x).ToList(),
+            Complete = issues.Count == 0, Issues = issues, QuoteFiles = quotes, HierarchyCaptured = includeHierarchy, ArchiveDirectories = directories.OrderBy(x => x).ToList(),
             ContentSignature = Convert.ToHexString(signature.GetHashAndReset()),
             QuoteStatus = issues.Count > 0 ? "Da verificare (lettura archivio parziale)" : strongQuote ? "Presente (da nome file)" :
                 quotes.Count > 0 ? "Da verificare (nome ambiguo)" : administration ? "Non trovato nei nomi" : "Cartella amministrazione non trovata" };

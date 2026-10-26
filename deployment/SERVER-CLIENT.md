@@ -1,3 +1,15 @@
+## Versione 2.8.0: elenco continuo, report alle 23
+
+Il monitoraggio continuo riguarda la creazione, eliminazione e rinomina delle cartelle censite (e dei file ZIP/7z per l'Archivio). Il controllo di recupero ogni minuto aggiorna soltanto l'elenco. Le modifiche ai file non avviano piu analisi ricorsive; anche il comando Aggiorna aggiorna soltanto l'elenco. Nessuna commessa viene identificata nelle sottocartelle di una commessa.
+
+Dimensioni, date dei file, preventivi e gerarchie vengono elaborati una volta al giorno a partire dalle 23:00, ora italiana, con gestione dell'ora legale indipendente dal fuso della VM. Il calendario e interno al servizio: nessuna attivita pianificata Windows e nessuna dipendenza dall'apertura del client. Le letture possono durare oltre la mezzanotte e non si sovrappongono. Se il servizio riparte tra le 23 e mezzanotte e manca il report del giorno, ritenta; un avvio prima delle 23 attende le 23, senza recuperare i giorni in cui era spento.
+
+Il server conserva i report HTML datati nella sottocartella report-giornalieri dell'archivio JSON configurato. Export > Scarica ultimo report giornaliero (23:00) scarica dal server l'ultimo report completato. I report precedenti restano nella cartella condivisa; non vengono cancellati automaticamente. La consultazione della gerarchia usa esclusivamente l'ultima lettura salvata, anche dopo un riavvio. Il report indica avvio, fine, ultima verifica e dati precedenti/non verificati in caso di errori o accessi parziali. Non e una fotografia atomica del filesystem.
+
+Fino alla prima elaborazione, una nuova cartella mostra In attesa del report delle 23:00. Per le altre restano visibili i dati dell'ultima elaborazione, con la data di verifica. La sorgente viene sempre letta senza modifiche. Questa modalita sostituisce la verifica continua e la coda prioritaria delle versioni precedenti.
+
+Aggiornare prima Server e poi Client tramite il programma di aggiornamento diretto. Restano invariati autenticazione Windows, TCP dedicato, backup e aggiornamenti all'apertura senza attivita pianificate.
+
 # Server e client 2.1 — account Active Directory, senza certificati
 
 ## Account e gruppo da creare

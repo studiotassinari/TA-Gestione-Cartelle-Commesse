@@ -28,7 +28,7 @@ Check(!batch.TryGetDue(now.AddSeconds(20), out _), "Evento elaborato non ripete 
 for (int i = 0; i < 31; i++) batch.Mark(now.AddSeconds(i));
 Check(batch.TryGetDue(now.AddSeconds(31), out _), "Flusso continuo elaborato entro trenta secondi");
 var root = Path.Combine(Path.GetTempPath(), "TA-PushChecks-" + Guid.NewGuid().ToString("N"));
-Check(FolderWatchService.Relevant("C", root, Path.Combine(root, "2026", "C26001 - Cliente - Argomento", "interno", "file.txt")), "Modifiche annidate ammesse per metadati");
+Check(FolderWatchService.Relevant("C", root, Path.Combine(root, "2026", "C26001 - Cliente - Argomento", "interno", "file.txt")), "Creazioni annidate ammesse dal filtro di percorso");
 Check(!FolderWatchService.Relevant("C", root, Path.Combine(root, "Altro", "file.txt")), "Contenitori non annuali ignorati");
 Check(!FolderWatchService.Relevant("C", root, Path.Combine(root, "..", "esterno")), "Percorsi esterni ignorati");
 
@@ -62,19 +62,22 @@ Directory.CreateDirectory(bids); Directory.CreateDirectory(archive);
 var settings = new ServerSettings { JobsRoot = jobs, BidsRoot = bids, ArchivedJobsRoot = bids, ArchiveFolder = archive, RefreshMinutes = 999 };
 using var scans = new ScanCoordinator(settings, NullLogger<ScanCoordinator>.Instance, hub);
 using var watcher = new FolderWatchService(settings, scans, NullLogger<FolderWatchService>.Instance);
-await scans.StartAsync(token); await watcher.StartAsync(token);
+foreach(var category in new[] { "C", "G", "A" }) await scans.Get(category).InitializeAsync();
+await watcher.StartAsync(token);
 try
 {
     await Task.Delay(2500, token);
     var nested = Directory.CreateDirectory(Path.Combine(job, "C26999 - Non - Commessa")).FullName;
     File.WriteAllText(Path.Combine(nested, "file.txt"), "test");
-    while (scans.Get("C").State.Snapshot?.Records.SingleOrDefault()?.Inspection?.TotalBytes != 4)
-        await Task.Delay(200, token);
-    Check(scans.Get("C").State.Snapshot!.Records.Count == 1, "Watcher aggiorna dimensioni senza censire commesse annidate");
+    var fresh = Directory.CreateDirectory(Path.Combine(jobs, "2026", "C26002 - Nuova - Cartella")).FullName;
+    while (scans.Get("C").State.Snapshot?.Records.Count != 2) await Task.Delay(200, token);
+    Check(scans.Get("C").State.Snapshot!.Records.All(r => r.Inspection == null), "Creazione rilevata senza analizzare dimensioni o commesse annidate");
+    Directory.Delete(fresh);
+    while (scans.Get("C").State.Snapshot?.Records.Count != 1) await Task.Delay(200, token);
+    Check(true, "Eliminazione cartella rilevata dal watcher");
     File.Delete(Path.Combine(nested, "file.txt"));
-    while (scans.Get("C").State.Snapshot?.Records.Single().Inspection?.TotalBytes != 0)
-        await Task.Delay(200, token);
-    Check(true, "Eliminazione file rilevata senza polling client o scansione periodica");
+    await Task.Delay(2500, token);
+    Check(scans.Get("C").State.Snapshot!.Records.Single().Inspection == null, "Eliminazione file non avvia analisi ricorsive");
 }
 finally
 {
