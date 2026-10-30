@@ -1,3 +1,11 @@
+## Versione 2.9.0: apertura su Z e archivi sotto lavori
+
+Il doppio clic e i comandi Apri del client traducono la condivisione aziendale nel percorso Z del PC. La conversione supporta sia il nome DNS completo sia quello breve, senza cambiare condivisioni diverse. Il server mantiene i percorsi UNC originali. Gli archivi vengono selezionati in Esplora file senza estrazione.
+
+La scheda Archivio include adesso ZIP e 7z presenti ricorsivamente nella radice lavori, oltre alla radice archivio. Ogni file e censito una sola volta anche con radici sovrapposte. Le sottocartelle non diventano nuove commesse. L'indice viene aggiornato dal monitor e dal controllo ogni minuto; le letture dei contenuti, le dimensioni e le gerarchie restano limitate al report delle 23 italiane. Tutte le sorgenti restano in sola lettura. Una radice non accessibile viene segnalata e non cancella le righe precedenti non verificabili.
+
+Aggiornare prima Server e poi Client tramite l'aggiornatore diretto.
+
 # TA-Gestione Cartelle Commesse
 
 Applicazione .NET 10 con client WPF/MVVM e servizio Windows per Windows Server 2022 nel dominio aziendale.
@@ -14,12 +22,12 @@ Fino alla prima elaborazione, una nuova cartella mostra In attesa del report del
 
 Aggiornare prima Server e poi Client tramite il programma di aggiornamento diretto. Restano invariati autenticazione Windows, TCP dedicato, backup e aggiornamenti all'apertura senza attivita pianificate.
 
-## Scarica e installa - versione 2.8.0
+## Scarica e installa - versione 2.9.0
 
-**[Scarica il programma di aggiornamento diretto 2.8.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.8.0/TA-Commesse-Aggiornatore-2.8.0.exe)**. Eseguirlo prima sulla VM (Server), poi sui PC (Client). I setup sotto servono solo per installazioni iniziali.
+**[Scarica il programma di aggiornamento diretto 2.9.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.9.0/TA-Commesse-Aggiornatore-2.9.0.exe)**. Eseguirlo prima sulla VM (Server), poi sui PC (Client). I setup sotto servono solo per installazioni iniziali.
 
-- [Scarica installatore Server 2.8.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.8.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.8.0.exe)
-- [Scarica installatore Client 2.8.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.8.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.8.0.exe)
+- [Scarica installatore Server 2.9.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.9.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.9.0.exe)
+- [Scarica installatore Client 2.9.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.9.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.9.0.exe)
 
 Il server verifica commesse, gare e archivio ogni minuto, senza sovrapporre scansioni della stessa categoria, e invia notifiche push ai client. Il menu Aiuto > Informazioni mostra la versione client e, quando disponibile, quella server. Resta necessario configurare account, gruppo AD e SPN seguendo la guida.
 
@@ -111,7 +119,7 @@ Verifiche locali: cartella C26198 con metadati bloccati, aggiornamento griglie W
 
 ### Aggiornatore
 
-TA-Commesse-Aggiornatore-2.8.0.exe e un programma autonomo: scarica da GitHub il pacchetto ZIP del componente, verifica l'impronta pubblicata da GitHub e le impronte di ogni file, chiude l'interfaccia e sostituisce soltanto i file diversi. Non esegue un installatore. Configurazioni, dati, registrazione e account del servizio restano invariati. L'aggiornamento server richiede privilegi amministrativi e arresta/riavvia il servizio solo se prima era attivo; un servizio gia fermo resta fermo.
+TA-Commesse-Aggiornatore-2.9.0.exe e un programma autonomo: scarica da GitHub il pacchetto ZIP del componente, verifica l'impronta pubblicata da GitHub e le impronte di ogni file, chiude l'interfaccia e sostituisce soltanto i file diversi. Non esegue un installatore. Configurazioni, dati, registrazione e account del servizio restano invariati. L'aggiornamento server richiede privilegi amministrativi e arresta/riavvia il servizio solo se prima era attivo; un servizio gia fermo resta fermo.
 
 Per passare dalla 2.6.0 senza usare un installatore, scaricare una volta l'aggiornatore autonomo, eseguirlo sulla VM scegliendo Server e poi sui PC scegliendo Client. Dalla nuova versione il controllo automatico resta limitato all'apertura del client o del gestore, oltre al comando manuale. Nessuna attivita pianificata. I file Installazione-Iniziale servono solo per nuove installazioni; non sono il canale di aggiornamento.
 

@@ -7,7 +7,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     {
         ['C'] = new('C', settings.JobsRoot, settings.ArchiveFolder, logger, changes),
         ['G'] = new('G', settings.BidsRoot, settings.ArchiveFolder, logger, changes),
-        ['A'] = new('A', settings.ArchivedJobsRoot, settings.ArchiveFolder, logger, changes)
+        ['A'] = new('A', settings.ArchivedJobsRoot, settings.ArchiveFolder, logger, changes, additionalArchiveRoot: settings.JobsRoot)
     };
     private CancellationToken shutdown;
     private Task nightly = Task.CompletedTask;

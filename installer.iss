@@ -1,7 +1,7 @@
 ; Verifica se il parametro AppVersion non è stato fornito al compilatore.
 #ifndef AppVersion
 ; Definisce il valore predefinito del parametro quando manca un valore esterno.
-  #define AppVersion "2.8.0"
+  #define AppVersion "2.9.0"
 ; Termina la definizione condizionale del parametro.
 #endif
 ; Verifica se il parametro PublishDir non è stato fornito al compilatore.

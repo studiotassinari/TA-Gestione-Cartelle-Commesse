@@ -15,7 +15,7 @@ public sealed class FolderWatchService(ServerSettings settings, ScanCoordinator 
     }
     protected override async Task ExecuteAsync(CancellationToken token)
     {
-        var watches = new[] { new Watch("C", settings.JobsRoot), new Watch("G", settings.BidsRoot), new Watch("A", settings.ArchivedJobsRoot) };
+        var watches = new[] { new Watch("C", settings.JobsRoot), new Watch("G", settings.BidsRoot), new Watch("A", settings.ArchivedJobsRoot), new Watch("A", settings.JobsRoot) };
         try
         {
             while (!token.IsCancellationRequested)

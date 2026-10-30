@@ -1,3 +1,11 @@
+## Versione 2.9.0: apertura su Z e archivi sotto lavori
+
+Il doppio clic e i comandi Apri del client traducono la condivisione aziendale nel percorso Z del PC. La conversione supporta sia il nome DNS completo sia quello breve, senza cambiare condivisioni diverse. Il server mantiene i percorsi UNC originali. Gli archivi vengono selezionati in Esplora file senza estrazione.
+
+La scheda Archivio include adesso ZIP e 7z presenti ricorsivamente nella radice lavori, oltre alla radice archivio. Ogni file e censito una sola volta anche con radici sovrapposte. Le sottocartelle non diventano nuove commesse. L'indice viene aggiornato dal monitor e dal controllo ogni minuto; le letture dei contenuti, le dimensioni e le gerarchie restano limitate al report delle 23 italiane. Tutte le sorgenti restano in sola lettura. Una radice non accessibile viene segnalata e non cancella le righe precedenti non verificabili.
+
+Aggiornare prima Server e poi Client tramite l'aggiornatore diretto.
+
 ## Versione 2.8.0: elenco continuo, report alle 23
 
 Il monitoraggio continuo riguarda la creazione, eliminazione e rinomina delle cartelle censite (e dei file ZIP/7z per l'Archivio). Il controllo di recupero ogni minuto aggiorna soltanto l'elenco. Le modifiche ai file non avviano piu analisi ricorsive; anche il comando Aggiorna aggiorna soltanto l'elenco. Nessuna commessa viene identificata nelle sottocartelle di una commessa.

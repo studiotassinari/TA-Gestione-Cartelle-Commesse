@@ -5,7 +5,7 @@ namespace TA.Server;
 
 // Elenco e lettura ricorsiva procedono separatamente: una commessa grande non blocca le nuove righe.
 public sealed class CategoryWorker(char prefix, string root, string archive, ILogger logger, ChangeHub changes,
-    Func<string, CancellationToken, FolderInspection>? inspect = null)
+    Func<string, CancellationToken, FolderInspection>? inspect = null, string? additionalArchiveRoot = null)
 {
     private readonly object gate = new();
     private CategoryState state = new(prefix, root, true, "Caricamento archivio...", "", null);
@@ -46,7 +46,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
         try
         {
             var started = DateTime.UtcNow;
-            var result = (prefix == 'A' ? ArchivedJobsReader.Scan(root, token, false) : FolderReader.Scan(root, prefix, token));
+            var result = (prefix == 'A' ? ArchivedJobsReader.ScanRoots(new[] { root, additionalArchiveRoot ?? "" }, token) : FolderReader.Scan(root, prefix, token));
             token.ThrowIfCancellationRequested();
             if (result.Cancelled) throw new OperationCanceledException(token);
             if (result.Error != null || (result.Incomplete && prefix != 'A'))

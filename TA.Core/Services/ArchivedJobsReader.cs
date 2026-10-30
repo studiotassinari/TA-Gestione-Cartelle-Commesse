@@ -9,6 +9,22 @@ namespace TA_Gestione_Cartelle_Commesse.Services;
 // Censimento in sola lettura: non estrae, rinomina, ripara o scrive negli archivi.
 public static class ArchivedJobsReader
 {
+    // Unisce le radici senza duplicare un archivio; una radice non leggibile non cancella i risultati precedenti.
+    public static ScanResult ScanRoots(IEnumerable<string> roots, CancellationToken token)
+    {
+        var rows = new Dictionary<string, FolderRecord>(StringComparer.OrdinalIgnoreCase);
+        var warnings = new List<string>(); bool incomplete = false;
+        foreach (var root in roots.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            token.ThrowIfCancellationRequested();
+            var scan = Scan(root, token, false);
+            incomplete |= scan.Incomplete || scan.Error != null;
+            if (scan.Error != null) warnings.Add(root + ": " + scan.Error);
+            warnings.AddRange(scan.Warnings);
+            foreach (var row in scan.Records) rows[row.Path] = row;
+        }
+        return new(rows.Values.OrderByDescending(r => r.Year).ThenByDescending(r => r.Number).ToList(), warnings, Incomplete: incomplete);
+    }
     public static ScanResult Scan(string root, CancellationToken token, bool readFileMetadata = true)
     {
         var records = new List<FolderRecord>(); var warnings = new List<string>();

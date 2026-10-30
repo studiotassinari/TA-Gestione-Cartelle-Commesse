@@ -119,9 +119,9 @@ public sealed class CategoryViewModel : Observable
             if (prefix == 'A')
             {
                 var start = new System.Diagnostics.ProcessStartInfo("explorer.exe") { UseShellExecute = false };
-                start.ArgumentList.Add("/select,"); start.ArgumentList.Add(record.Path); System.Diagnostics.Process.Start(start);
+                start.ArgumentList.Add("/select,"); start.ArgumentList.Add(ClientPaths.ForExplorer(record.Path)); System.Diagnostics.Process.Start(start);
             }
-            else System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(record.Path) { UseShellExecute = true });
+            else System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(ClientPaths.ForExplorer(record.Path)) { UseShellExecute = true });
         }
         catch (ServerRejectedException ex) when (prefix == 'A' && ex.Message.Contains("Categoria non valida"))
         { ConnectionFailed = false; connected = false; LastConnectionError = null; Status = "Archivio richiede server 2.7.0 o successivo."; }

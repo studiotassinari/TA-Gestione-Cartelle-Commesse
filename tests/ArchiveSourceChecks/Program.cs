@@ -31,9 +31,17 @@ try
         Check(result.QuoteStatus.StartsWith("Presente") && result.ArchiveDirectories.Contains("99_AMMINISTRAZIONE"), extension + ": preventivo e gerarchia letti senza estrarre");
         Check(SHA256.HashData(File.ReadAllBytes(file)).SequenceEqual(before) && File.GetLastWriteTimeUtc(file) == modified && Directory.GetDirectories(root).Length == 0, extension + ": file invariato e nessuna estrazione");
     }
+    var jobs = Directory.CreateDirectory(Path.Combine(root, "lavori", "2026", "C26001 - Cliente - Commessa", "consegne")).FullName;
+    var compressed = Path.Combine(jobs, "C26002 - Cliente - Compressa.zip");
+    using(var zip = System.IO.Compression.ZipFile.Open(compressed, System.IO.Compression.ZipArchiveMode.Create)) zip.CreateEntry("Documenti/");
+    var combined = ArchivedJobsReader.ScanRoots(new[] { root, Path.Combine(root, "lavori") }, default);
+    Check(combined.Records.Count(r => r.Path == compressed) == 1, "ZIP sotto lavori censito ricorsivamente una sola volta anche con radici sovrapposte");
+    Check(combined.Records.All(r => r.Inspection == null && r.ArchiveBytes == null), "Censimento multi-radice non analizza dimensioni o contenuto");
+    var partial = ArchivedJobsReader.ScanRoots(new[] { jobs, Path.Combine(root, "non-esiste") }, default);
+    Check(partial.Incomplete && partial.Records.Count == 1 && partial.Warnings.Count > 0, "Radice non disponibile conserva i risultati leggibili e segnala lettura parziale");
     File.WriteAllText(Path.Combine(root, "C26199 - guasto.7z"), "non e un archivio");
     var scan = ArchivedJobsReader.Scan(root, default);
-    Check(scan.Records.Count == 3 && scan.Records.All(r => r.ArchiveBytes > 0), "Censimento include ZIP e 7z, con dimensioni compresse");
+    Check(scan.Records.Count == 4 && scan.Records.All(r => r.ArchiveBytes > 0), "Censimento include ZIP e 7z, con dimensioni compresse");
     Check(!ArchivedJobsReader.Inspect(Path.Combine(root, "C26199 - guasto.7z"), default).Complete, "Archivio danneggiato segnalato senza riparazioni");
 }
 finally

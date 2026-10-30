@@ -13,6 +13,10 @@ internal static class Program
     static void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL: " + name); Console.WriteLine("PASS: " + name); }
     [STAThread] static void Main()
     {
+        Check(ClientPaths.ForExplorer(@"\\ingtassinari.it\data\lavori\2026\C26198 - A - B") == @"Z:\lavori\2026\C26198 - A - B", "Apertura converte la condivisione aziendale in Z");
+        Check(ClientPaths.ForExplorer(@"\\INGTASSINARI\DATA\archivio\esempio.zip") == @"Z:\archivio\esempio.zip", "Conversione supporta nome breve e maiuscole");
+        Check(ClientPaths.ForExplorer(@"\\ingtassinari.it\database\file") == @"\\ingtassinari.it\database\file", "Condivisioni diverse restano inalterate");
+        Check(ClientPaths.ForExplorer(@"Z:\lavori") == @"Z:\lavori", "Percorsi gia mappati invariati");
         var app = new Application();
         foreach (var prefix in new[] { 'C', 'G', 'A' })
         {
