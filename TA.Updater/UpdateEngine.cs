@@ -155,6 +155,7 @@ public sealed class UpdateEngine(string component, string root, Action<string, b
             var id = component == "Server" ? "{07E5CE80-53A7-4B01-A6C7-E2898FBDF247}" : "{D0B63D8F-FF51-4B68-9553-4B49A78C7B3A}";
             using var key = hive.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + id + "_is1", true);
             key?.SetValue("DisplayVersion", version);
+            key?.SetValue("DisplayName", "TA-Gestione Cartelle Commesse" + (component == "Server" ? " - Server" : "") + " versione " + version);
         }
         catch (Exception ex) { Note("File aggiornati; versione nell'elenco App non aggiornata: " + ex.Message); }
     }

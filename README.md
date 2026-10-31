@@ -1,6 +1,18 @@
-## Sviluppo 2.11.0: inventario nomi e MCP
+# Versione 2.11.0 — inventario nomi e MCP
 
-Analisi ricorsiva in sola lettura dei nomi dei file, inclusi ZIP e 7z, JSON per anno e codice, proposte per committenti ricorrenti e report sintetico delle differenze. Elaborazione alle 23:00; notifiche delle modifiche sospese. Doppio clic sui rami della struttura per aprire Esplora file. [Dettagli, limiti e strumenti MCP](deployment/ANALISI-NOMI.md). I download pubblicati sotto si riferiscono all'ultima release precedente.
+Analisi ricorsiva in sola lettura dei nomi e metadati dei file, anche dentro ZIP e 7z, con JSON per anno e codice commessa. Le cartelle dei committenti ricorrenti producono proposte da verificare; nessuna commessa annidata viene promossa automaticamente.
+
+Elaborazione completa alle 23:00 italiane. Differenze nel menu **Export > Report sintetico analisi nomi e differenze**; notifiche sospese. Doppio clic sul testo dei rami della struttura per aprire Esplora file. Il nuovo strumento MCP **analisi_file** consulta catalogo, file, proposte, pattern ed errori, senza chiamate automatiche alle API IA.
+
+- [Aggiornatore diretto 2.11.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.11.0/TA-Commesse-Aggiornatore-2.11.0.exe)
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.11.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.11.0.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.11.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.11.0.exe)
+- [Componente MCP 2.11.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.11.0/TA-Commesse-MCP-2.11.0.zip)
+- [Release e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.11.0)
+
+Aggiornare il **Server**, quindi il **Client** con l'aggiornatore. Per MCP fermare il tunnel, estrarre il pacchetto in una cartella stabile sulla VM e riavviare Start-McpTunnel.ps1 passando -Transport local e -TunnelClient con il percorso del tunnel-client ufficiale gia installato. Ricaricare gli strumenti del plugin ChatGPT. L'inventario diventa disponibile dopo la prima elaborazione notturna.
+
+[Formato JSON, limiti e uso MCP](deployment/ANALISI-NOMI.md). Le sezioni seguenti descrivono anche lo storico: le notifiche delle differenze restano sospese nella 2.11.0.
 
 ## Versione 2.9.0: apertura su Z e archivi sotto lavori
 
@@ -26,14 +38,14 @@ Fino alla prima elaborazione, una nuova cartella mostra In attesa del report del
 
 Aggiornare prima Server e poi Client tramite il programma di aggiornamento diretto. Restano invariati autenticazione Windows, TCP dedicato, backup e aggiornamenti all'apertura senza attivita pianificate.
 
-## Scarica e installa - versione 2.9.0
+## Scarica e installa - versione 2.11.0
 
-**[Scarica il programma di aggiornamento diretto 2.9.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.9.0/TA-Commesse-Aggiornatore-2.9.0.exe)**. Eseguirlo prima sulla VM (Server), poi sui PC (Client). I setup sotto servono solo per installazioni iniziali.
+**[Scarica il programma di aggiornamento diretto 2.11.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.11.0/TA-Commesse-Aggiornatore-2.11.0.exe)**. Eseguirlo prima sulla VM (Server), poi sui PC (Client). I setup sotto servono solo per installazioni iniziali.
 
-- [Scarica installatore Server 2.9.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.9.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.9.0.exe)
-- [Scarica installatore Client 2.9.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.9.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.9.0.exe)
+- [Scarica installatore Server 2.11.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.11.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.11.0.exe)
+- [Scarica installatore Client 2.11.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.11.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.11.0.exe)
 
-Il server verifica commesse, gare e archivio ogni minuto, senza sovrapporre scansioni della stessa categoria, e invia notifiche push ai client. Il menu Aiuto > Informazioni mostra la versione client e, quando disponibile, quella server. Resta necessario configurare account, gruppo AD e SPN seguendo la guida.
+Il server verifica commesse, gare e archivio ogni minuto, senza sovrapporre scansioni della stessa categoria, e conserva le differenze nel report, senza notifiche push. Il menu Aiuto > Informazioni mostra la versione client e, quando disponibile, quella server. Resta necessario configurare account, gruppo AD e SPN seguendo la guida.
 
 ## Due installatori
 
@@ -123,7 +135,7 @@ Verifiche locali: cartella C26198 con metadati bloccati, aggiornamento griglie W
 
 ### Aggiornatore
 
-TA-Commesse-Aggiornatore-2.9.0.exe e un programma autonomo: scarica da GitHub il pacchetto ZIP del componente, verifica l'impronta pubblicata da GitHub e le impronte di ogni file, chiude l'interfaccia e sostituisce soltanto i file diversi. Non esegue un installatore. Configurazioni, dati, registrazione e account del servizio restano invariati. L'aggiornamento server richiede privilegi amministrativi e arresta/riavvia il servizio solo se prima era attivo; un servizio gia fermo resta fermo.
+TA-Commesse-Aggiornatore-2.11.0.exe e un programma autonomo: scarica da GitHub il pacchetto ZIP del componente, verifica l'impronta pubblicata da GitHub e le impronte di ogni file, chiude l'interfaccia e sostituisce soltanto i file diversi. Non esegue un installatore. Configurazioni, dati, registrazione e account del servizio restano invariati. L'aggiornamento server richiede privilegi amministrativi e arresta/riavvia il servizio solo se prima era attivo; un servizio gia fermo resta fermo.
 
 Per passare dalla 2.6.0 senza usare un installatore, scaricare una volta l'aggiornatore autonomo, eseguirlo sulla VM scegliendo Server e poi sui PC scegliendo Client. Dalla nuova versione il controllo automatico resta limitato all'apertura del client o del gestore, oltre al comando manuale. Nessuna attivita pianificata. I file Installazione-Iniziale servono solo per nuove installazioni; non sono il canale di aggiornamento.
 
