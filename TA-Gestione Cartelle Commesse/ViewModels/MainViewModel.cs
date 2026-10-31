@@ -5,7 +5,7 @@ using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA_Gestione_Cartelle_Commesse.ViewModels;
 
 // Coordina solo presentazione e connessione; calcoli, archivio e report appartengono al servizio Windows.
-public sealed class MainViewModel : Observable
+public sealed partial class MainViewModel : Observable
 {
     public CategoryViewModel Commesse { get; } = new("Commesse", 'C');
     public CategoryViewModel Gare { get; } = new("Gare", 'G'); public CategoryViewModel Archivio { get; } = new("Archivio", 'A');
@@ -37,6 +37,7 @@ public sealed class MainViewModel : Observable
     public Command ReportCommand { get; }
     public MainViewModel()
     {
+        ToggleDiagnosticsCommand=new(() => DiagnosticsOpen=!DiagnosticsOpen);
         ManageServerCommand = new(ShowServerManagement, () => CanManageServer); CheckCommunicationCommand = new(() => _ = CheckCommunicationAsync()); ChangesCommand = new(ShowChanges);
         CreateJobCommand = new(CreateJob, () => connection != null);
         UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
@@ -48,6 +49,7 @@ public sealed class MainViewModel : Observable
 
         try { var settings = ClientSettings.Load(); host = settings.Host; port = settings.Port.ToString(); }
         catch (Exception ex) { reportStatus = "Configurazione non leggibile: " + ex.Message; }
+        diagnosticsOpen=string.IsNullOrWhiteSpace(host);
     }
     public async Task InitializeAsync()
     {
@@ -65,7 +67,7 @@ public sealed class MainViewModel : Observable
             if (dialog.ShowDialog() != true) return;
             credentials = dialog.Credential;
         }
-        pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
+        StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
         Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
@@ -76,6 +78,7 @@ public sealed class MainViewModel : Observable
             await PollAsync();
             if (Commesse.LastConnectionError is not System.Security.Authentication.AuthenticationException and not ServerRejectedException && Gare.LastConnectionError is not System.Security.Authentication.AuthenticationException and not ServerRejectedException)
             {
+                StartProgressPolling(connection);
                 pushCancellation = new CancellationTokenSource();
                 _ = WatchLoopAsync(connection, pushCancellation.Token);
             }
@@ -141,7 +144,7 @@ public sealed class MainViewModel : Observable
             }
         }
     }
-    public void Stop() { ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
+    public void Stop() { StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
 
 
     private void ShowServerManagement()
@@ -155,6 +158,7 @@ public sealed class MainViewModel : Observable
     }
     private async Task CheckCommunicationAsync()
     {
+        DiagnosticsOpen=true;
         if (connection == null) { CommunicationStatus = "Collegare prima il server."; return; }
         var id = Guid.NewGuid().ToString("N");
         var elapsed = System.Diagnostics.Stopwatch.StartNew();
@@ -195,7 +199,7 @@ public sealed class MainViewModel : Observable
             try { serverVersion = await connection.SendAsync<string>(new("Info"), timeout.Token); }
             catch { serverVersion = "Non disponibile (server non raggiungibile o versione precedente)"; }
         }
-        System.Windows.MessageBox.Show($"TA-Gestione Cartelle Commesse\n\nClient: {version}\nServer: {serverVersion}\nConnessione: {ServerHost}:{ServerPort}\n\nScansione server di commesse e gare ogni minuto, senza sovrapporre scansioni. Analisi nomi e gerarchie alle 23:00; differenze nel report, notifiche sospese.\n\nStudio Tassinari", "Informazioni", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        System.Windows.MessageBox.Show($"TA-Gestione Cartelle Commesse\n\nClient: {version}\nServer: {serverVersion}\nConnessione: {ServerHost}:{ServerPort}\n\nScansione completa ogni ora: commesse, gare e archivio, nomi dei file e voci ZIP/7z. Percentuale per fase quando stimabile, senza scansioni sovrapposte. Differenze nel report, notifiche sospese.\n\nStudio Tassinari", "Informazioni", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
     private async Task CreateReport(bool daily = false, bool analysis = false)
     {
@@ -209,7 +213,7 @@ public sealed class MainViewModel : Observable
             await File.WriteAllTextAsync(dialog.FileName, html, new System.Text.UTF8Encoding(false));
             ReportStatus = "Report salvato: " + dialog.FileName;
         }
-        catch (Exception ex) { ReportStatus = "Report non creato: " + ex.Message; }
+        catch (Exception ex) { DiagnosticsOpen=true; ReportStatus = "Report non creato: " + ex.Message; }
         finally { reporting = false; ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); }
     }
 }

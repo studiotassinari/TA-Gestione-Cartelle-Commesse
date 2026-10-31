@@ -27,7 +27,7 @@ foreach($sid in @('S-1-5-18','S-1-5-32-544')) {
 $rule=New-Object System.Security.AccessControl.FileSystemAccessRule([System.Security.Principal.SecurityIdentifier]::new('S-1-5-11'),'ReadAndExecute','ContainerInherit,ObjectInherit','None','Allow')
 $acl.AddAccessRule($rule)
 Set-Acl -LiteralPath $folder -AclObject $acl
-$settings=@{ Server=@{ JobsRoot=$JobsRoot; BidsRoot=$BidsRoot; ArchiveFolder=$ArchiveFolder; AllowedGroup=$AllowedGroup; Port=$Port; RefreshMinutes=1; JobTemplate=$JobTemplate; ArchivedJobsRoot=$ArchivedJobsRoot } }
+$settings=@{ Server=@{ JobsRoot=$JobsRoot; BidsRoot=$BidsRoot; ArchiveFolder=$ArchiveFolder; AllowedGroup=$AllowedGroup; Port=$Port; RefreshMinutes=60; JobTemplate=$JobTemplate; ArchivedJobsRoot=$ArchivedJobsRoot } }
 $settings | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $folder 'server-settings.json') -Encoding UTF8
 if ($OpenDomainFirewall) {
     # Regola limitata al profilo di dominio, sottorete locale e all'eseguibile del servizio.

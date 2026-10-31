@@ -9,7 +9,8 @@ public sealed class ServerSettings
     // Un gruppo esplicito evita di esporre tutti i metadati a qualunque account del dominio.
     public string JobTemplate { get; set; } = @"\\ingtassinari.it\data\lavori\2026\C26198 - CLIENTE - LUOGO - COSA";
     public string AllowedGroup { get; set; } = "";
-    public int RefreshMinutes { get; set; } = 1;
+    // Compatibilità con configurazioni precedenti: la frequenza effettiva è oraria.
+    public int RefreshMinutes { get; set; } = 60;
     // Porta TCP dedicata: i valori comunemente usati per HTTP sono esclusi.
     public int Port { get; set; } = 5443;
 

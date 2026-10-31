@@ -40,7 +40,7 @@ var transport = new StdioClientTransport(new StdioClientTransportOptions {
 });
 await using var client = await McpClient.CreateAsync(transport, cancellationToken: timeout.Token);
 var catalog = await client.ListToolsAsync(cancellationToken: timeout.Token);
-Check(catalog.Select(t => t.Name).Order().SequenceEqual(new[] { "analisi_file", "cerca_cartelle", "cerca_file", "dettaglio_cartella", "report_giornaliero", "sottocartelle" }), "Solo strumenti autorizzati");
+Check(catalog.Select(t => t.Name).Order().SequenceEqual(new[] { "analisi_file", "cerca_cartelle", "cerca_file", "dettaglio_cartella", "report_giornaliero", "sottocartelle", "stato_scansione" }), "Solo strumenti autorizzati");
 var invalid = await client.CallToolAsync("cerca_cartelle", new Dictionary<string,object?> { ["category"] = "X" }, cancellationToken: timeout.Token);
 Check(invalid.IsError == true, "Errore MCP strutturato");
 Console.WriteLine("PASS: ricerca, pagine, dimensioni mancanti, validazione percorsi, versioni report, avvio stdio e catalogo in sola lettura.");
@@ -48,6 +48,7 @@ Console.WriteLine("PASS: ricerca, pagine, dimensioni mancanti, validazione perco
 sealed class FakeSource : IReadOnlySource
 {
     public Task<AnalysisPage> Analysis(AnalysisQuery query, CancellationToken token) => Task.FromResult(new AnalysisPage(null, 0, null, Array.Empty<object>(), "test"));
+    public Task<ScanProgress> Progress(CancellationToken token) => Task.FromResult(new ScanProgress(true,"Inventario nomi",1,4,"test"));
     public Task<FileSearchPage> Files(FileSearchQuery query, CancellationToken token) => Task.FromResult(new FileSearchPage("v", DateTime.UtcNow, DateTime.UtcNow, 0, query.Offset, null, true, [], []));
     public int Calls;
     public string Report = "<html>report giornaliero</html>";

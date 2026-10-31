@@ -29,7 +29,7 @@ builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());
 builder.Services.AddHostedService<TcpService>();
 builder.Services.AddHostedService<LocalMcpService>();
-builder.Services.AddHostedService<FolderWatchService>();
+// Gli eventi filesystem non avviano scansioni fuori dalla cadenza oraria.
 using var host = builder.Build();
 var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
 lifetime.ApplicationStarted.Register(() => StartupLog.Write("Host avviato; attendere TCP pronto per la disponibilita delle connessioni."));

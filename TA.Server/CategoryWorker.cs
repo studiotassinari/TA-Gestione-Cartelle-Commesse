@@ -11,6 +11,8 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
     private CategoryState state = new(prefix, root, true, "Caricamento archivio...", "", null);
     private CancellationTokenSource? cancellation;
     private bool initialized; private readonly ArchiveWriter persistence = new(archive, prefix, logger);
+    private ScanProgress progress = new(false, "In attesa", 0, null, "Non avviata");
+    public ScanProgress Progress { get { lock (gate) return progress; } }
     private Task current = Task.CompletedTask;
     private Task<bool> indexTask = Task.FromResult(false);
     public CategoryState State { get { lock (gate) return state; } }
@@ -89,6 +91,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             if (state.Busy) return false;
             cancellation = CancellationTokenSource.CreateLinkedTokenSource(shutdown);
             state = state with { Busy = true, Message = "Verifica metadati server in corso..." };
+            progress = new(true, "Preparazione", 0, null, "Lettura elenco", DateTime.UtcNow);
             var source = cancellation;
             changes.Publish();
             current = Task.Run(() => Scan(source));
@@ -107,19 +110,29 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
         var started = DateTime.UtcNow;
         try
         {
-            if (!await RefreshIndexAsync(source.Token)) return;
+            if (!await RefreshIndexAsync(source.Token))
+            { lock(gate) progress=progress with { HasErrors=true, Message=state.Message }; return; }
             List<FolderRecord> pending;
-            lock (gate) pending = state.Snapshot!.Records.ToList();
+            lock (gate)
+            {
+                pending = state.Snapshot!.Records.ToList();
+                progress=progress with { Phase="Dimensioni e gerarchie", Total=pending.Count, HasErrors=state.Snapshot.Warnings.Count>0 };
+            }
             logger.LogInformation("Metadati {Category}: avvio verifica di {Count} cartelle", prefix, pending.Count);
             int completed = 0; var lastSave = DateTime.UtcNow; var lastPush = DateTime.MinValue;
             foreach (var record in pending)
             {
                 source.Token.ThrowIfCancellationRequested();
-                lock (gate) state = state with { Message = $"Metadati {++completed}/{pending.Count}: {record.Code}. Elenco aggiornato separatamente." };
+                lock (gate)
+                {
+                    state=state with { Message=$"Metadati {completed}/{pending.Count}: {record.Code}" };
+                    progress=progress with { Message=string.IsNullOrWhiteSpace(record.Code) ? record.Path : record.Code };
+                }
                 var inspection = (inspect ?? (prefix == 'A' ? (p, ct) => ArchivedJobsReader.Inspect(p, ct, true) : FolderInspectionService.Inspect))(record.Path, source.Token);
                 List<string> differences = [];
                 lock (gate)
                 {
+                    progress=progress with { Completed=++completed, HasErrors=progress.HasErrors || !inspection.Complete };
                     var snapshot = state.Snapshot!;
                     var position = snapshot.Records.FindIndex(r => string.Equals(r.Path, record.Path, StringComparison.OrdinalIgnoreCase));
                     // Non reinserisce cartelle rimosse o rinominate durante una lettura lunga.
@@ -142,18 +155,23 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             lock (gate) latest = state.Snapshot!;
             persistence.Enqueue(latest, source.Token);
             await persistence.Completion;
-            lock (gate) state = state with { Message = $"Metadati verificati per {completed} cartelle. Controllo elenco ogni minuto." };
+            lock (gate) state = state with { Message = $"Metadati verificati per {completed} cartelle. Prossima elaborazione oraria." };
             logger.LogInformation("Metadati {Category}: completati {Count}, durata {Seconds:F1}s", prefix, completed, (DateTime.UtcNow - started).TotalSeconds);
         }
-        catch (OperationCanceledException) { lock (gate) state = state with { Message = "Metadati interrotti; risultati disponibili conservati" }; }
+        catch (OperationCanceledException) { lock (gate) { progress=progress with {HasErrors=true}; state = state with { Message = "Metadati interrotti; risultati disponibili conservati" }; } }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Verifica {Category} fallita", prefix);
-            lock (gate) state = state with { Message = "Verifica metadati fallita; risultati disponibili conservati: " + ex.Message };
+            lock (gate) { progress=progress with {HasErrors=true}; state = state with { Message = "Verifica metadati fallita; risultati disponibili conservati: " + ex.Message }; }
         }
         finally
         {
-            lock (gate) { state = state with { Busy = false }; cancellation = null; source.Dispose(); }
+            lock (gate)
+            {
+                state=state with { Busy=false };
+                progress=progress with { IsRunning=false, Message=state.Message, FinishedUtc=DateTime.UtcNow, HasErrors=progress.HasErrors || state.ArchiveStatus.StartsWith("Salvataggio") };
+                cancellation=null; source.Dispose();
+            }
             changes.Publish();
         }
     }

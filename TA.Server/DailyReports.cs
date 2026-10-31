@@ -14,10 +14,10 @@ public static class DailyReports
     }
     public static string Latest(string directory)
     {
-        var file = Directory.Exists(directory) ? Directory.EnumerateFiles(directory, "????-??-??.html").OrderDescending().FirstOrDefault() : null;
-        return file == null ? throw new IOException("Nessun report giornaliero disponibile. La prima elaborazione parte alle 23:00, ora italiana.") : File.ReadAllText(file);
+        var file = Directory.Exists(directory) ? Directory.EnumerateFiles(directory, "*.html").OrderDescending().FirstOrDefault() : null;
+        return file == null ? throw new IOException("Nessun report disponibile. Attendere il completamento della prima scansione oraria.") : File.ReadAllText(file);
     }
-    public static void Save(string directory, DateTime date, IEnumerable<CategoryWorker> workers, DateTimeOffset started)
+    public static void Save(string directory, DateTime date, IEnumerable<CategoryWorker> workers, DateTimeOffset started, bool hourly = false)
     {
         string H(string? value) => WebUtility.HtmlEncode(value) ?? "";
         var states = workers.Select(w => w.State).ToArray();
@@ -25,7 +25,7 @@ public static class DailyReports
         var bids = states.Single(s => s.Prefix == 'G').Snapshot;
         var archived = states.Single(s => s.Prefix == 'A').Snapshot;
         var html = ReportWriter.Create(jobs?.Root ?? "", new(jobs?.Records ?? [], jobs?.Warnings ?? []), bids?.Root ?? "", new(bids?.Records ?? [], bids?.Warnings ?? []), archived?.Root ?? "", new(archived?.Records ?? [], archived?.Warnings ?? []));
-        var detail = new StringBuilder($"<section><h2>Report giornaliero {date:dd/MM/yyyy}</h2><p>Avvio {ItalianTime(started):dd/MM/yyyy HH:mm:ss}; fine {ItalianTime(DateTimeOffset.UtcNow):dd/MM/yyyy HH:mm:ss} (ora italiana). I dati rappresentano le letture effettuate durante questa elaborazione, non una fotografia atomica.</p>");
+        var detail = new StringBuilder($"<section><h2>Report {(hourly ? "orario" : "giornaliero")} {ItalianTime(started):dd/MM/yyyy HH:mm}</h2><p>Avvio {ItalianTime(started):dd/MM/yyyy HH:mm:ss}; fine {ItalianTime(DateTimeOffset.UtcNow):dd/MM/yyyy HH:mm:ss} (ora italiana). I dati rappresentano le letture effettuate durante questa elaborazione, non una fotografia atomica.</p>");
         foreach (var state in states)
         {
             detail.Append($"<h3>Categoria {state.Prefix}</h3><p>{H(state.Message)} — {H(state.ArchiveStatus)}</p>");
@@ -41,7 +41,7 @@ public static class DailyReports
         detail.Append("</section>");
         html = html.Replace("<main>", "<main>" + detail);
         Directory.CreateDirectory(directory);
-        var target = Path.Combine(directory, date.ToString("yyyy-MM-dd") + ".html");
+        var target = Path.Combine(directory, (hourly ? started.UtcDateTime.ToString("yyyy-MM-dd_HH-mm") : date.ToString("yyyy-MM-dd")) + ".html");
         var temp = target + ".tmp";
         File.WriteAllText(temp, html, Encoding.UTF8);
         File.Move(temp, target, true);

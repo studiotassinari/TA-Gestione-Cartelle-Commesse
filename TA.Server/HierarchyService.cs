@@ -12,7 +12,7 @@ public static class HierarchyService
         if (Path.IsPathRooted(relative) || relative.Contains(':') || relative.Split(['/', '\\']).Any(p => p is ".." or "."))
             throw new ArgumentException("Percorso relativo non valido");
         var metadata = record.Inspection;
-        if (metadata?.HierarchyCaptured != true) throw new IOException("Gerarchia non ancora disponibile: attendere il report giornaliero delle 23:00.");
+        if (metadata?.HierarchyCaptured != true) throw new IOException("Gerarchia non ancora disponibile: attendere la scansione oraria.");
         var parent = relative.Replace(Path.DirectorySeparatorChar, '/').Trim('/');
         return metadata.ArchiveDirectories.Where(p => (p.Contains('/') ? p[..p.LastIndexOf('/')] : "") == parent)
             .OrderBy(p => p).Select(p => new FolderEntry(p.Split('/').Last(), record.Path + "\\" + p.Replace('/', Path.DirectorySeparatorChar), p)).ToArray();

@@ -12,7 +12,7 @@ public sealed class FileSearchService(ServerSettings settings)
     public FileSearchPage Search(FileSearchQuery query, CancellationToken token = default)
     {
         FileSearchValidation.Validate(query);
-        var run = store.Latest() ?? throw new IOException("Inventario dei singoli file non ancora disponibile: attendere la scansione delle 23:00. Non equivale a zero risultati.");
+        var run = store.Latest() ?? throw new IOException("Inventario dei singoli file non ancora disponibile: attendere la scansione oraria. Non equivale a zero risultati.");
         var version = run.CompletedUtc.ToString("O", CultureInfo.InvariantCulture);
         if (query.Version != null && query.Version != version)
             throw new ArgumentException("Inventario cambiato: ripartire da offset 0 senza version.");

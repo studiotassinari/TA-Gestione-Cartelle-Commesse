@@ -5,11 +5,11 @@ using TA_Gestione_Cartelle_Commesse.Services;
 
 namespace TA.Server;
 
-// Censimento notturno separato dalle risposte State, che restano leggere.
+// Censimento orario separato dalle risposte State, che restano leggere.
 public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisService> logger)
 {
     private readonly InventoryStore store = new(settings.ArchiveFolder);
-    public async Task RunAsync(IEnumerable<CategoryState> states, CancellationToken token)
+    public async Task RunAsync(IEnumerable<CategoryState> states, CancellationToken token, Action<ScanProgress>? reportProgress = null)
     {
         var roots = new[] { settings.JobsRoot, settings.BidsRoot, settings.ArchivedJobsRoot };
         var output = Path.GetFullPath(store.Root).TrimEnd('\\','/');
@@ -19,32 +19,38 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
         await Task.Run(() =>
         {
             var started = DateTime.UtcNow;
+            reportProgress?.Invoke(new(true,"Preparazione inventario",0,null,"Censimento delle unità da analizzare",started));
             var plan = InventoryPlanner.Plan(states.Select(s => (s.Prefix.ToString(), s.Root, s.Snapshot?.Records ?? [])), settings.JobsRoot, token);
             var folders = plan.Units.Where(u => !FileInventoryReader.IsArchive(u.Path)).Select(u => Path.GetFullPath(u.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var previous = store.Latest();
             var reports = new List<InventoryManifest>();
+            int completed=0; bool warnings=plan.Issues.Count>0;
             foreach(var unit in plan.Units)
             {
                 token.ThrowIfCancellationRequested();
+                reportProgress?.Invoke(new(true,"Inventario nomi",completed,plan.Units.Count,unit.Path,started,HasErrors:warnings));
                 try
                 {
                     var excluded = new HashSet<string>(folders, StringComparer.OrdinalIgnoreCase); excluded.Remove(Path.GetFullPath(unit.Path));
                     var result = FileInventoryReader.Read(unit.Path, excluded, token);
-                    reports.Add(store.Save(unit, result, token));
+                    var manifest=store.Save(unit,result,token); reports.Add(manifest);
+                    warnings |= !manifest.Complete;
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
                 {
-                    plan.Issues.Add(unit.Path + ": inventario non aggiornato: " + ex.Message);
+                    warnings=true; plan.Issues.Add(unit.Path + ": inventario non aggiornato: " + ex.Message);
                     var old = previous?.Inventories.FirstOrDefault(m => m.Unit.Id == unit.Id);
                     if (old != null) reports.Add(old with { Complete = false, Added = 0, Removed = 0, Changed = 0, Baseline = false });
                 }
+                reportProgress?.Invoke(new(true,"Inventario nomi",++completed,plan.Units.Count,unit.Path,started,HasErrors:warnings));
             }
             token.ThrowIfCancellationRequested();
             // Un'unità assente dal piano non dimostra da sola una cancellazione (rete o censimento incompleto).
             foreach (var old in previous?.Inventories ?? [])
                 if (!reports.Any(m => m.Unit.Id == old.Unit.Id))
                     plan.Issues.Add("Unità non rilevata nel censimento corrente, verificare rimozione o indisponibilità: " + old.Unit.Path);
+            reportProgress?.Invoke(new(true,"Salvataggio inventario",completed,plan.Units.Count,"Salvataggio JSON e differenze",started,HasErrors:warnings || plan.Issues.Count>0));
             store.SaveRun(new(started, DateTime.UtcNow, reports, plan.Candidates, plan.Issues));
             logger.LogInformation("Censimento nomi completato: {Count} unità, {Candidates} proposte. Nessuna notifica.", reports.Count, plan.Candidates.Count);
         }, token);
@@ -53,7 +59,7 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
     {
         if(query.Offset < 0 || query.Limit is < 1 or > 100 || query.Offset > int.MaxValue-query.Limit || query.Text.Length > 200)
             throw new ArgumentException("Paginazione o testo non valido.");
-        var run = store.Latest() ?? throw new IOException("Inventario nomi non ancora disponibile: prima elaborazione alle 23:00.");
+        var run = store.Latest() ?? throw new IOException("Inventario nomi non ancora disponibile: attendere la prima scansione oraria.");
         IEnumerable<object> result;
         string note = "Nomi e metadati salvati, non contenuti. Proposte da verificare; nessuna classificazione automatica.";
         switch(query.Kind)

@@ -4,6 +4,7 @@ Il progetto TA.Mcp usa il SDK ufficiale ModelContextProtocol 2.3.0. Comunica su 
 
 ## Strumenti
 
+- stato_scansione: fase, percentuale per unità quando nota, ultima conclusione e prossima scansione; sola lettura, non avvia elaborazioni.
 - cerca_file: singoli file in cartelle e ZIP/7z; filtri nome, estensione, categoria, anno e codice; totale, data scansione e pagine vincolate alla versione dell inventario. Vedere ANALISI-NOMI.md.
 - cerca_cartelle: categorie C, G, A; ricerca codice, committente, argomento; pagine fino a 100 righe.
 - dettaglio_cartella: non conformità e nomi dei preventivi candidati, paginati.
@@ -56,9 +57,9 @@ Il componente stdio non implementa OAuth. Non inserire la chiave del tunnel nei 
 
 ## Collaudo
 
-`dotnet run --project tests/McpChecks -c Release` dalla radice, dopo la compilazione Release di TA.Mcp, verifica con dati fittizi ricerca, paginazione, null delle dimensioni, input rifiutati, versioni del report, handshake stdio e catalogo dei sei strumenti.
+`dotnet run --project tests/McpChecks -c Release` dalla radice, dopo la compilazione Release di TA.Mcp, verifica con dati fittizi ricerca, paginazione, null delle dimensioni, input rifiutati, versioni del report, handshake stdio e catalogo dei sette strumenti.
 
-La prova completa richiede sulla VM: identità Windows autorizzata, tunnel con polling attivo, rilevamento dei sei strumenti in ChatGPT e chiamata a cerca_cartelle. Non dichiarare il collegamento operativo prima di queste prove. Nessun dato aziendale viene inviato durante i test locali con dati fittizi.
+La prova completa richiede sulla VM: identità Windows autorizzata, tunnel con polling attivo, rilevamento dei sette strumenti in ChatGPT e chiamata a cerca_cartelle. Non dichiarare il collegamento operativo prima di queste prove. Nessun dato aziendale viene inviato durante i test locali con dati fittizi.
 
 Il tunnel ufficiale espone una diagnostica HTTP limitata a 127.0.0.1 su porta casuale: non è accessibile dalla rete. Il servizio TA resta sul proprio canale TCP. Non esporre la diagnostica sulle interfacce di rete.
 

@@ -1,10 +1,10 @@
-# Inventario nomi, versione 2.11.0
+# Inventario nomi, versione 2.13.0
 
 Il servizio legge le radici configurate di commesse, gare e archivio. L'indice delle commesse resta limitato al primo livello delle cartelle annuali. Il nuovo inventario legge ricorsivamente i nomi di tutti i file accessibili, anche nelle cartelle fuori dagli anni e nei contenitori dei clienti. Non modifica le sorgenti, non estrae archivi e non legge il contenuto dei documenti ordinari. Legge nomi, percorsi relativi, tipo, dimensione e data dai metadati; per ZIP e 7z legge le intestazioni degli archivi.
 
 ## Calendario e report
 
-L'elaborazione completa parte alle 23:00, ora italiana, dopo il calcolo giornaliero delle dimensioni e della gerarchia. Il controllo dell'elenco ogni minuto continua. Non ci sono attività pianificate Windows né chiamate automatiche a modelli IA. Le differenze non generano push o notifiche Windows. Il canale di comunicazione conserva connessione e riscontri; il client può recuperare l'elenco con Aggiorna o riconnettendosi.
+La scansione completa avviene ogni ora e comprende elenchi, dimensioni, gerarchie e inventario dei nomi. Alla prima installazione della 2.13 parte subito; un checkpoint persistente impedisce una nuova esecuzione nello slot già completato dopo un riavvio. Dopo una scansione lunga viene usata la prima ora intera successiva alla fine, senza accodare gli slot persi. I controlli del calendario avvengono ogni minuto (non sono scansioni); l'avvio può quindi ritardare fino a un minuto. Gli slot UTC gestiscono anche il cambio dell'ora; il client mostra le scadenze nell'ora italiana. Nessun watcher avvia scansioni extra e nessuna attività pianificata Windows è creata. Aggiorna elenco resta manuale e non ricalcola i metadati. Le differenze non generano notifiche Windows né richieste automatiche a modelli IA. Il client aggiorna silenziosamente le viste quando riceve lo stato di scansione conclusa.
 
 Il menu **Export > Report sintetico analisi nomi e differenze** scarica dal server un HTML con nuove voci, rimozioni confermate, metadati variati, letture parziali e proposte di commesse. Prima della prima elaborazione il report non è disponibile. La prima lettura costituisce la base del confronto. Una rinomina appare come rimozione e aggiunta; non vengono interpretati i contenuti dei documenti. Non è una fotografia atomica del filesystem.
 
@@ -60,4 +60,12 @@ Ogni file restituisce code, name, extension, relativePath, parentRelativePath, p
 
 La nuova proprietà Location viene salvata in ciascuna voce JSON dalla prossima scansione. I JSON 2.11 già presenti restano leggibili: la posizione viene ricostruita dal manifest e dal percorso relativo, senza accedere alle sorgenti. L'organizzazione resta separata per anno e codice. Per gli archivi con solo anno a due cifre non viene indovinato il secolo: cercarli con code (per esempio C26) invece del filtro year.
 
-Aggiornare il servizio e il componente MCP sulla VM, riavviare il tunnel e ricaricare gli strumenti del plugin. La prima ricerca reale richiede un inventario notturno completato; il nuovo strumento non avvia scansioni o estrazioni.
+Aggiornare il servizio e il componente MCP sulla VM, riavviare il tunnel e ricaricare gli strumenti del plugin. La prima ricerca reale richiede un inventario orario completato; il nuovo strumento non avvia scansioni o estrazioni.
+
+## Stato e report orari (2.13)
+
+La barra del client mostra preparazione, dimensioni e gerarchie, inventario nomi e salvataggio. La percentuale indica le unità completate nella fase corrente: non è una stima del tempo e riparte al cambio di fase. Una singola commessa grande può mantenere la stessa percentuale a lungo. Quando manca il totale la barra è indeterminata. Errori e letture parziali sono espliciti; i dettagli sono in Visualizza > Stato e connessione, insieme a prova di collegamento, messaggi e segnalazioni delle categorie. Il pannello è chiuso inizialmente, salvo client non configurato.
+
+Il client richiede uno stato leggero ogni 3 secondi durante la scansione, ogni 15 secondi in attesa. Errori di autenticazione fermano i tentativi fino a Connetti. Lo strumento MCP stato_scansione consulta gli stessi dati senza avviare letture. Un server precedente va aggiornato per fornire questo stato.
+
+I report sono salvati in ArchiveFolder/report-orari/yyyy-MM-dd_HH-mm.html (nome UTC, orari nel testo italiani); ultima-scansione.json registra l'ultima conclusione. Gli eventuali report-giornalieri precedenti restano leggibili come fallback. Un errore fatale ritenta dopo cinque minuti; una scansione conclusa con segnalazioni mantiene il normale ciclo orario. I JSON dei file mantengono l'organizzazione per anno e commessa. Nessuna cancellazione automatica dello storico.

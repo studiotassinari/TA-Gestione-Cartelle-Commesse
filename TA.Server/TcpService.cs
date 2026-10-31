@@ -96,7 +96,7 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
                 {
                     reply = AdministrativeCommands.Handle(request, domainAdmin, () => new(
                         CommunicationLog.Tail(Path.Combine(CommunicationLog.DirectoryPath, "service.log")),
-                        CommunicationLog.Tail(CommunicationLog.FilePath))) ?? Dispatch(request);
+                        CommunicationLog.Tail(CommunicationLog.FilePath))) ?? await Dispatch(request).WaitAsync(ct);
                 }
                 catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or KeyNotFoundException)
                 { reply = Reply.Fail(ex.Message); }
@@ -107,7 +107,7 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
             finally { if (commandSlot) slots.Release(); if (pushSlot) pushSlots.Release(); }
         }
     }
-    private Reply Dispatch(Request request)
+    private async Task<Reply> Dispatch(Request request)
     {
         if (request.Version != 2) return Reply.Fail("Versione del protocollo non supportata.");
         switch (request.Operation)
@@ -126,9 +126,10 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
             case "State":
                 var state = scans.Get(request.Category).State;
                 return Reply.Ok(state with { Snapshot = state.Snapshot == null ? null : state.Snapshot with { Records = state.Snapshot.Records.Select(r => r.Inspection == null ? r : r with { Inspection = r.Inspection with { ArchiveDirectories = [] } }).ToList() } });
-            case "Refresh": return Reply.Ok(scans.Refresh(request.Category));
+            case "Refresh": return Reply.Ok(await scans.RefreshAsync(request.Category));
             case "Cancel": scans.Get(request.Category).Cancel(); return Reply.Ok(true);
             case "Children": return Reply.Ok(HierarchyService.Children(scans.Get(request.Category).State, request.FolderId ?? "", request.RelativePath));
+            case "Progress": return Reply.Ok(scans.Progress);
             case "DailyReport": return Reply.Ok(scans.DailyReport());
             case "Files": return Reply.Ok(files.Search(request.Files ?? new()));
             case "Analysis": return Reply.Ok(analysis.Query(request.Analysis ?? new()));
