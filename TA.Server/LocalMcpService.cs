@@ -7,7 +7,7 @@ using TA.Transport;
 namespace TA.Server;
 
 // Endpoint locale separato da TCP: ACL Windows, identità del chiamante e sola lettura.
-public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, ILogger<LocalMcpService> logger) : BackgroundService
+public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger) : BackgroundService
 {
     public static PipeSecurity Security(SecurityIdentifier owner, SecurityIdentifier group, SecurityIdentifier? admins)
     {
@@ -92,6 +92,7 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
                     Records = state.Snapshot.Records.Select(r => r.Inspection == null ? r : r with { Inspection = r.Inspection with { ArchiveDirectories = [] } }).ToList() } });
             case "Children": return Reply.Ok(HierarchyService.Children(scans.Get(request.Category).State, request.FolderId ?? "", request.RelativePath));
             case "DailyReport": return Reply.Ok(scans.DailyReport());
+            case "Files": return Reply.Ok(files.Search(request.Files ?? new()));
             case "Analysis": return Reply.Ok(analysis.Query(request.Analysis ?? new()));
             case "AnalysisReport": return Reply.Ok(analysis.Report());
             default: throw new UnauthorizedAccessException("Comando non ammesso.");

@@ -6,7 +6,7 @@ using TA.Server;
 using TA.Transport;
 
 void Check(bool ok, string message) { if (!ok) throw new Exception(message); }
-foreach(var operation in new[] { "Info", "State", "Children", "DailyReport", "Analysis", "AnalysisReport" }) LocalReadOnlyPolicy.Validate(new Request(operation));
+foreach(var operation in new[] { "Info", "State", "Children", "DailyReport", "Analysis", "AnalysisReport", "Files" }) LocalReadOnlyPolicy.Validate(new Request(operation));
 foreach(var operation in new[] { "Refresh", "Cancel", "CreateJob", "TemplatePreview", "AdminAudit", "Report", "Subscribe", "Unknown" })
 {
     try { LocalReadOnlyPolicy.Validate(new Request(operation)); throw new Exception("Operazione ammessa: " + operation); }

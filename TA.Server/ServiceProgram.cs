@@ -23,6 +23,7 @@ builder.Services.AddWindowsService(options => options.ServiceName = "TACommesseS
 builder.Services.AddSingleton(settings);
 builder.Services.AddSingleton(new ChangeHub(false));
 builder.Services.AddSingleton<AnalysisService>();
+builder.Services.AddSingleton<FileSearchService>();
 builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());

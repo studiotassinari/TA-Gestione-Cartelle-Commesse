@@ -21,6 +21,10 @@ await Rejected(() => tools.Detail("C", "invalid"));
 await Rejected(() => tools.Analysis("files"));
 await Rejected(() => tools.Analysis("patterns"));
 await Rejected(() => tools.Analysis("delete"));
+await Rejected(() => tools.Files(extension: "../pdf"));
+await Rejected(() => tools.Files(category: "X"));
+await Rejected(() => tools.Files(offset: 1));
+await Rejected(() => tools.Files(year: "26"));
 using var first = JsonDocument.Parse(await tools.DailyReport(length: 5));
 var version = first.RootElement.GetProperty("version").GetString();
 using var second = JsonDocument.Parse(await tools.DailyReport(5, 5, version));
@@ -36,7 +40,7 @@ var transport = new StdioClientTransport(new StdioClientTransportOptions {
 });
 await using var client = await McpClient.CreateAsync(transport, cancellationToken: timeout.Token);
 var catalog = await client.ListToolsAsync(cancellationToken: timeout.Token);
-Check(catalog.Select(t => t.Name).Order().SequenceEqual(new[] { "analisi_file", "cerca_cartelle", "dettaglio_cartella", "report_giornaliero", "sottocartelle" }), "Solo strumenti autorizzati");
+Check(catalog.Select(t => t.Name).Order().SequenceEqual(new[] { "analisi_file", "cerca_cartelle", "cerca_file", "dettaglio_cartella", "report_giornaliero", "sottocartelle" }), "Solo strumenti autorizzati");
 var invalid = await client.CallToolAsync("cerca_cartelle", new Dictionary<string,object?> { ["category"] = "X" }, cancellationToken: timeout.Token);
 Check(invalid.IsError == true, "Errore MCP strutturato");
 Console.WriteLine("PASS: ricerca, pagine, dimensioni mancanti, validazione percorsi, versioni report, avvio stdio e catalogo in sola lettura.");
@@ -44,6 +48,7 @@ Console.WriteLine("PASS: ricerca, pagine, dimensioni mancanti, validazione perco
 sealed class FakeSource : IReadOnlySource
 {
     public Task<AnalysisPage> Analysis(AnalysisQuery query, CancellationToken token) => Task.FromResult(new AnalysisPage(null, 0, null, Array.Empty<object>(), "test"));
+    public Task<FileSearchPage> Files(FileSearchQuery query, CancellationToken token) => Task.FromResult(new FileSearchPage("v", DateTime.UtcNow, DateTime.UtcNow, 0, query.Offset, null, true, [], []));
     public int Calls;
     public string Report = "<html>report giornaliero</html>";
     public List<FolderRecord> Rows = [new("C26001","26","001","Comune","Opera","C:/test/1","OK"), new("C26002","26","002","Comune","Opera","C:/test/2","OK")];

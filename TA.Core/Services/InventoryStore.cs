@@ -32,7 +32,7 @@ public sealed class InventoryStore(string archiveFolder)
         var generation = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffffff") + "-" + Guid.NewGuid().ToString("N");
         var output = Path.Combine(folder, generation); Directory.CreateDirectory(output);
         int pages = 0;
-        foreach(var chunk in entries.Chunk(1000))
+        foreach(var chunk in entries.Select(e => e with { Location = FileLocator.Locate(unit, e) }).Chunk(1000))
         {
             token.ThrowIfCancellationRequested();
             Atomic(Path.Combine(output, $"files-{pages++:D5}.json"), chunk);
@@ -40,7 +40,7 @@ public sealed class InventoryStore(string archiveFolder)
         var manifest = new InventoryManifest(unit, generation, DateTime.UtcNow, result.Complete, entries.Count, pages,
             result.Issues.Take(200).ToList(), previous == null ? 0 : after.Keys.Except(before.Keys).Count(),
             previous == null || !result.Complete ? 0 : before.Keys.Except(after.Keys).Count(),
-            previous == null ? 0 : after.Count(p => before.TryGetValue(p.Key, out var old) && old != p.Value), previous == null);
+            previous == null ? 0 : after.Count(p => before.TryGetValue(p.Key, out var old) && (old.Bytes != p.Value.Bytes || old.ModifiedUtc != p.Value.ModifiedUtc)), previous == null);
         Atomic(Path.Combine(output, "manifest.json"), manifest);
         token.ThrowIfCancellationRequested();
         Atomic(latest, manifest);

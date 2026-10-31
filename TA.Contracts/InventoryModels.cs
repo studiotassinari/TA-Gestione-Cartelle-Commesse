@@ -1,7 +1,7 @@
 namespace TA_Gestione_Cartelle_Commesse.Contracts;
 
 // Solo nomi e metadati: nessun contenuto dei documenti.
-public sealed record InventoryEntry(string RelativePath, string Kind, string? Container = null, long? Bytes = null, DateTime? ModifiedUtc = null);
+public sealed record InventoryEntry(string RelativePath, string Kind, string? Container = null, long? Bytes = null, DateTime? ModifiedUtc = null, FileLocation? Location = null);
 public sealed record InventoryUnit(string Id, string Category, string Year, string Code, string Client, string Subject, string Path, string Classification);
 public sealed record ProjectCandidate(string Path, string Client, string Subject, string? SuggestedCode, string Evidence, string Confidence);
 public sealed record InventoryResult(List<InventoryEntry> Entries, List<string> Issues, bool Complete);
