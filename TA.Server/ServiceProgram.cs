@@ -21,11 +21,13 @@ using (var serviceIdentity = System.Security.Principal.WindowsIdentity.GetCurren
     StartupLog.Write($"Configurazione valida; account servizio={serviceIdentity.Name}; gruppo autorizzato={settings.AllowedGroup}; versione={System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}.");
 builder.Services.AddWindowsService(options => options.ServiceName = "TACommesseServer");
 builder.Services.AddSingleton(settings);
-builder.Services.AddSingleton<ChangeHub>();
+builder.Services.AddSingleton(new ChangeHub(false));
+builder.Services.AddSingleton<AnalysisService>();
 builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());
 builder.Services.AddHostedService<TcpService>();
+builder.Services.AddHostedService<LocalMcpService>();
 builder.Services.AddHostedService<FolderWatchService>();
 using var host = builder.Build();
 var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();

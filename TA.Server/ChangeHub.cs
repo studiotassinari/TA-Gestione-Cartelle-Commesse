@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 namespace TA.Server;
 // Ogni client ha una coda limitata: basta conservare la revisione piu recente.
-public sealed class ChangeHub
+public sealed class ChangeHub(bool enabled = true)
 {
     private readonly object gate = new();
     private readonly HashSet<Subscription> subscribers = [];
@@ -20,6 +20,7 @@ public sealed class ChangeHub
     }
     public void Publish(string? message = null)
     {
+        if (!enabled) return; // Le differenze sono disponibili soltanto nel report.
         lock (gate)
         {
             if (message != null) summary = message;

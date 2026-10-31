@@ -23,7 +23,7 @@ public sealed class ServerConnection(string host, int port, NetworkCredential? c
             "TACommesse/" + host, ProtectionLevel.EncryptAndSign, TokenImpersonationLevel.Identification).WaitAsync(ct);
         // L'SPN deve essere registrato sull'account di servizio: un ripiego non mutuo viene rifiutato.
         if (!authenticated.IsMutuallyAuthenticated || !authenticated.IsEncrypted || !authenticated.IsSigned)
-            throw new AuthenticationException("Autenticazione mutua non riuscita. Verificare SPN e account del servizio.");
+            throw new AuthenticationException($"Protezione Windows insufficiente: server={host}:{port}; SPN=TACommesse/{host}; autenticata={authenticated.IsAuthenticated}; mutua={authenticated.IsMutuallyAuthenticated}; cifrata={authenticated.IsEncrypted}; firmata={authenticated.IsSigned}; protocollo={authenticated.RemoteIdentity?.AuthenticationType}. Verificare identita del processo, destinazione DNS e account del servizio.");
         request = Identify(request);
         await WireProtocol.WriteAsync(authenticated, request, ct);
         var reply = await WireProtocol.ReadAsync<Reply>(authenticated, ct);

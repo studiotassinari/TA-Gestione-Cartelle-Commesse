@@ -60,7 +60,7 @@ var jobs = Path.Combine(root, "lavori"); var bids = Path.Combine(root, "gare"); 
 var job = Directory.CreateDirectory(Path.Combine(jobs, "2026", "C26001 - Cliente - Progetto")).FullName;
 Directory.CreateDirectory(bids); Directory.CreateDirectory(archive);
 var settings = new ServerSettings { JobsRoot = jobs, BidsRoot = bids, ArchivedJobsRoot = bids, ArchiveFolder = archive, RefreshMinutes = 999 };
-using var scans = new ScanCoordinator(settings, NullLogger<ScanCoordinator>.Instance, hub);
+using var scans = new ScanCoordinator(settings, NullLogger<ScanCoordinator>.Instance, hub, new AnalysisService(settings, NullLogger<AnalysisService>.Instance));
 using var watcher = new FolderWatchService(settings, scans, NullLogger<FolderWatchService>.Instance);
 foreach(var category in new[] { "C", "G", "A" }) await scans.Get(category).InitializeAsync();
 await watcher.StartAsync(token);

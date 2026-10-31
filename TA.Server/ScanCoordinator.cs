@@ -1,7 +1,7 @@
 namespace TA.Server;
 
 // L'elenco viene verificato ogni minuto; le letture ricorsive partono solo alle 23 italiane.
-public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordinator> logger, ChangeHub changes) : BackgroundService
+public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordinator> logger, ChangeHub changes, AnalysisService analysis) : BackgroundService
 {
     private readonly Dictionary<char, CategoryWorker> workers = new()
     {
@@ -26,6 +26,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
             foreach (var worker in workers.Values) worker.Start(token);
             await Task.WhenAll(workers.Values.Select(w => w.Completion));
             token.ThrowIfCancellationRequested();
+            await analysis.RunAsync(workers.Values.Select(w => w.State), token);
             DailyReports.Save(ReportsDirectory, date, workers.Values, started);
             changes.Publish("Report giornaliero dimensioni e gerarchie disponibile: " + date.ToString("dd/MM/yyyy"));
         }

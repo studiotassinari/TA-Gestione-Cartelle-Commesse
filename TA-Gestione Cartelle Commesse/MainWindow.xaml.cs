@@ -22,15 +22,21 @@ public partial class MainWindow : Window
     {
         InitializeComponent(); TA_Gestione_Cartelle_Commesse.Services.ClientLog.Write("Avvio client " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
         tray = new TA.Desktop.TrayLifetime(this, "TA - Commesse", "Client");
-        if (DataContext is MainViewModel model)
-        {
-            model.Commesse.DataChanged += message => tray.Notify("Commesse aggiornate", message);
-            model.Gare.DataChanged += message => tray.Notify("Gare aggiornate", message); model.Archivio.DataChanged += message => tray.Notify("Archivio aggiornato", message);
-        }
+        // Le differenze tra scansioni sono consultabili nel report, senza notifiche Windows.
         Closed += (_, _) => { if (DataContext is MainViewModel viewModel) viewModel.Stop(); };
     }
 
     // Avvia il caricamento dell'archivio solo quando la vista è pronta a ricevere le notifiche.
+    private void Hierarchy_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        // Il testo identifica il ramo cliccato; gli espansori mantengono il loro gesto standard.
+        if (e.ChangedButton == MouseButton.Left && e.OriginalSource is TextBlock { DataContext: FolderNode node })
+        {
+            if (node.OpenCommand.CanExecute(null)) node.OpenCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
         TA.Desktop.UpdateLauncher.Check("Client");

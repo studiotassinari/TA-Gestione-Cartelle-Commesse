@@ -26,7 +26,7 @@ using (var truncated = new MemoryStream(new byte[] { 0, 0, 0, 8, 1 }))
     await Expect<EndOfStreamException>(async () => { await WireProtocol.ReadAsync<Request>(truncated, default); }, "Rifiuta messaggio troncato");
 var root = Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "case-" + Guid.NewGuid().ToString("N"))).FullName;
 Directory.CreateDirectory(Path.Combine(root, "Documenti"));
-var record = new FolderRecord("C26001", "26", "001", "Cliente", "Test", root, "Valido");
+var record = new FolderRecord("C26001", "26", "001", "Cliente", "Test", root, "Valido") { Inspection = new FolderInspection { HierarchyCaptured = true, ArchiveDirectories = ["Documenti"] } };
 var state = new CategoryState('C', root, false, "", "", new ArchiveSnapshot { Records = [record] });
 Check(HierarchyService.Children(state, record.Id, "").Single().Name == "Documenti", "Gerarchia della cartella nota");
 foreach (var invalid in new[] { "..", "..\\esterna", "Documenti/../../", "C:\\Windows", "\\\\server\\share", "Documenti:stream" })

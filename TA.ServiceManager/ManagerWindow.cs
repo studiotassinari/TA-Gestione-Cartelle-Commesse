@@ -74,8 +74,8 @@ public sealed class ManagerWindow : Window
             if (lastLog != result.log)
             {
                 var added = result.log.StartsWith(lastLog) ? result.log[lastLog.Length..] : result.log;
-                if (lastLog.Length > 0 && (added.Contains("Evento filesystem ricevuto") || added.Contains("Warning") || added.Contains("ERRORE FATALE")))
-                    tray.Notify("Novita dal server", "Rilevate modifiche alle cartelle o segnalazioni da verificare. Apri il gestore per i dettagli.");
+                if (lastLog.Length > 0 && (added.Contains("Warning") || added.Contains("ERRORE FATALE")))
+                    tray.Notify("Novita dal server", "Rilevate segnalazioni del servizio da verificare. Apri il gestore per i dettagli.");
                 lastLog = result.log; Render();
             }
         }

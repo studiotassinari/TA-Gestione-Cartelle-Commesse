@@ -11,7 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 // Ogni comando richiede cifratura, firma, autenticazione Windows mutua e appartenenza al gruppo configurato.
-public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger) : BackgroundService
+public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -130,6 +130,8 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, C
             case "Cancel": scans.Get(request.Category).Cancel(); return Reply.Ok(true);
             case "Children": return Reply.Ok(HierarchyService.Children(scans.Get(request.Category).State, request.FolderId ?? "", request.RelativePath));
             case "DailyReport": return Reply.Ok(scans.DailyReport());
+            case "Analysis": return Reply.Ok(analysis.Query(request.Analysis ?? new()));
+            case "AnalysisReport": return Reply.Ok(analysis.Report());
             case "Report":
                 var jobs = scans.Get("C").State.Snapshot;
                 var bids = scans.Get("G").State.Snapshot;

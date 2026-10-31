@@ -284,7 +284,7 @@
                     <!-- Definisce GroupBox con intestazione Gerarchia cartelle e gli eventuali comandi o contenuti associati. -->
                     <GroupBox Grid.Column="2" Header="Gerarchia cartelle">
                         <!-- Visualizza la gerarchia della selezione usando i modelli dei nodi definiti nelle risorse. -->
-                        <TreeView ItemsSource="{Binding Hierarchy}"/>
+                        <TreeView ItemsSource="{Binding Hierarchy}" PreviewMouseDoubleClick="Hierarchy_DoubleClick"/>
                     <!-- Conclude lʼelemento GroupBox e il suo contenuto. -->
                     </GroupBox>
                 <!-- Conclude lʼelemento Grid e il suo contenuto. -->
@@ -324,6 +324,7 @@
             <MenuItem Header="_Export">
                 <!-- Definisce MenuItem con intestazione Crea report cartelle e non conformità e gli eventuali comandi o contenuti associati. -->
                 <MenuItem Header="Scarica ultimo report giornaliero (23:00)" Command="{Binding DailyReportCommand}"/>
+                <MenuItem Header="Report sintetico analisi nomi e differenze" Command="{Binding AnalysisReportCommand}"/>
                 <MenuItem Header="Crea report cartelle e non conformità" Command="{Binding ReportCommand}"/>
             <!-- Conclude lʼelemento MenuItem e il suo contenuto. -->
             </MenuItem>

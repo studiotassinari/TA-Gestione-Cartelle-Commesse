@@ -33,6 +33,7 @@ public sealed class MainViewModel : Observable
     public Command AboutCommand { get; }
     public Command ConnectCommand { get; }
     public Command DailyReportCommand { get; }
+    public Command AnalysisReportCommand { get; }
     public Command ReportCommand { get; }
     public MainViewModel()
     {
@@ -41,6 +42,7 @@ public sealed class MainViewModel : Observable
         UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
         AboutCommand = new(() => _ = ShowAboutAsync());
         ConnectCommand = new(() => _ = ConnectAsync(), () => !connecting);
+        AnalysisReportCommand = new(() => _ = CreateReport(analysis: true), () => connection != null && !reporting);
         DailyReportCommand = new(() => _ = CreateReport(true), () => connection != null && !reporting);
         ReportCommand = new(() => _ = CreateReport(), () => connection != null && !reporting);
 
@@ -65,7 +67,7 @@ public sealed class MainViewModel : Observable
         }
         pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); CreateJobCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";
@@ -110,7 +112,7 @@ public sealed class MainViewModel : Observable
                             throw new System.Security.Authentication.AuthenticationException("Richiesta rifiutata: " + error.Message);
                         throw new IOException("Recupero dati interrotto.", error);
                     }
-                    ClientLog.Write($"Push ricevuto: revisione={notice.Revision}; dettaglio={notice.Summary}; righe C={Commesse.Records.Count}, G={Gare.Records.Count}"); ReportStatus = "Dati aggiornati dal server alle " + DateTime.Now.ToString("HH:mm:ss") + ". Notifiche push attive.";
+                    ClientLog.Write($"Push ricevuto: revisione={notice.Revision}; dettaglio={notice.Summary}; righe C={Commesse.Records.Count}, G={Gare.Records.Count}"); ReportStatus = "Dati aggiornati dal server alle " + DateTime.Now.ToString("HH:mm:ss") + ". Differenze disponibili nel report; notifiche sospese.";
                 }).Task.Unwrap(), () => { delay = 5; ClientLog.Write("Sottoscrizione push accettata."); }, token, notice =>
                 {
                     CommunicationStatus = $"Canale verificato alle {DateTime.Now:HH:mm:ss}: {notice.Kind}; " + (notice.ProbeId != null ? "riscontro inviato al server." : "server precedente senza riscontro.");
@@ -193,21 +195,21 @@ public sealed class MainViewModel : Observable
             try { serverVersion = await connection.SendAsync<string>(new("Info"), timeout.Token); }
             catch { serverVersion = "Non disponibile (server non raggiungibile o versione precedente)"; }
         }
-        System.Windows.MessageBox.Show($"TA-Gestione Cartelle Commesse\n\nClient: {version}\nServer: {serverVersion}\nConnessione: {ServerHost}:{ServerPort}\n\nScansione server di commesse e gare ogni minuto, senza sovrapporre scansioni. Aggiornamento client tramite notifiche push.\n\nStudio Tassinari", "Informazioni", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        System.Windows.MessageBox.Show($"TA-Gestione Cartelle Commesse\n\nClient: {version}\nServer: {serverVersion}\nConnessione: {ServerHost}:{ServerPort}\n\nScansione server di commesse e gare ogni minuto, senza sovrapporre scansioni. Analisi nomi e gerarchie alle 23:00; differenze nel report, notifiche sospese.\n\nStudio Tassinari", "Informazioni", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
-    private async Task CreateReport(bool daily = false)
+    private async Task CreateReport(bool daily = false, bool analysis = false)
     {
         if (connection == null) return;
         var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Report HTML (*.html)|*.html", FileName = "Report-cartelle-" + DateTime.Now.ToString("yyyy-MM-dd-HHmm") + ".html" };
         if (dialog.ShowDialog() != true) return;
-        reporting = true; ReportCommand.Refresh(); DailyReportCommand.Refresh(); ReportStatus = "Richiesta report al server...";
+        reporting = true; ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); ReportStatus = "Richiesta report al server...";
         try
         {
-            var html = await connection.SendAsync<string>(new(daily ? "DailyReport" : "Report"));
+            var html = await connection.SendAsync<string>(new(analysis ? "AnalysisReport" : daily ? "DailyReport" : "Report"));
             await File.WriteAllTextAsync(dialog.FileName, html, new System.Text.UTF8Encoding(false));
             ReportStatus = "Report salvato: " + dialog.FileName;
         }
         catch (Exception ex) { ReportStatus = "Report non creato: " + ex.Message; }
-        finally { reporting = false; ReportCommand.Refresh(); DailyReportCommand.Refresh(); }
+        finally { reporting = false; ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); }
     }
 }

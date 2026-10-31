@@ -1,3 +1,7 @@
+## Sviluppo 2.11.0: inventario nomi e MCP
+
+Analisi ricorsiva in sola lettura dei nomi dei file, inclusi ZIP e 7z, JSON per anno e codice, proposte per committenti ricorrenti e report sintetico delle differenze. Elaborazione alle 23:00; notifiche delle modifiche sospese. Doppio clic sui rami della struttura per aprire Esplora file. [Dettagli, limiti e strumenti MCP](deployment/ANALISI-NOMI.md). I download pubblicati sotto si riferiscono all'ultima release precedente.
+
 ## Versione 2.9.0: apertura su Z e archivi sotto lavori
 
 Il doppio clic e i comandi Apri del client traducono la condivisione aziendale nel percorso Z del PC. La conversione supporta sia il nome DNS completo sia quello breve, senza cambiare condivisioni diverse. Il server mantiene i percorsi UNC originali. Gli archivi vengono selezionati in Esplora file senza estrazione.
