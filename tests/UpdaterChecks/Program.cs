@@ -1,8 +1,17 @@
 using System.IO;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.Json;
 using TA.Updater;
 static void Check(bool condition, string text) { if (!condition) throw new Exception(text); Console.WriteLine("PASS: " + text); }
+if(args.Contains("--exit-fixture")) { Thread.Sleep(100); return; }
+using(var current=Process.GetCurrentProcess())
+{
+    try{ProcessExitWait.Wait(current,TimeSpan.Zero);throw new Exception("Processo ancora attivo accettato");}
+    catch(IOException){Check(!current.HasExited,"Attesa scaduta impedisce la sostituzione senza terminare il processo");}
+}
+using(var child=Process.Start(new ProcessStartInfo(Environment.ProcessPath!,"--exit-fixture"){UseShellExecute=false,CreateNoWindow=true})!)
+{ProcessExitWait.Wait(child,TimeSpan.FromSeconds(10));Check(child.HasExited,"Sostituzione consentita dopo l’uscita effettiva del processo");}
 var root = Path.Combine(Path.GetTempPath(), "TA-UpdaterChecks-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 try

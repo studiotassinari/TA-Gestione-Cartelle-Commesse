@@ -138,12 +138,22 @@ public sealed class UpdateEngine(string component, string root, Action<string, b
     }
     private void Reopen()
     { var start = new ProcessStartInfo(Interface) { UseShellExecute = false }; start.Environment["TA_SKIP_UPDATE_ONCE"] = "1"; Process.Start(start); }
-    private static void StopService()
+    private void StopService()
     {
-        using var service = new ServiceController("TACommesseServer");
-        if (service.Status == ServiceControllerStatus.Stopped) return;
-        if (service.Status != ServiceControllerStatus.StopPending) service.Stop();
-        service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(90));
+        var processes=Process.GetProcessesByName("TA.Server");
+        try
+        {
+            var matching=processes.Where(p=>!p.HasExited && string.Equals(p.MainModule?.FileName,Exe,StringComparison.OrdinalIgnoreCase)).ToList();
+            using var service = new ServiceController("TACommesseServer");
+            if(service.Status!=ServiceControllerStatus.Stopped)
+            {
+                if (service.Status != ServiceControllerStatus.StopPending) service.Stop();
+                service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(90));
+            }
+            Note("Attesa della chiusura completa del processo del servizio...");
+            foreach(var process in matching)ProcessExitWait.Wait(process,TimeSpan.FromMinutes(2));
+        }
+        finally {foreach(var process in processes)process.Dispose();}
     }
     private static void StartService()
     { using var service = new ServiceController("TACommesseServer"); service.Refresh(); if (service.Status != ServiceControllerStatus.Running) { service.Start(); service.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(60)); } }

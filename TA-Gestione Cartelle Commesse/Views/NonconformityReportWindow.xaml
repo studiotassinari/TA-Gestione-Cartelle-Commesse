@@ -1,0 +1,25 @@
+<Window x:Class="TA_Gestione_Cartelle_Commesse.Views.NonconformityReportWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="Report non conformità — TA" Width="1160" Height="720" MinWidth="780" MinHeight="480" Background="#F3F6F6" Foreground="#192845" FontSize="13" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+ <DockPanel Margin="20">
+  <TextBlock DockPanel.Dock="Top" Text="Non conformità e verifiche" FontSize="24" FontWeight="Bold" Margin="0,0,0,10"/>
+  <TextBlock DockPanel.Dock="Top" Text="{Binding Summary}" TextWrapping="Wrap" Foreground="#536775" Margin="0,0,0,10"/>
+  <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+   <Button DockPanel.Dock="Right" Content="Esporta vista HTML" Command="{Binding ExportCommand}" Padding="12,7" Margin="8,0,0,0"/>
+   <Button DockPanel.Dock="Right" Content="Aggiorna report" Command="{Binding RefreshCommand}" Padding="12,7" Margin="8,0,0,0"/>
+   <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}" Width="130" Margin="0,0,10,0" VerticalContentAlignment="Center"/>
+   <TextBox Text="{Binding Filter,UpdateSourceTrigger=PropertyChanged}" Padding="8" ToolTip="Cerca codice, committente, percorso o segnalazione"/>
+  </DockPanel>
+  <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0"><TextBlock Text="{Binding CountText}" FontWeight="Bold"/><TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel>
+  <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" HeadersVisibility="Column" Background="White" AlternatingRowBackground="#EEF4F4" GridLinesVisibility="Horizontal" RowHeight="32">
+   <DataGrid.Columns>
+    <DataGridTextColumn Header="Categoria" Binding="{Binding Category}" Width="90"/>
+    <DataGridTextColumn Header="Codice" Binding="{Binding Code}" Width="85"/>
+    <DataGridTextColumn Header="Committente" Binding="{Binding Client}" Width="150"/>
+    <DataGridTextColumn Header="Tipo" Binding="{Binding Type}" Width="170"/>
+    <DataGridTextColumn Header="Dettaglio" Binding="{Binding Detail}" Width="*" MinWidth="260"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="ToolTip" Value="{Binding Detail}"/></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>
+    <DataGridTextColumn Header="Percorso" Binding="{Binding Path}" Width="260"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="ToolTip" Value="{Binding Path}"/></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>
+   </DataGrid.Columns>
+  </DataGrid>
+ </DockPanel>
+</Window>

@@ -17,10 +17,11 @@ public static class FolderReader
     // Verifica l'esclusione confrontando soltanto l'ultimo componente del percorso.
     public static bool IsExcluded(string path) => Excluded.Contains(System.IO.Path.GetFileName(path));
     // Scansiona una radice per categoria e controlla periodicamente il token di annullamento.
-    public static ScanResult Scan(string root, char prefix, CancellationToken token)
+    public static ScanResult Scan(string root, char prefix, CancellationToken token, Action<string>? currentDirectory = null)
     // Inizio del blocco di istruzioni o della definizione precedente.
     {
         // Prepara gli elenchi separati delle cartelle trovate e delle segnalazioni.
+        currentDirectory?.Invoke(root);
         var records = new List<FolderRecord>(); var warnings = new List<string>();
         // Usa una pila per tenere traccia delle directory ancora da esaminare.
         var pending = new Stack<string>();
@@ -66,6 +67,7 @@ public static class FolderReader
         {
             // Interrompe la scansione tra una directory e la successiva se richiesto.
             if (token.IsCancellationRequested) return new([], [], true);
+            currentDirectory?.Invoke(current);
             // Isola gli errori relativi all'enumerazione della directory corrente.
             try
             // Inizio del blocco di istruzioni o della definizione precedente.

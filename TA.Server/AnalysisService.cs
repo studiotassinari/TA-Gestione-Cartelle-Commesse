@@ -32,7 +32,9 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
                 try
                 {
                     var excluded = new HashSet<string>(folders, StringComparer.OrdinalIgnoreCase); excluded.Remove(Path.GetFullPath(unit.Path));
-                    var result = FileInventoryReader.Read(unit.Path, excluded, token);
+                    var result = FileInventoryReader.Read(unit.Path, excluded, token,
+                        path => reportProgress?.Invoke(new(true,"Inventario nomi",completed,plan.Units.Count,path,started,HasErrors:warnings,
+                            Locations:[new(unit.Category,"Inventario nomi",path)])));
                     var manifest=store.Save(unit,result,token); reports.Add(manifest);
                     warnings |= !manifest.Complete;
                 }

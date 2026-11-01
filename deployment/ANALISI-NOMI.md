@@ -1,4 +1,4 @@
-# Inventario nomi, versione 2.13.0
+# Inventario nomi, versione 2.14.0
 
 Il servizio legge le radici configurate di commesse, gare e archivio. L'indice delle commesse resta limitato al primo livello delle cartelle annuali. Il nuovo inventario legge ricorsivamente i nomi di tutti i file accessibili, anche nelle cartelle fuori dagli anni e nei contenitori dei clienti. Non modifica le sorgenti, non estrae archivi e non legge il contenuto dei documenti ordinari. Legge nomi, percorsi relativi, tipo, dimensione e data dai metadati; per ZIP e 7z legge le intestazioni degli archivi.
 
@@ -64,7 +64,9 @@ Aggiornare il servizio e il componente MCP sulla VM, riavviare il tunnel e ricar
 
 ## Stato e report orari (2.13)
 
-La barra del client mostra preparazione, dimensioni e gerarchie, inventario nomi e salvataggio. La percentuale indica le unità completate nella fase corrente: non è una stima del tempo e riparte al cambio di fase. Una singola commessa grande può mantenere la stessa percentuale a lungo. Quando manca il totale la barra è indeterminata. Errori e letture parziali sono espliciti; i dettagli sono in Visualizza > Stato e connessione, insieme a prova di collegamento, messaggi e segnalazioni delle categorie. Il pannello è chiuso inizialmente, salvo client non configurato.
+In basso sono sempre disponibili quattro schede: **Scansione**, **Connessione**, **Archivio JSON** e **Messaggi**. Il divisore orizzontale permette di regolarne l’altezza. La scansione mostra le ultime dodici rilevazioni delle cartelle in lettura, con categoria, fase e percorso; per gli archivi il separatore ` > ` distingue il file ZIP/7z dalla directory interna. Il client osserva il percorso corrente ogni tre secondi durante il lavoro: è un riepilogo di attività, non un elenco completo di ogni cartella attraversata. La percentuale testuale, quando stimabile, riguarda le unità della fase e non il tempo residuo. Nessuna barra animata né pannello laterale.
+
+Il report **Report > Non conformità** è una finestra WPF figlia del client, con fotografie delle tre categorie e relative date. La ricerca e il filtro categoria valgono anche per l’esportazione HTML. I problemi di lettura, i nomi non conformi e i preventivi da verificare restano distinti. L’assenza di un inventario o di una verifica non equivale a conformità.
 
 Il client richiede uno stato leggero ogni 3 secondi durante la scansione, ogni 15 secondi in attesa. Errori di autenticazione fermano i tentativi fino a Connetti. Lo strumento MCP stato_scansione consulta gli stessi dati senza avviare letture. Un server precedente va aggiornato per fornire questo stato.
 

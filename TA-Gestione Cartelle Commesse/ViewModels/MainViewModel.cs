@@ -35,9 +35,11 @@ public sealed partial class MainViewModel : Observable
     public Command DailyReportCommand { get; }
     public Command AnalysisReportCommand { get; }
     public Command ReportCommand { get; }
+    public Command NonconformityReportCommand {get;}
     public MainViewModel()
     {
-        ToggleDiagnosticsCommand=new(() => DiagnosticsOpen=!DiagnosticsOpen);
+        ShowScanCommand=new(()=>StatusTabIndex=0); ShowConnectionCommand=new(()=>StatusTabIndex=1);
+        NonconformityReportCommand=new(ShowNonconformityReport,()=>connection!=null);
         ManageServerCommand = new(ShowServerManagement, () => CanManageServer); CheckCommunicationCommand = new(() => _ = CheckCommunicationAsync()); ChangesCommand = new(ShowChanges);
         CreateJobCommand = new(CreateJob, () => connection != null);
         UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
@@ -49,7 +51,7 @@ public sealed partial class MainViewModel : Observable
 
         try { var settings = ClientSettings.Load(); host = settings.Host; port = settings.Port.ToString(); }
         catch (Exception ex) { reportStatus = "Configurazione non leggibile: " + ex.Message; }
-        diagnosticsOpen=string.IsNullOrWhiteSpace(host);
+        statusTabIndex=string.IsNullOrWhiteSpace(host)?1:0;
     }
     public async Task InitializeAsync()
     {
@@ -67,9 +69,9 @@ public sealed partial class MainViewModel : Observable
             if (dialog.ShowDialog() != true) return;
             credentials = dialog.Credential;
         }
-        StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
+        nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); NonconformityReportCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";
@@ -147,6 +149,15 @@ public sealed partial class MainViewModel : Observable
     public void Stop() { StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
 
 
+    private Views.NonconformityReportWindow? nonconformityWindow;
+    private void ShowNonconformityReport()
+    {
+        if(connection==null)return;
+        if(nonconformityWindow!=null){nonconformityWindow.Activate();return;}
+        nonconformityWindow=new(new NonconformityReportViewModel(connection)){Owner=System.Windows.Application.Current.MainWindow};
+        nonconformityWindow.Closed+=(_,_)=>nonconformityWindow=null;
+        nonconformityWindow.Show();
+    }
     private void ShowServerManagement()
     {
         if (!CanManageServer) return;
@@ -158,7 +169,7 @@ public sealed partial class MainViewModel : Observable
     }
     private async Task CheckCommunicationAsync()
     {
-        DiagnosticsOpen=true;
+        StatusTabIndex=1;
         if (connection == null) { CommunicationStatus = "Collegare prima il server."; return; }
         var id = Guid.NewGuid().ToString("N");
         var elapsed = System.Diagnostics.Stopwatch.StartNew();
@@ -199,7 +210,7 @@ public sealed partial class MainViewModel : Observable
             try { serverVersion = await connection.SendAsync<string>(new("Info"), timeout.Token); }
             catch { serverVersion = "Non disponibile (server non raggiungibile o versione precedente)"; }
         }
-        System.Windows.MessageBox.Show($"TA-Gestione Cartelle Commesse\n\nClient: {version}\nServer: {serverVersion}\nConnessione: {ServerHost}:{ServerPort}\n\nScansione completa ogni ora: commesse, gare e archivio, nomi dei file e voci ZIP/7z. Percentuale per fase quando stimabile, senza scansioni sovrapposte. Differenze nel report, notifiche sospese.\n\nStudio Tassinari", "Informazioni", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        System.Windows.MessageBox.Show($"TA-Gestione Cartelle Commesse\n\nClient: {version}\nServer: {serverVersion}\nConnessione: {ServerHost}:{ServerPort}\n\nScansione completa ogni ora: commesse, gare e archivio, nomi dei file e voci ZIP/7z. Log delle cartelle correnti nelle schede inferiori, senza scansioni sovrapposte. Differenze nel report, notifiche sospese.\n\nStudio Tassinari", "Informazioni", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
     private async Task CreateReport(bool daily = false, bool analysis = false)
     {
@@ -213,7 +224,7 @@ public sealed partial class MainViewModel : Observable
             await File.WriteAllTextAsync(dialog.FileName, html, new System.Text.UTF8Encoding(false));
             ReportStatus = "Report salvato: " + dialog.FileName;
         }
-        catch (Exception ex) { DiagnosticsOpen=true; ReportStatus = "Report non creato: " + ex.Message; }
+        catch (Exception ex) { StatusTabIndex=3; ReportStatus = "Report non creato: " + ex.Message; }
         finally { reporting = false; ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); }
     }
 }

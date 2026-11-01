@@ -31,7 +31,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
             {
                 var items = workers.Values.Select(w => w.Progress).ToArray();
                 state = state with { Completed = items.Sum(p => p.Completed), Total = items.Any(p => p.Total == null) ? null : items.Sum(p => p.Total!.Value),
-                    Message = string.Join(" • ", workers.Select(p => p.Key + ": " + p.Value.Progress.Message)), HasErrors = items.Any(p => p.HasErrors) };
+                    Message = string.Join(" • ", workers.Select(p => p.Key + ": " + p.Value.Progress.Message)), HasErrors = items.Any(p => p.HasErrors), Locations=items.Where(p=>p.IsRunning).SelectMany(p=>p.Locations ?? []).ToArray() };
             }
             return state;
         }

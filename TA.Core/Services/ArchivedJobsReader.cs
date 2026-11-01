@@ -10,14 +10,14 @@ namespace TA_Gestione_Cartelle_Commesse.Services;
 public static class ArchivedJobsReader
 {
     // Unisce le radici senza duplicare un archivio; una radice non leggibile non cancella i risultati precedenti.
-    public static ScanResult ScanRoots(IEnumerable<string> roots, CancellationToken token)
+    public static ScanResult ScanRoots(IEnumerable<string> roots, CancellationToken token, Action<string>? currentDirectory = null)
     {
         var rows = new Dictionary<string, FolderRecord>(StringComparer.OrdinalIgnoreCase);
         var warnings = new List<string>(); bool incomplete = false;
         foreach (var root in roots.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             token.ThrowIfCancellationRequested();
-            var scan = Scan(root, token, false);
+            var scan = Scan(root, token, false, currentDirectory);
             incomplete |= scan.Incomplete || scan.Error != null;
             if (scan.Error != null) warnings.Add(root + ": " + scan.Error);
             warnings.AddRange(scan.Warnings);
@@ -25,7 +25,7 @@ public static class ArchivedJobsReader
         }
         return new(rows.Values.OrderByDescending(r => r.Year).ThenByDescending(r => r.Number).ToList(), warnings, Incomplete: incomplete);
     }
-    public static ScanResult Scan(string root, CancellationToken token, bool readFileMetadata = true)
+    public static ScanResult Scan(string root, CancellationToken token, bool readFileMetadata = true, Action<string>? currentDirectory = null)
     {
         var records = new List<FolderRecord>(); var warnings = new List<string>();
         var pending = new Stack<string>(); pending.Push(root); bool incomplete = false;
@@ -33,6 +33,7 @@ public static class ArchivedJobsReader
         while (pending.TryPop(out var directory))
         {
             token.ThrowIfCancellationRequested();
+            currentDirectory?.Invoke(directory);
             try
             {
                 foreach (var path in Directory.EnumerateFileSystemEntries(directory))
@@ -64,8 +65,9 @@ public static class ArchivedJobsReader
         return new(records.OrderByDescending(r => r.Year).ThenByDescending(r => r.Number).ToList(), warnings, Incomplete: incomplete);
     }
     public static FolderInspection Inspect(string path, CancellationToken token) => Inspect(path, token, false);
-    public static FolderInspection Inspect(string path, CancellationToken token, bool includeHierarchy)
+    public static FolderInspection Inspect(string path, CancellationToken token, bool includeHierarchy, Action<string>? currentDirectory = null)
     {
+        currentDirectory?.Invoke(path); string? lastDirectory=null;
         long bytes = 0, count = 0; DateTime? latest = null;
         var issues = new List<string>(); var quotes = new List<string>();
         var directories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -86,6 +88,8 @@ public static class ArchivedJobsReader
                 if (key.StartsWith('/') || segments.Any(s => s is "." or ".." || s.Contains(':')))
                 { issues.Add("Percorso interno non valido: " + key); continue; }
                 var dirCount = entry.IsDirectory ? segments.Length : segments.Length - 1;
+                var inner=string.Join('/',segments.Take(Math.Max(0,dirCount)));
+                if(inner!=lastDirectory){currentDirectory?.Invoke(path+" > "+(inner.Length==0?"/":inner));lastDirectory=inner;}
                 for (int i = 1; i <= dirCount; i++)
                     if (includeHierarchy && directories.Count < 50000) directories.Add(string.Join('/', segments.Take(i)));
                 bool admin = segments.Take(Math.Max(0, dirCount)).Any(s => new[] { "amministraione", "amministrazione", "99_AMMINISTRAZIONE" }.Contains(s, StringComparer.OrdinalIgnoreCase));

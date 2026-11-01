@@ -41,6 +41,10 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             return indexTask = Task.Run(() => ReadIndex(token), token);
         }
     }
+    private void CurrentDirectory(string phase,string path)
+    {
+        lock(gate)progress=progress with { Message=path, Locations=[new(prefix.ToString(),phase,path)] };
+    }
     private DateTime NextRevision() => state.Snapshot is { } old && old.SavedUtc >= DateTime.UtcNow
         ? old.SavedUtc.AddTicks(1) : DateTime.UtcNow;
     private bool ReadIndex(CancellationToken token)
@@ -48,7 +52,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
         try
         {
             var started = DateTime.UtcNow;
-            var result = (prefix == 'A' ? ArchivedJobsReader.ScanRoots(new[] { root, additionalArchiveRoot ?? "" }, token) : FolderReader.Scan(root, prefix, token));
+            var result = (prefix == 'A' ? ArchivedJobsReader.ScanRoots(new[] { root, additionalArchiveRoot ?? "" }, token, p=>CurrentDirectory("Lettura elenco",p)) : FolderReader.Scan(root, prefix, token, p=>CurrentDirectory("Lettura elenco",p)));
             token.ThrowIfCancellationRequested();
             if (result.Cancelled) throw new OperationCanceledException(token);
             if (result.Error != null || (result.Incomplete && prefix != 'A'))
@@ -126,9 +130,11 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
                 lock (gate)
                 {
                     state=state with { Message=$"Metadati {completed}/{pending.Count}: {record.Code}" };
-                    progress=progress with { Message=string.IsNullOrWhiteSpace(record.Code) ? record.Path : record.Code };
+                    progress=progress with { Message=record.Path, Locations=[new(prefix.ToString(),"Dimensioni e gerarchie",record.Path)] };
                 }
-                var inspection = (inspect ?? (prefix == 'A' ? (p, ct) => ArchivedJobsReader.Inspect(p, ct, true) : FolderInspectionService.Inspect))(record.Path, source.Token);
+                var inspection = inspect!=null ? inspect(record.Path,source.Token) : prefix=='A'
+                    ? ArchivedJobsReader.Inspect(record.Path,source.Token,true,p=>CurrentDirectory("Dimensioni e gerarchie",p))
+                    : FolderInspectionService.Inspect(record.Path,source.Token,p=>CurrentDirectory("Dimensioni e gerarchie",p));
                 List<string> differences = [];
                 lock (gate)
                 {

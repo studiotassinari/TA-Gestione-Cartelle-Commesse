@@ -33,7 +33,10 @@ public static class FolderInspectionService
         => Inspect(root, token, file => file.LastWriteTimeUtc);
 
     // Lettore separato per riprodurre nei test date Win32 non rappresentabili in .NET.
-    internal static FolderInspection Inspect(string root, CancellationToken token, Func<FileInfo, DateTime> readModified)
+    public static FolderInspection Inspect(string root, CancellationToken token, Action<string> currentDirectory)
+        => Inspect(root, token, file => file.LastWriteTimeUtc, currentDirectory);
+
+    internal static FolderInspection Inspect(string root, CancellationToken token, Func<FileInfo, DateTime> readModified, Action<string>? currentDirectory = null)
     {
         using var signature = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
         void Hash(object value) => signature.AppendData(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(value));
@@ -47,6 +50,7 @@ public static class FolderInspectionService
         while (pending.TryPop(out var item))
         {
             token.ThrowIfCancellationRequested();
+            currentDirectory?.Invoke(item.Path);
             try
             {
                 // Non segue collegamenti, evitando cicli e letture fuori dalla cartella di lavoro.

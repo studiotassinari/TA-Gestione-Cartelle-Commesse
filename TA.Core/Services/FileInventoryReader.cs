@@ -6,7 +6,7 @@ namespace TA_Gestione_Cartelle_Commesse.Services;
 // Non estrae archivi e non apre stream dei documenti: solo directory e intestazioni ZIP/7z.
 public static class FileInventoryReader
 {
-    public static InventoryResult Read(string root, ISet<string> excludedRoots, CancellationToken token)
+    public static InventoryResult Read(string root, ISet<string> excludedRoots, CancellationToken token, Action<string>? currentDirectory = null)
     {
         var entries = new List<InventoryEntry>(); var issues = new List<string>();
         const int maximum = 1_000_000;
@@ -14,6 +14,8 @@ public static class FileInventoryReader
         string Relative(string path) => Path.GetRelativePath(root, path).Replace('\\', '/');
         void Archive(string path, string container)
         {
+            currentDirectory?.Invoke(path);
+            string? lastDirectory=null;
             try
             {
                 var before = new FileInfo(path); long size = before.Length; var stamp = before.LastWriteTimeUtc;
@@ -27,6 +29,8 @@ public static class FileInventoryReader
                     if (key.Length == 0 || key.StartsWith('/') || key.Split('/').Any(p => p is "." or ".." || p.Contains(':')))
                     { issues.Add(container + ": percorso interno non valido"); continue; }
                     var segments = key.Split('/');
+                    var inner=item.IsDirectory ? key : string.Join('/',segments.SkipLast(1));
+                    if(inner!=lastDirectory){currentDirectory?.Invoke(path+" > "+(inner.Length==0?"/":inner));lastDirectory=inner;}
                     for (int i = 1; i < segments.Length; i++)
                     {
                         var dir = string.Join('/', segments.Take(i));
@@ -60,6 +64,7 @@ public static class FileInventoryReader
                 while (pending.TryPop(out var dir))
                 {
                     token.ThrowIfCancellationRequested();
+                    currentDirectory?.Invoke(dir);
                     try
                     {
                         foreach (var path in Directory.EnumerateFileSystemEntries(dir).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
@@ -71,7 +76,7 @@ public static class FileInventoryReader
                                 var attributes = File.GetAttributes(path);
                                 if ((attributes & FileAttributes.ReparsePoint) != 0) { issues.Add(Relative(path) + ": collegamento escluso"); continue; }
                                 if ((attributes & FileAttributes.Directory) != 0) { Add(new(Relative(path), "directory")); pending.Push(path); }
-                                else FileEntry(path, Relative(path));
+                                else { FileEntry(path, Relative(path)); if(IsArchive(path))currentDirectory?.Invoke(dir); }
                             }
                             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentOutOfRangeException)
                             { issues.Add(Relative(path) + ": " + ex.Message); }

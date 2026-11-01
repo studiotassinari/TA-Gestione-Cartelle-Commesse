@@ -1,22 +1,24 @@
-# TA-Gestione Cartelle Commesse — 2.13.0
+# TA-Gestione Cartelle Commesse — 2.14.0
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati, senza leggere il contenuto dei documenti o estrarre gli archivi ZIP/7z.
 
 ## Scarica
 
-- [Aggiornatore diretto 2.13.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.13.0/TA-Commesse-Aggiornatore-2.13.0.exe) — prima Server sulla VM, poi Client sui PC.
-- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.13.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.13.0.exe)
-- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.13.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.13.0.exe)
-- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.13.0/TA-Commesse-MCP-2.13.0.zip)
-- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.13.0)
+- [Aggiornatore diretto 2.14.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.14.0/TA-Commesse-Aggiornatore-2.14.0.exe) — prima Server sulla VM, poi Client sui PC.
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.14.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.14.0.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.14.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.14.0.exe)
+- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.14.0/TA-Commesse-MCP-2.14.0.zip)
+- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.14.0)
 
-Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. I pacchetti non sono firmati digitalmente.
+Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. L’aggiornatore del server attende anche la chiusura effettiva del processo prima di sostituire i file. I pacchetti non sono firmati digitalmente.
 
 ## Scansione ogni ora e interfaccia
 
 La scansione oraria include elenchi, dimensioni, gerarchie e inventario di tutti i nomi accessibili sotto lavori, gare e archivio. La prima scansione parte all'avvio se manca il checkpoint; le successive alla prima ora intera dopo la conclusione, con tolleranza di un minuto. Nessuna sovrapposizione o recupero in coda delle ore occupate. Il checkpoint evita ripetizioni dopo un riavvio. Questa frequenza sostituisce il precedente controllo ogni minuto e la scansione delle 23; il monitor degli eventi non avvia elaborazioni aggiuntive.
 
-La barra in basso mostra fase corrente, percentuale quando è noto il numero di unità e prossima esecuzione. Il valore riguarda la fase e non il tempo residuo. Durante la preparazione viene mostrata una barra indeterminata. **Visualizza > Stato e connessione**, oppure il pulsante in basso, apre il controllo con messaggi, segnalazioni di lettura, impostazioni server e verifica della comunicazione. Il pannello resta chiuso quando non serve.
+In basso sono sempre disponibili quattro schede: **Scansione**, **Connessione**, **Archivio JSON** e **Messaggi**. Il divisore orizzontale permette di regolarne l’altezza. La scansione mostra le ultime dodici rilevazioni delle cartelle in lettura, con categoria, fase e percorso; per gli archivi il separatore ` > ` distingue il file ZIP/7z dalla directory interna. Il client osserva il percorso corrente ogni tre secondi durante il lavoro: è un riepilogo di attività, non un elenco completo di ogni cartella attraversata. La percentuale testuale, quando stimabile, riguarda le unità della fase e non il tempo residuo. Nessuna barra animata né pannello laterale.
+
+**Report > Non conformità** apre una finestra collegata al client con dati già censiti dal server, ricerca, filtro per categoria e salvataggio HTML della vista. Distingue nomi non conformi, problemi di lettura e preventivi da verificare; indica dati mancanti e verifiche dei file ancora da eseguire. Non avvia nuove scansioni.
 
 Gli elenchi si aggiornano silenziosamente alla conclusione. Le differenze sono consultabili in **Export > Report sintetico analisi nomi e differenze**; le notifiche delle differenze restano sospese. **Export > Scarica ultimo report orario** recupera il report di dimensioni e gerarchie. Il comando manuale **Aggiorna elenco** verifica solo l'elenco della categoria.
 

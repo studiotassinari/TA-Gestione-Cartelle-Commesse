@@ -1,4 +1,5 @@
 using System.Windows.Threading;
+using System.Collections.ObjectModel;
 using TA.Transport;
 using TA_Gestione_Cartelle_Commesse.Contracts;
 using TA_Gestione_Cartelle_Commesse.Infrastructure;
@@ -6,16 +7,19 @@ namespace TA_Gestione_Cartelle_Commesse.ViewModels;
 
 public sealed partial class MainViewModel
 {
-    private bool diagnosticsOpen, readingProgress;
+    private bool readingProgress;
+    private int statusTabIndex;
+    private readonly Dictionary<string,string> lastLocations=new();
+    public ObservableCollection<ScanLogEntry> ScanLog {get;}=[];
+    public int StatusTabIndex {get=>statusTabIndex;set{statusTabIndex=value;Notify();}}
     private DispatcherTimer? progressTimer;
     private CancellationTokenSource? progressCancellation;
     private ScanProgress scanProgress = new(false, "Non collegato", 0, null, "Collegare il server per conoscere l'avanzamento");
-    public bool DiagnosticsOpen { get => diagnosticsOpen; set { diagnosticsOpen=value; Notify(); } }
-    public Command ToggleDiagnosticsCommand { get; private set; } = null!;
+    public Command ShowScanCommand { get; private set; } = null!;
+    public Command ShowConnectionCommand { get; private set; } = null!;
     public string ProgressCaption => scanProgress.Phase + (scanProgress.IsRunning && scanProgress.Percentage is { } value ? $" — {value:0.#}% ({scanProgress.Completed}/{scanProgress.Total})" : "");
     public string ProgressDetail => scanProgress.Message;
-    public double ProgressValue => scanProgress.Percentage ?? 0;
-    public bool ProgressIndeterminate => scanProgress.IsRunning && scanProgress.Percentage == null;
+
     public string ProgressSchedule
     {
         get
@@ -27,12 +31,26 @@ public sealed partial class MainViewModel
     }
     public void ApplyProgress(ScanProgress value)
     {
+
         scanProgress=value;
-        foreach(var property in new[]{nameof(ProgressCaption),nameof(ProgressDetail),nameof(ProgressValue),nameof(ProgressIndeterminate),nameof(ProgressSchedule)}) Notify(property);
+        if(value.IsRunning && value.Locations is {Count:>0})
+            foreach(var location in value.Locations)AppendScanLog(location.Category,location.Phase,location.Path);
+        else AppendScanLog("Servizio",value.Phase,value.Message);
+
+        foreach(var property in new[]{nameof(ProgressCaption),nameof(ProgressDetail),nameof(ProgressSchedule)}) Notify(property);
+    }
+    private void AppendScanLog(string category,string phase,string path)
+    {
+        string key=phase+"|"+path;
+        if(lastLocations.GetValueOrDefault(category)==key)return;
+        lastLocations[category]=key;
+        var label=category=="C"?"Commesse":category=="G"?"Gare":category=="A"?"Archivio":category;
+        ScanLog.Insert(0,new(DateTime.Now.ToString("HH:mm:ss"),label,phase,path));
+        while(ScanLog.Count>12)ScanLog.RemoveAt(ScanLog.Count-1);
     }
     private void StartProgressPolling(ServerConnection server)
     {
-        StopProgressPolling(); progressCancellation=new();
+        StopProgressPolling(); lastLocations.Clear(); ScanLog.Clear(); progressCancellation=new();
         var token=progressCancellation.Token;
         progressTimer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(3)};
         progressTimer.Tick+=async (_,_)=>await ReadProgress(server,token);

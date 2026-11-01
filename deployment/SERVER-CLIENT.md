@@ -205,3 +205,10 @@ Le colonne iniziano con Codice, Anno, Numero, Committente, Argomento, Dimensione
 ## Versione 2.13.0 — frequenza e interfaccia attuali
 
 Le indicazioni storiche sui controlli ogni minuto, watcher e report delle 23 sono sostituite dalla scansione completa ogni ora. RefreshMinutes nei vecchi file non cambia la nuova frequenza fissa. Il ciclo interno al servizio non usa attività pianificate e non dipende dal client aperto. Consultare [ANALISI-NOMI.md](ANALISI-NOMI.md#stato-e-report-orari-213) per checkpoint, progressi e report. Il client offre una barra permanente e un controllo Stato e connessione a richiesta; gli aggiornamenti delle viste a fine scansione non generano notifiche Windows. Aggiornare sia server sia client alla 2.13, oltre al pacchetto MCP se usato.
+
+
+## Versione 2.14.0 — log e schede inferiori
+
+In basso sono sempre disponibili quattro schede: **Scansione**, **Connessione**, **Archivio JSON** e **Messaggi**. Il divisore orizzontale permette di regolarne l’altezza. La scansione mostra le ultime dodici rilevazioni delle cartelle in lettura, con categoria, fase e percorso; per gli archivi il separatore ` > ` distingue il file ZIP/7z dalla directory interna. Il client osserva il percorso corrente ogni tre secondi durante il lavoro: è un riepilogo di attività, non un elenco completo di ogni cartella attraversata. La percentuale testuale, quando stimabile, riguarda le unità della fase e non il tempo residuo. Nessuna barra animata né pannello laterale.
+
+Il comando Report > Non conformità apre una finestra figlia con filtri ed esportazione. Aggiornare sia server sia client alla 2.14 per avere i percorsi correnti; un server 2.13 può mostrare solo il precedente riepilogo della fase. La cadenza resta oraria.
