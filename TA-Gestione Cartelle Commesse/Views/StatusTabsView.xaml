@@ -8,7 +8,7 @@
      <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressSchedule}" Foreground="#536775" FontSize="12" Margin="16,0,0,0"/>
      <TextBlock Text="{Binding ProgressCaption}" FontWeight="Bold"/>
     </DockPanel>
-    <DataGrid ItemsSource="{Binding ScanLog}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="23" ColumnHeaderHeight="27" GridLinesVisibility="None" SelectionMode="Single" FontSize="12" ToolTip="Ultime cartelle osservate dal client, più recenti in alto. Percorso interno ZIP/7z separato da &gt;. Nessun contenuto dei documenti.">
+    <DataGrid ItemsSource="{Binding ScanLog}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="23" ColumnHeaderHeight="34" GridLinesVisibility="None" SelectionMode="Single" FontSize="12" ToolTip="Ultime cartelle osservate dal client, più recenti in alto. Percorso interno ZIP/7z separato da &gt;. Nessun contenuto dei documenti.">
      <DataGrid.Columns>
       <DataGridTextColumn Header="Ora" Binding="{Binding Time}" Width="80"/>
       <DataGridTextColumn Header="Categoria" Binding="{Binding Category}" Width="90"/>

@@ -35,8 +35,10 @@ internal static class Program
         Check(tabs.Items.Count==4 && tabs.ActualHeight>100,"Schede informative inferiori presenti e utilizzabili");
         vm.ShowConnectionCommand.Execute(null);Render(root,"client-bottom-connection.png",1264,826);
         Check(tabs.SelectedIndex==1 && Walk(root).OfType<ConnectionStatusView>().Any(),"Comando connessione seleziona la scheda inferiore");
-        vm.ShowScanCommand.Execute(null);Render(root,"client-bottom-small.png",864,626);
+        vm.ShowScanCommand.Execute(null);Render(root,"client-bottom-small.png",864,676);
         Check(tabs.ActualHeight>=140,"Schede utilizzabili anche alla dimensione minima");
+        var folderGrid=Walk(root).OfType<DataGrid>().Single(g=>ReferenceEquals(g.ItemsSource,vm.Commesse.Records));
+        Check(folderGrid.ActualHeight>=90,"Elenco delle commesse leggibile anche alla dimensione minima");
         var invalid=new FolderRecord("C26198","26","198","Cliente","Progetto",@"Z:\lavori\2026\C26198 - <script>","Non conforme");
         var checkedRow=invalid with {Code="C26199",Path=@"Z:\lavori\2026\C26199",Status="Valido",Inspection=new(){Complete=false,Issues=["Accesso negato"],QuoteStatus="Non trovato nei nomi"}};
         var report=new NonconformityReportViewModel();
