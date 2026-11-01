@@ -19,7 +19,7 @@ public sealed class LocalPipeConnection
         // Verifica Windows del processo proprietario, prima di inviare la richiesta.
         LocalServiceIdentity.Verify(pipe.SafePipeHandle);
         await WireProtocol.WriteAsync(pipe, request with { ClientMachine = Environment.MachineName,
-            ClientVersion = "MCP-local", CorrelationId = Guid.NewGuid().ToString("N") }, timeout.Token);
+            ClientVersion = "MCP-local/"+System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version, CorrelationId = request.CorrelationId ?? Guid.NewGuid().ToString("N") }, timeout.Token);
         var reply = await LocalPipeProtocol.ReadReplyAsync(pipe, timeout.Token);
         if (!reply.Success) throw new ServerRejectedException(reply.Error ?? "Richiesta locale rifiutata.");
         return reply.Data.Deserialize<T>() ?? throw new InvalidDataException("Risposta locale vuota.");

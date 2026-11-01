@@ -6,7 +6,13 @@ using TA.Server;
 using TA.Transport;
 
 void Check(bool ok, string message) { if (!ok) throw new Exception(message); }
-foreach(var operation in new[] { "Info", "State", "Children", "DailyReport", "Analysis", "AnalysisReport", "Files", "Progress" }) LocalReadOnlyPolicy.Validate(new Request(operation));
+LocalReadOnlyPolicy.Validate(new Request("Info"));
+foreach(var (operation,tool) in new[]{("State","cerca_cartelle"),("Children","sottocartelle"),("DailyReport","report_giornaliero"),("Analysis","analisi_file"),("Files","cerca_file"),("Progress","stato_scansione"),("ReadDocument","leggi_documento"),("ListDocuments","elenca_documenti")})
+{
+    LocalReadOnlyPolicy.Validate(new Request(operation,CorrelationId:Guid.NewGuid().ToString("N"),McpTool:tool));
+    try{LocalReadOnlyPolicy.Validate(new Request(operation));throw new Exception("MCP precedente ammesso");}catch(UnauthorizedAccessException){}
+    try{LocalReadOnlyPolicy.Validate(new Request(operation,CorrelationId:Guid.NewGuid().ToString("N"),McpTool:"inesistente"));throw new Exception("Strumento non corrispondente ammesso");}catch(UnauthorizedAccessException){}
+}
 foreach(var operation in new[] { "Refresh", "Cancel", "CreateJob", "TemplatePreview", "AdminAudit", "Report", "Subscribe", "Unknown" })
 {
     try { LocalReadOnlyPolicy.Validate(new Request(operation)); throw new Exception("Operazione ammessa: " + operation); }

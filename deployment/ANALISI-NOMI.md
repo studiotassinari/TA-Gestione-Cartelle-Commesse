@@ -1,6 +1,8 @@
-# Inventario nomi, versione 2.14.0
+# Inventario nomi, versione 2.15.0
 
 Il servizio legge le radici configurate di commesse, gare e archivio. L'indice delle commesse resta limitato al primo livello delle cartelle annuali. Il nuovo inventario legge ricorsivamente i nomi di tutti i file accessibili, anche nelle cartelle fuori dagli anni e nei contenitori dei clienti. Non modifica le sorgenti, non estrae archivi e non legge il contenuto dei documenti ordinari. Legge nomi, percorsi relativi, tipo, dimensione e data dai metadati; per ZIP e 7z legge le intestazioni degli archivi.
+
+La lettura dei contenuti introdotta nella 2.15.0 è separata da questo inventario e avviene solo su richiesta per un singolo documento. Nessun testo viene aggiunto ai JSON: vedere [MCP.md](MCP.md).
 
 ## Calendario e report
 

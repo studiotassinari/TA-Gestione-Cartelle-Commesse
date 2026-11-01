@@ -7,7 +7,7 @@ using TA.Transport;
 namespace TA.Server;
 
 // Endpoint locale separato da TCP: ACL Windows, identità del chiamante e sola lettura.
-public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger) : BackgroundService
+public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger, TA.Server.Documents.DocumentService? documents = null) : BackgroundService
 {
     public static PipeSecurity Security(SecurityIdentifier owner, SecurityIdentifier group, SecurityIdentifier? admins)
     {
@@ -71,9 +71,9 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
             });
             if (!allowed) throw new UnauthorizedAccessException("Account non autorizzato al canale MCP locale.");
             LocalReadOnlyPolicy.Validate(request);
-            var reply = Dispatch(request);
+            var reply = await Dispatch(request, timeout.Token);
             await LocalPipeProtocol.WriteReplyAsync(pipe, reply, timeout.Token);
-            CommunicationLog.Write(Environment.MachineName, "pipe-locale", user, request.Operation, "Risposta inviata", "MCP sola lettura", request.CorrelationId);
+            CommunicationLog.Write(Environment.MachineName, "pipe-locale", user, request.Operation, "Risposta inviata", "MCP su richiesta; strumento="+request.McpTool+"; client="+request.ClientVersion, request.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -81,10 +81,12 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
             try { await LocalPipeProtocol.WriteReplyAsync(pipe, Reply.Fail(ex.Message), timeout.Token); } catch { /* Il chiamante può essersi disconnesso. */ }
         }
     }
-    private Reply Dispatch(Request request)
+    private async Task<Reply> Dispatch(Request request,CancellationToken token)
     {
         switch (request.Operation)
         {
+            case "ReadDocument": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,request.Document,null,token)).Document);
+            case "ListDocuments": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,null,request.Documents,token)).Listing);
             case "Info": return Reply.Ok(typeof(LocalMcpService).Assembly.GetName().Version?.ToString(3) ?? "Sconosciuta");
             case "State":
                 var state = scans.Get(request.Category).State;
@@ -95,7 +97,6 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
             case "DailyReport": return Reply.Ok(scans.DailyReport());
             case "Files": return Reply.Ok(files.Search(request.Files ?? new()));
             case "Analysis": return Reply.Ok(analysis.Query(request.Analysis ?? new()));
-            case "AnalysisReport": return Reply.Ok(analysis.Report());
             default: throw new UnauthorizedAccessException("Comando non ammesso.");
         }
     }

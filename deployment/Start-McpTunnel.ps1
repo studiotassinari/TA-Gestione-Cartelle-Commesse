@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory)][ValidatePattern('^tunnel_[a-zA-Z0-9]+$')][string]$TunnelId,
     [ValidateRange(1024,65535)][int]$Port = 5443,
     [ValidateSet('kerberos','local')][string]$Transport = 'kerberos',
+    [switch]$CheckConnection,
     [string]$TunnelClient = (Join-Path $PSScriptRoot 'Tunnel\tunnel-client.exe')
 )
 $ErrorActionPreference = 'Stop'
@@ -15,7 +16,7 @@ if (!(Test-Path -LiteralPath $mcp) -or !(Test-Path -LiteralPath $TunnelClient)) 
 $env:TA_MCP_SERVER = $Server
 $env:TA_MCP_PORT = $Port.ToString()
 $env:TA_MCP_TRANSPORT = $Transport
-if ($Transport -eq 'local') {
+if ($CheckConnection) {
     & $mcp --check
     if ($LASTEXITCODE -ne 0) { throw 'Canale locale non disponibile. Aggiornare e avviare TACommesseServer prima del tunnel.' }
 }

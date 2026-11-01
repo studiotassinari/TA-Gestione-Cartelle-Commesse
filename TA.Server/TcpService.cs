@@ -11,7 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 // Ogni comando richiede cifratura, firma, autenticazione Windows mutua e appartenenza al gruppo configurato.
-public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger) : BackgroundService
+public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -96,7 +96,7 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
                 {
                     reply = AdministrativeCommands.Handle(request, domainAdmin, () => new(
                         CommunicationLog.Tail(Path.Combine(CommunicationLog.DirectoryPath, "service.log")),
-                        CommunicationLog.Tail(CommunicationLog.FilePath))) ?? await Dispatch(request).WaitAsync(ct);
+                        CommunicationLog.Tail(CommunicationLog.FilePath))) ?? await Dispatch(request,ct).WaitAsync(ct);
                 }
                 catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or KeyNotFoundException)
                 { reply = Reply.Fail(ex.Message); }
@@ -107,11 +107,13 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
             finally { if (commandSlot) slots.Release(); if (pushSlot) pushSlots.Release(); }
         }
     }
-    private async Task<Reply> Dispatch(Request request)
+    private async Task<Reply> Dispatch(Request request,CancellationToken token)
     {
         if (request.Version != 2) return Reply.Fail("Versione del protocollo non supportata.");
         switch (request.Operation)
         {
+            case "ReadDocument": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,request.Document,null,token)).Document);
+            case "ListDocuments": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,null,request.Documents,token)).Listing);
             case "Info": return Reply.Ok(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "Sconosciuta");
             case "TemplatePreview":
                 if (request.Category != "C") return Reply.Fail("Il modello e disponibile solo per le commesse.");

@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TA.Server;
 
+if(args.Contains("--document-worker")){await TA.Server.Documents.DocumentWorker.RunAsync();return;}
+
 StartupLog.Write("Avvio processo servizio: lettura configurazione.");
 try
 {
@@ -24,6 +26,7 @@ builder.Services.AddSingleton(settings);
 builder.Services.AddSingleton(new ChangeHub(false));
 builder.Services.AddSingleton<AnalysisService>();
 builder.Services.AddSingleton<FileSearchService>();
+builder.Services.AddSingleton<TA.Server.Documents.DocumentService>();
 builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());
