@@ -26,14 +26,24 @@
    <Grid>
     <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="8"/><RowDefinition Height="230" MinHeight="150"/></Grid.RowDefinitions>
     <DataGrid x:Name="ReportsGrid" MouseDoubleClick="Reports_DoubleClick" ToolTip="Doppio clic: apri una copia del documento in sola lettura" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single" SelectionUnit="FullRow" EnableRowVirtualization="True" RowHeight="36" Background="White" BorderBrush="#D6E0E2">
-     <DataGrid.RowStyle><Style TargetType="DataGridRow"><Setter Property="ToolTip" Value="{Binding Title}"/></Style></DataGrid.RowStyle>
+     <DataGrid.RowStyle><Style TargetType="DataGridRow">
+      <Setter Property="ToolTip" Value="{Binding ServerLocation}"/>
+      <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+      <EventSetter Event="PreviewMouseRightButtonDown" Handler="Report_RightClick"/>
+      <Setter Property="ContextMenu"><Setter.Value><ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+       <MenuItem Header="Apri documento (copia in sola lettura)" Command="{Binding OpenDocumentCommand}"/>
+       <MenuItem Header="Apri percorso in Esplora file" Command="{Binding OpenFolderCommand}"/>
+      </ContextMenu></Setter.Value></Setter>
+     </Style></DataGrid.RowStyle>
      <DataGrid.Columns>
       <DataGridTextColumn Header="Relazione" Binding="{Binding Title}" Width="240" MinWidth="220"/>
       <DataGridTextColumn Header="Località" Binding="{Binding Municipality}" Width="*" MinWidth="95"/>
-      <DataGridTextColumn Header="Commessa" Binding="{Binding ProjectLabel}" Width="135"/>
-      <DataGridTextColumn Header="Fascicolo" Binding="{Binding DossierTitle}" Width="150"/>
-      <DataGridTextColumn Header="Analisi" Binding="{Binding AnalysisStatus}" Width="150"/>
-      <DataGridTextColumn Header="Tipo" Binding="{Binding Kind}" Width="95"/>
+      <DataGridTextColumn Header="Indirizzo" Binding="{Binding Address}" Width="180" MinWidth="150"/>
+      <DataGridTextColumn Header="Percorso sul server" Binding="{Binding ServerLocation}" Width="300" MinWidth="250"/>
+      <DataGridTextColumn Header="Commessa" Binding="{Binding ProjectLabel}" Width="135" MinWidth="120"/>
+      <DataGridTextColumn Header="Fascicolo" Binding="{Binding DossierTitle}" Width="150" MinWidth="130"/>
+      <DataGridTextColumn Header="Analisi" Binding="{Binding AnalysisStatus}" Width="150" MinWidth="130"/>
+      <DataGridTextColumn Header="Tipo" Binding="{Binding Kind}" Width="95" MinWidth="90"/>
      </DataGrid.Columns>
     </DataGrid>
     <GridSplitter Grid.Row="1" Height="8" HorizontalAlignment="Stretch" Background="Transparent"/>
@@ -46,6 +56,8 @@
        <TextBlock Text="{Binding DossierTitle, StringFormat=Fascicolo: {0}}" TextWrapping="Wrap"/>
        <TextBlock Text="{Binding AnalysisStatus}" TextWrapping="Wrap"/>
        <Button Content="Imposta posizione…" Click="Position_Click" HorizontalAlignment="Left" IsEnabled="{Binding DataContext.CanLocate, RelativeSource={RelativeSource AncestorType=Window}}"/>
+       <Button Content="Localizza indirizzo con Nominatim…" Click="Geocode_Click" HorizontalAlignment="Left" IsEnabled="{Binding DataContext.CanGeocode, RelativeSource={RelativeSource AncestorType=Window}}" Margin="8,8,0,0"/>
+       <TextBlock Text="{Binding ServerLocation, StringFormat=Percorso sul server: {0}}" TextWrapping="Wrap" Margin="0,6,0,0"/>
        <TextBlock Text="{Binding ProjectLabel}" Margin="0,6,0,0"/><TextBlock Text="{Binding Client}"/>
        <TextBlock Text="{Binding Author}"/><TextBlock Text="{Binding FileName}" TextWrapping="Wrap" Margin="0,6,0,0"/>
        <TextBlock Text="{Binding PositionSource, StringFormat=Fonte posizione: {0}}" TextWrapping="Wrap"/>

@@ -59,6 +59,7 @@ internal static class Program
             Check(true,"MCP distingue consultazione dei metadati da lettura dei contenuti");
 
             GeologyAnalysisChecks.Run(root).GetAwaiter().GetResult();
+            GeocodingChecks.Run(root).GetAwaiter().GetResult();
             GeologyOpenChecks.Run(root).GetAwaiter().GetResult();
             GeologyIndexChecks.Run(root);
             AppContext.SetSwitch("TA.Tests.DisableMapNetwork",true);
