@@ -6,7 +6,7 @@
 		<!-- Genera un eseguibile Windows grafico senza finestra console. -->
 		<OutputType>WinExe</OutputType>
 		<!-- Compila per .NET 10 su Windows, necessario per WPF. -->
-		<Version>2.17.0</Version><TargetFramework>net10.0-windows</TargetFramework>
+		<Version>2.18.0</Version><TargetFramework>net10.0-windows</TargetFramework>
 		<!-- Imposta il namespace di base per i tipi generati dal progetto. -->
 		<RootNamespace>TA_Gestione_Cartelle_Commesse</RootNamespace>
 		<!-- Abilita lʼanalisi statica dei riferimenti che possono contenere null. -->

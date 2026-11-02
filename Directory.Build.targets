@@ -1,0 +1,9 @@
+<Project>
+  <!-- Un solo simbolo TA con cartella per eseguibili, collegamenti e area di notifica. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'TA.ServiceManager' Or '$(MSBuildProjectName)' == 'TA.Server' Or '$(MSBuildProjectName)' == 'TA.Updater'">
+    <ApplicationIcon>$(MSBuildThisFileDirectory)TA-Gestione Cartelle Commesse/Assets/Brand/App.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'TA-Gestione Cartelle Commesse' Or '$(MSBuildProjectName)' == 'TA.ServiceManager' Or '$(MSBuildProjectName)' == 'DesktopChecks'">
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)TA-Gestione Cartelle Commesse/Assets/Brand/App.ico" LogicalName="TA.Desktop.App.ico" />
+  </ItemGroup>
+</Project>

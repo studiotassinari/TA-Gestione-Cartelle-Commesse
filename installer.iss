@@ -1,7 +1,7 @@
 ; Verifica se il parametro AppVersion non è stato fornito al compilatore.
 #ifndef AppVersion
 ; Definisce il valore predefinito del parametro quando manca un valore esterno.
-  #define AppVersion "2.17.0"
+  #define AppVersion "2.18.0"
 ; Termina la definizione condizionale del parametro.
 #endif
 ; Verifica se il parametro PublishDir non è stato fornito al compilatore.
@@ -18,6 +18,7 @@
 #endif
 ; Apre la sezione [Setup] della configurazione Inno Setup.
 [Setup]
+SetupIconFile=TA-Gestione Cartelle Commesse\Assets\Brand\App.ico
 ; Mantiene lʼidentificativo stabile tra versioni per aggiornare la stessa installazione.
 AppId={{D0B63D8F-FF51-4B68-9553-4B49A78C7B3A}
 ; Definisce il nome mostrato dal programma di installazione e da Windows.

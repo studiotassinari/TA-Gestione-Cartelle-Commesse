@@ -7,6 +7,8 @@ public sealed class ServerSettings
     public string BidsRoot { get; set; } = ""; public string ArchivedJobsRoot { get; set; } = @"\\ingtassinari.it\data\archivio";
     public string ArchiveFolder { get; set; } = "";
     public string GeologyCatalogPath { get; set; } = "";
+    // Modificabile dall'amministratore per passare a un'istanza Nominatim aziendale senza aggiornare il client.
+    public string NominatimSearchUrl { get; set; } = "https://nominatim.openstreetmap.org/search";
     // Abilitazione esplicita: l'unica scrittura MCP riguarda il catalogo JSON derivato.
     public bool EnableMcpGeologyWrites { get; set; }
     // Un gruppo esplicito evita di esporre tutti i metadati a qualunque account del dominio.

@@ -49,6 +49,16 @@ Le coordinate IA sono mostrate sulla mappa come **proposte da verificare**. Un f
 
 ## Client e doppio clic
 
+### Ricerca dell'indirizzo con Nominatim
+
+Selezionare una relazione e scegliere **Localizza indirizzo con Nominatim…**. Controllare l'indirizzo proposto e premere **Cerca indirizzo**: soltanto il testo mostrato viene inviato al servizio. Non inserire dati personali o riservati. Non vengono inviati documenti o nomi dei committenti automaticamente. Scegliere il risultato pertinente e salvare: coordinate, precisione, fonte e autore sono conservati nel catalogo JSON come posizione **geocodificata, da verificare**, senza modificare gli originali. Un risultato relativo al centro abitato non identifica il sito dell'intervento.
+
+La ricerca passa dal server autenticato, non dal tunnel MCP. Non viene avviata alla digitazione, durante le scansioni o in modo periodico. Il server condivide fra i client cache persistente e limite di una richiesta al secondo, rispetta le pause richieste dal fornitore e non ripete automaticamente le richieste fallite. Cache e stato del limite si trovano nella sottocartella `geocodifica` dell'archivio geologico. Dati © OpenStreetMap contributors, ODbL; [condizioni Nominatim](https://operations.osmfoundation.org/policies/nominatim/).
+
+La proprietà `Server.NominatimSearchUrl` nel file delle impostazioni del server consente di sostituire l'endpoint senza ricompilare: valore predefinito `https://nominatim.openstreetmap.org/search`. Usare un endpoint HTTPS compatibile con la ricerca JSON v2 Nominatim; riavviare il servizio dopo la modifica. Nessuna chiave o fatturazione viene configurata dall'applicazione.
+
+La griglia mostra **Indirizzo** e **Percorso sul server**, inclusa la voce interna agli archivi. Il menu contestuale della riga offre **Apri documento (copia in sola lettura)** e **Apri percorso in Esplora file**. Il secondo comando seleziona il documento, oppure lo ZIP/7z che lo contiene, traducendo `\\ingtassinari.it\data` in `Z:` per l'apertura sul client.
+
 **Analisi → Relazioni geologiche e geotecniche** apre una finestra indipendente a istanza unica, con ricerca dinamica, fascicolo, stato dell'analisi e mappa OpenStreetMap. Le selezioni di elenco e mappa sono collegate. Gli elementi privi di coordinate restano nell'elenco.
 
 Il doppio clic su una riga e il pulsante **Apri documento** aprono il file nell'applicazione Windows associata. Per proteggere gli originali viene preparata una copia locale con attributo di sola lettura e protezione Office, anche quando il documento è contenuto in ZIP/7z. Si legge soltanto la voce scelta; nessuna estrazione dell'intero archivio. Il processo è separato e limitato a 25 secondi/512 MiB/50 MiB di documento. Le copie si trovano in `%LOCALAPPDATA%\Tassinari\CommesseClient\DocumentiConsultazione`. Non sono un nuovo archivio condiviso e possono essere eliminate dall'utente dopo la consultazione.

@@ -112,6 +112,7 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
         if (request.Version != 2) return Reply.Fail("Versione del protocollo non supportata.");
         switch (request.Operation)
         {
+            case "GeocodeGeologicalAddress": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile.")).GeocodeAsync(request.GeologicalGeocode ?? throw new ArgumentException("Indirizzo mancante."), token));
             case "SaveGeologicalPosition": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).SavePosition(request.GeologicalPosition ?? throw new ArgumentException("Posizione mancante."), user, token));
             case "PendingGeologicalAnalyses": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Pending(request.GeologicalPending ?? new(), token));
             case "GeologicalDossiers": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Dossiers(request.GeologicalDossiers ?? new(), token));

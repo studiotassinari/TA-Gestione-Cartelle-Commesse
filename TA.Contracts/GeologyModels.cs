@@ -43,7 +43,8 @@ public sealed record GeologicalReport
     public string RelativePath { get; init; } = "";
     public string? ArchiveEntry { get; init; }
     public bool HasPosition => Latitude is >= -90 and <= 90 && Longitude is >= -180 and <= 180;
-    public string PositionLabel => HasPosition ? string.Join(" · ", new[] { Municipality, Address, PositionAccuracy }.Where(s => !string.IsNullOrWhiteSpace(s))) : "Posizione da individuare";
+    public string PositionLabel => string.Join(" · ", new[] { Municipality, Address, HasPosition ? PositionAccuracy : "Coordinate da individuare" }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    public string ServerLocation => PhysicalPath + (string.IsNullOrWhiteSpace(ArchiveEntry) ? "" : " > " + ArchiveEntry);
     public string ProjectLabel => string.IsNullOrWhiteSpace(ProjectCode) ? "Non associata" : ProjectCode;
     public bool CanRead => OriginalAvailable && (!string.IsNullOrWhiteSpace(PhysicalPath) || (FolderId.Length == 64 && FolderId.All(Uri.IsHexDigit) && Category is "C" or "G" or "A"));
 }
@@ -53,5 +54,5 @@ public sealed record GeologyQuery(string Search = "", string Code = "", bool Onl
 public sealed record GeologyPage(string Version, DateTime UpdatedUtc, int Total, int Offset, int? NextOffset, List<GeologicalReport> Reports, List<string> Warnings);
 public sealed record GeologicalReadQuery(string ReportId, int Offset = 0, int Length = 12000, string? Version = null);
 
-public sealed record GeologicalPositionUpdate(string ReportId, double Latitude, double Longitude, string Municipality, string Address, string Source, string Version);
-public sealed record GeologicalPosition(string ReportId, double Latitude, double Longitude, string Municipality, string Address, string Source, DateTime UpdatedUtc, string UpdatedBy);
+public sealed record GeologicalPositionUpdate(string ReportId, double Latitude, double Longitude, string Municipality, string Address, string Source, string Version, string Accuracy = "Posizione indicata manualmente");
+public sealed record GeologicalPosition(string ReportId, double Latitude, double Longitude, string Municipality, string Address, string Source, DateTime UpdatedUtc, string UpdatedBy, string Accuracy = "Posizione indicata manualmente");

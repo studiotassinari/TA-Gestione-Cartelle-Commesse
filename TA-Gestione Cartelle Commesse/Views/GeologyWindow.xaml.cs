@@ -2,6 +2,16 @@ using TA_Gestione_Cartelle_Commesse.ViewModels;
 namespace TA_Gestione_Cartelle_Commesse.Views;
 public partial class GeologyWindow : System.Windows.Window
 {
+    private void Report_RightClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is System.Windows.Controls.DataGridRow row && row.Item is Contracts.GeologicalReport report && DataContext is GeologyViewModel model) model.Selected = report;
+    }
+    private async void Geocode_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (DataContext is not GeologyViewModel model || !model.CanGeocode) return;
+        var dialog = new GeologyGeocodingDialog(model) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.Change != null) await model.SavePositionAsync(dialog.Change);
+    }
     // Intestazioni, barre di scorrimento e spazio vuoto non attivano l'apertura.
     private async void Reports_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {

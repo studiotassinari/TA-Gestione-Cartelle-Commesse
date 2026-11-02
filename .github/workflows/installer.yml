@@ -15,6 +15,7 @@ on:
       # Include le modifiche alla configurazione dell'installatore.
       - 'installer.iss'
       - 'server-installer.iss'
+      - 'Directory.Build.targets'
       - 'TA.Contracts/**'
       - 'TA.Core/**'
       - 'TA.Transport/**'
@@ -66,7 +67,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.17.0"
+          $version = "2.18.0"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -268,13 +269,11 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
-          Catalogo geologico su database JSON condiviso: analisi avviata da ChatGPT, classificazione, sintesi, localizzazione con fonti e fascicoli omogenei. Nessuna API del modello chiamata dal server e nessuna elaborazione dei contenuti in background.
-          JSON delle analisi separati per anno/commessa/documento, revisioni immutabili e indice atomico; fascicoli con documenti associati e provenienza. Citazioni confrontate con le porzioni lette, checksum verificato prima del salvataggio, concorrenza gestita tramite revisione. Le proposte IA restano da verificare, le posizioni manuali hanno priorità.
-          Aggiornamento del catalogo dai JSON orari: riuso delle unità invariate, nuova analisi solo per documenti nuovi o modificati, incluse modifiche dei contenitori ZIP/7z. Storico conservato e fonti rimosse segnalate. La prima scansione può essere parziale.
-          Client: colonne fascicolo e stato, ricerca estesa, doppio clic e comando Apri documento. Copia locale in sola lettura anche da ZIP/7z, senza cambiare gli originali; processo isolato con limiti di 25 secondi, 512 MiB e 50 MiB di documento.
-          MCP: 15 strumenti. Nuovi prossime_relazioni_da_analizzare, elenca_fascicoli_geologici e salva_analisi_geologica. Il salvataggio è un'azione di scrittura dichiarata e richiede EnableMcpGeologyWrites=true sul server più una consultazione esplicita di analisi. Consultazioni normali invariate; analisi limitata a 15 minuti/60 operazioni, senza rinnovi automatici.
-          Aggiornare Server, Client e pacchetto MCP, riavviare il tunnel e aggiornare gli strumenti del plugin. La chiave runtime va inserita soltanto nella finestra del client ufficiale. Guida in deployment/GEOLOGIA.md.
-          Installatori per la prima installazione, updater diretto e pacchetti verificati SHA256. Runtime incluso, configurazioni e backup conservati; nessuna attività pianificata. Pacchetti non firmati digitalmente.
+          Nominatim nel catalogo geologico: ricerca dell'indirizzo solo su richiesta dal client, scelta esplicita del risultato e salvataggio JSON con fonte e precisione. Coordinate geocodificate da verificare. Cache condivisa, massimo una richiesta al secondo, nessun autocomplete o geocoding periodico. Non inviare indirizzi personali o riservati al servizio pubblico.
+          Griglia con indirizzo e percorso sul server; menu contestuale Apri documento in copia di sola lettura e Apri percorso in Esplora file. Supporto ZIP/7z e traduzione dei percorsi aziendali in Z: sul client. Comune e indirizzo leggibili anche senza coordinate.
+          Icona definitiva: cartella bianca con simbolo TA originale e proporzioni conservate, anche per gestore server, area di notifica, aggiornatore e installatori.
+          Aggiornare prima Server e poi Client con l'aggiornatore diretto. Tunnel MCP 2.17.0 compatibile, nessun nuovo strumento o riavvio del tunnel richiesto per queste funzioni. Configurazioni e cataloghi conservati; sorgenti sempre in sola lettura.
+          Installatori iniziali, pacchetti diretti e aggiornatore con impronte SHA256, runtime incluso e backup. Pacchetti non firmati digitalmente. Guida: deployment/GEOLOGIA.md.
           '@
           # Salva le note UTF-8 in un file per preservare accenti e interruzioni di riga.
           $notes | Set-Content release-notes.txt -Encoding utf8

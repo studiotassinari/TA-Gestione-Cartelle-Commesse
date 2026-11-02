@@ -9,6 +9,7 @@ internal static class Program
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var window = new Window { Title = "TA tray test", Width = 200, Height = 100, ShowInTaskbar = false };
         using var tray = new TrayLifetime(window, "TA test", "Client");
+        Check(window.Icon != null, "Icona aziendale incorporata caricata per finestra e area di notifica");
         bool closed = false; window.Closed += (_, _) => closed = true;
         window.Show(); window.WindowState = WindowState.Minimized;
         Check(!window.IsVisible && !closed, "Minimizza nasconde senza terminare");

@@ -16,7 +16,7 @@ public sealed partial class MainViewModel
         }
         var server = connection;
         // Nessun Owner: finestra indipendente, non modale e con propria voce nella barra applicazioni.
-        geologyWindow = new(new GeologyViewModel(server == null ? null : token => LoadGeology(server, token), server == null ? null : async (change, token) => { await server.SendAsync<bool>(new("SaveGeologicalPosition", GeologicalPosition: change), token); }));
+        geologyWindow = new(new GeologyViewModel(server == null ? null : token => LoadGeology(server, token), server == null ? null : async (change, token) => { await server.SendAsync<bool>(new("SaveGeologicalPosition", GeologicalPosition: change), token); }, server == null ? null : (query, token) => server.SendAsync<GeocodingResult>(new("GeocodeGeologicalAddress", GeologicalGeocode: query), token)));
         geologyWindow.Closed += (_, _) => geologyWindow = null;
         geologyWindow.Show();
     }
