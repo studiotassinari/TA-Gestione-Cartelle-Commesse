@@ -39,6 +39,7 @@ public sealed partial class MainViewModel : Observable
     public MainViewModel()
     {
         GeologyCommand = new(ShowGeology);
+        IpripiCommand = new(ShowIpripi);
         ShowScanCommand=new(()=>StatusTabIndex=0); ShowConnectionCommand=new(()=>StatusTabIndex=1);
         NonconformityReportCommand=new(ShowNonconformityReport,()=>connection!=null);
         ManageServerCommand = new(ShowServerManagement, () => CanManageServer); CheckCommunicationCommand = new(() => _ = CheckCommunicationAsync()); ChangesCommand = new(ShowChanges);
@@ -70,7 +71,7 @@ public sealed partial class MainViewModel : Observable
             if (dialog.ShowDialog() != true) return;
             credentials = dialog.Credential;
         }
-        geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
+        ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
         Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); NonconformityReportCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
@@ -147,7 +148,7 @@ public sealed partial class MainViewModel : Observable
             }
         }
     }
-    public void Stop() { geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
+    public void Stop() { ipripiWindow?.Close(); geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
 
 
     private Views.NonconformityReportWindow? nonconformityWindow;

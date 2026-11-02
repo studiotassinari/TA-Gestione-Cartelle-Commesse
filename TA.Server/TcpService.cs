@@ -11,7 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 // Ogni comando richiede cifratura, firma, autenticazione Windows mutua e appartenenza al gruppo configurato.
-public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null) : BackgroundService
+public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -112,6 +112,10 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
         if (request.Version != 2) return Reply.Fail("Versione del protocollo non supportata.");
         switch (request.Operation)
         {
+            case "IpripiRules": return Reply.Ok(IpripiRegulation.Get());
+            case "Ipripi": return Reply.Ok((ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).Query(request.Ipripi ?? new(), token));
+            case "ReadIpripi": return Reply.Ok(await (ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).ReadAsync(request.IpripiRead ?? throw new ArgumentException("Documento mancante."), token));
+            case "SaveIpripi": return Reply.Ok(await (ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).SaveAsync(request.IpripiAnalysis ?? throw new ArgumentException("Analisi mancante."), user, token));
             case "GeocodeGeologicalAddress": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile.")).GeocodeAsync(request.GeologicalGeocode ?? throw new ArgumentException("Indirizzo mancante."), token));
             case "SaveGeologicalPosition": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).SavePosition(request.GeologicalPosition ?? throw new ArgumentException("Posizione mancante."), user, token));
             case "PendingGeologicalAnalyses": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Pending(request.GeologicalPending ?? new(), token));

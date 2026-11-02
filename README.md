@@ -2,7 +2,11 @@
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 
-## Scarica
+## Sviluppo IPRiPI (branch dedicato)
+
+La nuova finestra **Analisi > IPRiPI — analisi MUR A.1/D.1** consulta PDF e risultati salvati da ChatGPT tramite il plugin, con citazioni verificate e classificazione secondo la DGR Emilia-Romagna **2272/2016**. Nessuna API OpenAI dal server. Funzionalità da collaudare prima della distribuzione; [guida, configurazione e limiti](deployment/IPRIPI.md).
+
+## Scarica la versione di produzione
 
 - [Aggiornatore diretto 2.18.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.18.0/TA-Commesse-Aggiornatore-2.18.0.exe) — prima Server sulla VM, poi Client sui PC.
 - [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.18.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.18.0.exe)
