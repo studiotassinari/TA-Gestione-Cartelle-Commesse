@@ -18,7 +18,7 @@ public static class FileInventoryReader
             string? lastDirectory=null;
             try
             {
-                var before = new FileInfo(path); long size = before.Length; var stamp = before.LastWriteTimeUtc;
+                var before = new FileInfo(path); long size = before.Length; var stamp = MetadataDates.Read(() => before.LastWriteTimeUtc, path, issues);
                 using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 using var archive = ArchiveFactory.OpenArchive(stream);
                 var dirs = new HashSet<string>(StringComparer.Ordinal);
@@ -37,12 +37,12 @@ public static class FileInventoryReader
                         if (dirs.Add(dir)) Add(new(dir, "directory", container));
                     }
                     if (item.IsDirectory) { if (dirs.Add(key)) Add(new(key, "directory", container)); continue; }
-                    Add(new(key, IsArchive(key) ? "nested-archive" : "file", container, item.Size, item.LastModifiedTime?.ToUniversalTime()));
+                    Add(new(key, IsArchive(key) ? "nested-archive" : "file", container, item.Size, MetadataDates.Read(() => item.LastModifiedTime?.ToUniversalTime(), container + "!" + key, issues)));
                     if (item.IsEncrypted) issues.Add(container + "!" + key + ": voce cifrata, solo nome/metadati visibili");
                     if (IsArchive(key)) issues.Add(container + "!" + key + ": archivio annidato censito ma non aperto (richiederebbe decompressione)");
                 }
                 var after = new FileInfo(path);
-                if (after.Length != size || after.LastWriteTimeUtc != stamp) issues.Add(container + ": modificato durante la lettura");
+                if (after.Length != size || MetadataDates.Read(() => after.LastWriteTimeUtc, path, issues) != stamp) issues.Add(container + ": modificato durante la lettura");
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) when (ex is not OutOfMemoryException) { issues.Add(container + ": archivio parziale/non leggibile: " + ex.Message); }

@@ -132,9 +132,10 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
                     state=state with { Message=$"Metadati {completed}/{pending.Count}: {record.Code}" };
                     progress=progress with { Message=record.Path, Locations=[new(prefix.ToString(),"Dimensioni e gerarchie",record.Path)] };
                 }
-                var inspection = inspect!=null ? inspect(record.Path,source.Token) : prefix=='A'
-                    ? ArchivedJobsReader.Inspect(record.Path,source.Token,true,p=>CurrentDirectory("Dimensioni e gerarchie",p))
-                    : FolderInspectionService.Inspect(record.Path,source.Token,p=>CurrentDirectory("Dimensioni e gerarchie",p));
+                var inspected = RecordInspection.Read(record, prefix, source.Token, (path, token) => inspect!=null ? inspect(path,token) : prefix=='A'
+                    ? ArchivedJobsReader.Inspect(path,token,true,p=>CurrentDirectory("Dimensioni e gerarchie",p))
+                    : FolderInspectionService.Inspect(path,token,p=>CurrentDirectory("Dimensioni e gerarchie",p)), logger);
+                var inspection = inspected.Inspection!;
                 List<string> differences = [];
                 lock (gate)
                 {
@@ -146,7 +147,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
                     {
                         var previous = snapshot.Records[position];
                         var updated = previous with { Inspection = inspection };
-                        if (prefix == 'A') { var file = new FileInfo(record.Path); updated = updated with { ArchiveBytes = file.Length, ArchiveModifiedUtc = file.LastWriteTimeUtc }; }
+                        if (prefix == 'A') updated = updated with { ArchiveBytes = inspected.ArchiveBytes, ArchiveModifiedUtc = inspected.ArchiveModifiedUtc };
                         differences = FolderChanges.Compare([previous], [updated]);
                         var records = snapshot.Records.ToList(); records[position] = updated;
                         state = state with { Snapshot = snapshot with { Records = records, SavedUtc = NextRevision() } };

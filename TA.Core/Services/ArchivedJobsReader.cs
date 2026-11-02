@@ -75,7 +75,7 @@ public static class ArchivedJobsReader
         bool administration = false, strongQuote = false;
         try
         {
-            var before = new FileInfo(path); var length = before.Length; var modified = before.LastWriteTimeUtc;
+            var before = new FileInfo(path); var length = before.Length; var modified = MetadataDates.Read(() => before.LastWriteTimeUtc, path, issues);
             using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var archive = ArchiveFactory.OpenArchive(file);
             int entries = 0;
@@ -94,10 +94,11 @@ public static class ArchivedJobsReader
                     if (includeHierarchy && directories.Count < 50000) directories.Add(string.Join('/', segments.Take(i)));
                 bool admin = segments.Take(Math.Max(0, dirCount)).Any(s => new[] { "amministraione", "amministrazione", "99_AMMINISTRAZIONE" }.Contains(s, StringComparer.OrdinalIgnoreCase));
                 administration |= admin;
-                signature.AppendData(JsonSerializer.SerializeToUtf8Bytes(new { key, entry.Size, entry.LastModifiedTime }));
+                var entryModified = MetadataDates.Read(() => entry.LastModifiedTime, path + " > " + key, issues);
+                signature.AppendData(JsonSerializer.SerializeToUtf8Bytes(new { key, entry.Size, LastModifiedTime = entryModified }));
                 if (entry.IsDirectory) continue;
                 count++; bytes = checked(bytes + entry.Size);
-                if (entry.LastModifiedTime is { } date)
+                if (entryModified is { } date)
                 { var utc = date.ToUniversalTime(); if (latest == null || utc > latest) latest = utc; }
                 if (entry.IsEncrypted && !issues.Contains("Contenuti cifrati: verificati soltanto i metadati leggibili."))
                     issues.Add("Contenuti cifrati: verificati soltanto i metadati leggibili.");
@@ -106,7 +107,7 @@ public static class ArchivedJobsReader
                 { quotes.Add(key); strongQuote |= !Regex.IsMatch(key, @"(?i)(richiest|modell|fac[ _-]?simile|bozza)"); }
             }
             var after = new FileInfo(path);
-            if (after.Length != length || after.LastWriteTimeUtc != modified) issues.Add("Archivio modificato durante la lettura: verifica da ripetere.");
+            if (after.Length != length || MetadataDates.Read(() => after.LastWriteTimeUtc, path, issues) != modified) issues.Add("Archivio modificato durante la lettura: verifica da ripetere.");
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) { issues.Add("Archivio non completamente leggibile (danneggiato, protetto o formato non supportato): " + ex.Message); }

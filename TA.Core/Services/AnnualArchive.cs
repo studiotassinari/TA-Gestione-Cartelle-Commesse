@@ -24,13 +24,13 @@ internal static class AnnualArchive
     public static ArchiveSnapshot? Load(string target, string root, char prefix)
     {
         // Lettori contemporanei ammessi; una scrittura esclusiva non elimina file ancora in lettura.
-        using var lease = new FileStream(target + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+        using var lease = SharedFileAccess.Retry(() => new FileStream(target + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite), CancellationToken.None);
         return ReadUnlocked(target, root, prefix);
     }
-    private static ArchiveSnapshot? ReadUnlocked(string target, string root, char prefix)
+    private static ArchiveSnapshot? ReadUnlocked(string target, string root, char prefix, CancellationToken token = default)
     {
         byte[] bytes;
-        try { bytes = File.ReadAllBytes(target); }
+        try { bytes = SharedFileAccess.ReadBytes(target, token); }
         catch (FileNotFoundException) { return null; }
         using var json = JsonDocument.Parse(bytes);
         if (!json.RootElement.TryGetProperty("SchemaVersion", out var schema)) throw new InvalidDataException("Schema archivio assente.");
@@ -49,7 +49,7 @@ internal static class AnnualArchive
                     || !file.StartsWith(year + "-", StringComparison.Ordinal))
                     throw new InvalidDataException("Riferimento annuale non valido.");
                 byte[] content;
-                try { content = File.ReadAllBytes(Path.Combine(YearFolder(target), file)); }
+                try { content = SharedFileAccess.ReadBytes(Path.Combine(YearFolder(target), file), token); }
                 catch (FileNotFoundException ex) { throw new InvalidDataException("Archivio annuale mancante: " + year, ex); }
                 if (file != year + "-" + Convert.ToHexString(SHA256.HashData(content)) + ".json")
                     throw new InvalidDataException("Archivio annuale alterato o incompleto: " + year);
@@ -87,15 +87,15 @@ internal static class AnnualArchive
     {
         token.ThrowIfCancellationRequested();
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-        using var lease = new FileStream(target + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        var previous = ReadUnlocked(target, data.Root, data.Prefix);
+        using var lease = SharedFileAccess.Retry(() => new FileStream(target + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), token);
+        var previous = ReadUnlocked(target, data.Root, data.Prefix, token);
         if (previous != null && (previous.StartedUtc > data.StartedUtc || (previous.StartedUtc == data.StartedUtc && previous.SavedUtc > data.SavedUtc))) return false;
         Validate(data, data.Root, data.Prefix);
         if (File.Exists(target))
         {
-            using var old = JsonDocument.Parse(File.ReadAllBytes(target));
+            using var old = JsonDocument.Parse(SharedFileAccess.ReadBytes(target, token));
             if (old.RootElement.GetProperty("SchemaVersion").GetInt32() == 1 && !File.Exists(target + ".legacy-v1.bak"))
-                File.Copy(target, target + ".legacy-v1.bak");
+                SharedFileAccess.Retry(() => File.Copy(target, target + ".legacy-v1.bak"), token);
         }
         var directory = YearFolder(target); Directory.CreateDirectory(directory);
         if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
@@ -130,7 +130,7 @@ internal static class AnnualArchive
             using (var file = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             { file.Write(content); file.Flush(true); }
             token.ThrowIfCancellationRequested();
-            File.Move(temp, target, true);
+            SharedFileAccess.Retry(() => { if (File.Exists(target)) File.Replace(temp, target, null, true); else File.Move(temp, target); }, token);
         }
         finally { if (File.Exists(temp)) File.Delete(temp); }
     }

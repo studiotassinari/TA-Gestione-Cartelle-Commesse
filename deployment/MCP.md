@@ -41,6 +41,8 @@ La lettura avviene in un processo separato: massimo 50 MiB per documento, 20 sec
 
 ## Aggiornamento sulla VM
 
+Il server 2.15.1 conserva la compatibilità con TA.Mcp 2.15.0. Per questa correzione della scansione e dei salvataggi JSON non occorre riavviare il tunnel già aggiornato. I passaggi seguenti riguardano il passaggio dalle versioni precedenti alla 2.15.0.
+
 Aggiornare insieme server e pacchetto MCP alla 2.15.0. Il servizio locale rifiuta le richieste dei vecchi componenti MCP prive dello strumento e dell'identificativo della chiamata. Il client desktop continua a usare Kerberos.
 
 1. Chiudere il Gestore TA tramite Esci e il vecchio tunnel con Ctrl+C nella sua finestra.
