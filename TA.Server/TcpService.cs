@@ -96,7 +96,7 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
                 {
                     reply = AdministrativeCommands.Handle(request, domainAdmin, () => new(
                         CommunicationLog.Tail(Path.Combine(CommunicationLog.DirectoryPath, "service.log")),
-                        CommunicationLog.Tail(CommunicationLog.FilePath))) ?? await Dispatch(request,ct).WaitAsync(ct);
+                        CommunicationLog.Tail(CommunicationLog.FilePath))) ?? await Dispatch(request,ct,user).WaitAsync(ct);
                 }
                 catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or KeyNotFoundException)
                 { reply = Reply.Fail(ex.Message); }
@@ -107,11 +107,12 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
             finally { if (commandSlot) slots.Release(); if (pushSlot) pushSlots.Release(); }
         }
     }
-    private async Task<Reply> Dispatch(Request request,CancellationToken token)
+    private async Task<Reply> Dispatch(Request request,CancellationToken token,string user)
     {
         if (request.Version != 2) return Reply.Fail("Versione del protocollo non supportata.");
         switch (request.Operation)
         {
+            case "SaveGeologicalPosition": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).SavePosition(request.GeologicalPosition ?? throw new ArgumentException("Posizione mancante."), user, token));
             case "Geology": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).Query(request.Geology ?? new(), token));
             case "ReadGeologicalDocument": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).ReadAsync(request.GeologicalRead ?? throw new ArgumentException("Relazione mancante."), token));
             case "ReadDocument": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,request.Document,null,token)).Document);
@@ -135,7 +136,7 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
             case "Children": return Reply.Ok(HierarchyService.Children(scans.Get(request.Category).State, request.FolderId ?? "", request.RelativePath));
             case "Progress": return Reply.Ok(scans.Progress);
             case "DailyReport": return Reply.Ok(scans.DailyReport());
-            case "Files": return Reply.Ok(files.Search(request.Files ?? new()));
+            case "Files": return Reply.Ok(files.Search(request.Files ?? new(), token));
             case "Analysis": return Reply.Ok(analysis.Query(request.Analysis ?? new()));
             case "AnalysisReport": return Reply.Ok(analysis.Report());
             case "Report":

@@ -1,16 +1,28 @@
-# TA-Gestione Cartelle Commesse — 2.15.1
+# TA-Gestione Cartelle Commesse — 2.16.0
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali o estrarre archivi su disco.
 
 ## Scarica
 
-- [Aggiornatore diretto 2.15.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.15.1/TA-Commesse-Aggiornatore-2.15.1.exe) — prima Server sulla VM, poi Client sui PC.
-- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.15.1/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.15.1.exe)
-- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.15.1/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.15.1.exe)
-- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.15.1/TA-Commesse-MCP-2.15.1.zip)
-- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.15.1)
+- [Aggiornatore diretto 2.16.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.16.0/TA-Commesse-Aggiornatore-2.16.0.exe) — prima Server sulla VM, poi Client sui PC.
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.16.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.16.0.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.16.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.16.0.exe)
+- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.16.0/TA-Commesse-MCP-2.16.0.zip)
+- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.16.0)
 
 Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. L’aggiornatore del server attende anche la chiusura effettiva del processo prima di sostituire i file. I pacchetti non sono firmati digitalmente.
+
+## Novità 2.16.0: catalogo geologico e mappa
+
+Catalogo geologico e geotecnico autonomo: generato dai nomi e dalle cartelle tematiche dell'inventario, anche dentro ZIP/7z. Candidati da verificare, commesse non attribuite senza evidenza, nessuna lettura automatica dei contenuti.
+
+Client: menu Analisi, finestra indipendente a istanza unica, ricerca dinamica, filtri e mappa OpenStreetMap con simboli selezionabili. Nessuna chiave API o fatturazione; richiede Internet e WebView2. Le posizioni possono essere indicate esplicitamente e salvate nei soli JSON condivisi con account e data.
+
+Catalogo e cache suddivisi per categoria, anno e commessa sotto ArchiveFolder/geologia. Aggiornamento all'avvio e ogni ora dai JSON, conservazione dei dati precedenti in caso di errore, nessuna notifica delle differenze.
+
+MCP: cerca_relazioni_geologiche e leggi_relazione_geologica. La ricerca dei file può consultare le unità già censite prima della fine del primo inventario generale, dichiarandole parziali. Gli errori applicativi sono espliciti. Navigazione diretta e lettura di un singolo documento restano disponibili indipendentemente dall'inventario globale.
+
+Vedere [guida del catalogo geologico](deployment/GEOLOGIA.md) e [collaborazione al progetto](CONTRIBUTING.md). Aggiornare anche il componente MCP e ricaricare i dodici strumenti per usare la nuova area.
 
 ## Correzioni 2.15.1: scansione e salvataggi JSON
 
@@ -46,7 +58,7 @@ I JSON sono separati per categoria, anno e codice nella cartella ArchiveFolder/i
 
 Lo strumento **cerca_file** filtra per nome, estensione, categoria, anno e codice. Restituisce totale, data scansione, completezza e pagine vincolate alla versione dell'inventario, senza scaricare tutto il catalogo. **stato_scansione** permette a ChatGPT di consultare fase e avanzamento. **analisi_file** offre catalogo, singoli inventari, candidati e frequenze dei nomi. Nessuna chiamata automatica a modelli IA.
 
-Quando occorre aggiornare il pacchetto MCP sulla VM: fermare il vecchio tunnel, usare il nuovo Start-McpTunnel.ps1 con il tunnel-client ufficiale già configurato e riavviare il tunnel. La chiave runtime viene inserita interattivamente e non salvata dallo script. Poi ricaricare gli strumenti del plugin ChatGPT. La ricerca effettiva richiede una prima scansione completa; un inventario mancante viene segnalato, senza restituire falsamente zero risultati.
+Quando occorre aggiornare il pacchetto MCP sulla VM: fermare il vecchio tunnel, usare il nuovo Start-McpTunnel.ps1 con il tunnel-client ufficiale già configurato e riavviare il tunnel. La chiave runtime viene inserita interattivamente e non salvata dallo script. Poi ricaricare gli strumenti del plugin ChatGPT. La ricerca usa anche le unità già censite durante il primo inventario, dichiarando i risultati parziali. La navigazione diretta e la lettura dei documenti non richiedono il completamento della ricerca globale.
 
 ## Configurazione e verifiche
 

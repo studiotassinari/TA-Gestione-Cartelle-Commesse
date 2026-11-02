@@ -6,7 +6,7 @@ using TA_Gestione_Cartelle_Commesse.Contracts;
 namespace TA.Server;
 
 // Catalogo curato separato dall'inventario: nessuna lettura automatica dei documenti o geocodifica.
-public sealed class GeologyService(ServerSettings settings, DocumentService documents)
+public sealed partial class GeologyService(ServerSettings settings, DocumentService documents)
 {
     public static void ValidateQuery(GeologyQuery q)
     {
@@ -30,8 +30,8 @@ public sealed class GeologyService(ServerSettings settings, DocumentService docu
     }
     private (GeologyCatalog Catalog, string Version) ReadCatalog(CancellationToken token)
     {
-        var path = string.IsNullOrWhiteSpace(settings.GeologyCatalogPath) ? Path.Combine(settings.ArchiveFolder, "geologia", "catalogo.json") : settings.GeologyCatalogPath;
-        if (!File.Exists(path)) throw new IOException("Catalogo delle relazioni geologiche non disponibile: collegare il catalogo condiviso. L'assenza del catalogo non equivale a zero relazioni.");
+        var path = GeologyStorage.CatalogPath(settings);
+        if (!File.Exists(path)) throw new IOException("Catalogo delle relazioni geologiche non disponibile: attendere la generazione dal censimento dei nomi. L'assenza del catalogo non equivale a zero relazioni.");
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         if (stream.Length > 20 * 1024 * 1024) throw new IOException("Catalogo geologico oltre il limite di 20 MiB.");
         using var buffer = new MemoryStream(); var block = new byte[65536]; int count;
@@ -50,7 +50,7 @@ public sealed class GeologyService(ServerSettings settings, DocumentService docu
                 (r.Latitude.HasValue != r.Longitude.HasValue) || (r.Latitude.HasValue && !r.HasPosition))
                 throw new InvalidDataException("Relazione con identità, campi o coordinate non validi nel catalogo.");
         }
-        return (catalog, Convert.ToHexString(SHA256.HashData(bytes)));
+        return MergePositions(catalog, bytes);
     }
     public async Task<DocumentPage> ReadAsync(GeologicalReadQuery q, CancellationToken token)
     {

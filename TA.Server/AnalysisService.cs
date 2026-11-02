@@ -61,7 +61,7 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
     {
         if(query.Offset < 0 || query.Limit is < 1 or > 100 || query.Offset > int.MaxValue-query.Limit || query.Text.Length > 200)
             throw new ArgumentException("Paginazione o testo non valido.");
-        var run = store.Latest() ?? throw new IOException("Inventario nomi non ancora disponibile: attendere la prima scansione oraria.");
+        var run = InventoryAvailability.Load(store) ?? throw new IOException("Inventario nomi non ancora disponibile: attendere le prime unità della scansione oraria oppure usare elenca_documenti per una cartella specifica.");
         IEnumerable<object> result;
         string note = "Nomi e metadati salvati, non contenuti. Proposte da verificare; nessuna classificazione automatica.";
         switch(query.Kind)

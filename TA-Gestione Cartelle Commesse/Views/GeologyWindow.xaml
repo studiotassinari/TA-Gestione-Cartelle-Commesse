@@ -39,9 +39,11 @@
       <StackPanel DataContext="{Binding Selected}">
        <TextBlock Text="{Binding Title, TargetNullValue=Seleziona una relazione nell’elenco o sulla mappa}" FontWeight="Bold" FontSize="16" TextWrapping="Wrap"/>
        <TextBlock Text="{Binding PositionLabel}" Foreground="#135F6E" Margin="0,8,0,0" TextWrapping="Wrap"/>
+       <Button Content="Imposta posizione…" Click="Position_Click" HorizontalAlignment="Left" IsEnabled="{Binding DataContext.CanLocate, RelativeSource={RelativeSource AncestorType=Window}}"/>
        <TextBlock Text="{Binding ProjectLabel}" Margin="0,6,0,0"/><TextBlock Text="{Binding Client}"/>
        <TextBlock Text="{Binding Author}"/><TextBlock Text="{Binding FileName}" TextWrapping="Wrap" Margin="0,6,0,0"/>
        <TextBlock Text="{Binding PositionSource, StringFormat=Fonte posizione: {0}}" TextWrapping="Wrap"/>
+       <TextBlock Text="{Binding DetectionStatus}" FontWeight="Bold"/><TextBlock Text="{Binding DetectionEvidence}" TextWrapping="Wrap"/>
        <TextBlock Text="{Binding Notes}" TextWrapping="Wrap" Margin="0,6,0,0"/>
       </StackPanel>
      </ScrollViewer>

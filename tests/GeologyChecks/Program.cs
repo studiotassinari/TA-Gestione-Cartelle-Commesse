@@ -19,8 +19,9 @@ internal static class Program
 {
     static void Check(bool ok,string message){if(!ok)throw new Exception(message);Console.WriteLine("PASS: "+message);}
     static void Reject<T>(Action action) where T:Exception {try{action();}catch(T){return;}throw new Exception("Atteso "+typeof(T).Name);}
-    [STAThread] static void Main()
+    [STAThread] static void Main(string[] args)
     {
+        if(args.Contains("--map-browser")){MapBrowserChecks.Run();return;}
         var root=Path.Combine(Path.GetTempPath(),"TA-Geology-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
         try
         {
@@ -54,9 +55,11 @@ internal static class Program
             LocalReadOnlyPolicy.Validate(new("Geology",McpTool:"cerca_relazioni_geologiche",CorrelationId:Guid.NewGuid().ToString("N")));
             Reject<UnauthorizedAccessException>(()=>LocalReadOnlyPolicy.Validate(new("ReadGeologicalDocument",McpTool:"cerca_relazioni_geologiche",CorrelationId:Guid.NewGuid().ToString("N"))));
             var session=JsonSerializer.SerializeToElement(ConsultationSessions.Shared.Open(false)).GetProperty("consultazione").GetString()!;
-            Reject<InvalidOperationException>(()=>McpInvocation.Begin("leggi_relazione_geologica",session));
+            Reject<ModelContextProtocol.McpException>(()=>McpInvocation.Begin("leggi_relazione_geologica",session));
             Check(true,"MCP distingue consultazione dei metadati da lettura dei contenuti");
 
+            GeologyIndexChecks.Run(root);
+            AppContext.SetSwitch("TA.Tests.DisableMapNetwork",true);
             var app=new Application {ShutdownMode=ShutdownMode.OnExplicitShutdown};
             var model=new GeologyViewModel();model.Apply(catalog);model.Search="rimini industriale";
             Check(model.Rows.Count==1&&model.Rows[0].Id=="geo-1","Ricerca dinamica locale senza interrogare il server");

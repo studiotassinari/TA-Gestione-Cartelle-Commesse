@@ -16,7 +16,7 @@ public sealed partial class MainViewModel
         }
         var server = connection;
         // Nessun Owner: finestra indipendente, non modale e con propria voce nella barra applicazioni.
-        geologyWindow = new(new GeologyViewModel(server == null ? null : token => LoadGeology(server, token)));
+        geologyWindow = new(new GeologyViewModel(server == null ? null : token => LoadGeology(server, token), server == null ? null : async (change, token) => { await server.SendAsync<bool>(new("SaveGeologicalPosition", GeologicalPosition: change), token); }));
         geologyWindow.Closed += (_, _) => geologyWindow = null;
         geologyWindow.Show();
     }
@@ -29,6 +29,6 @@ public sealed partial class MainViewModel
             rows.AddRange(page.Reports);
             if (rows.Count > 50000 || (page.NextOffset.HasValue && page.NextOffset <= page.Offset)) throw new System.IO.InvalidDataException("Paginazione del catalogo non valida.");
         } while (page.NextOffset.HasValue);
-        return new(1, page.UpdatedUtc, rows, page.Warnings);
+        return new(1, page.UpdatedUtc, rows, page.Warnings, page.Version);
     }
 }

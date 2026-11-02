@@ -12,7 +12,8 @@ public sealed class FileSearchService(ServerSettings settings)
     public FileSearchPage Search(FileSearchQuery query, CancellationToken token = default)
     {
         FileSearchValidation.Validate(query);
-        var run = store.Latest() ?? throw new IOException("Inventario dei singoli file non ancora disponibile: attendere la scansione oraria. Non equivale a zero risultati.");
+        var clock = Stopwatch.StartNew();
+        var run = InventoryAvailability.Load(store, query.Category, query.Year, query.Code, token) ?? throw new IOException("Inventario dei singoli file non ancora disponibile: attendere la scansione oraria. Non equivale a zero risultati.");
         var version = run.CompletedUtc.ToString("O", CultureInfo.InvariantCulture);
         if (query.Version != null && query.Version != version)
             throw new ArgumentException("Inventario cambiato: ripartire da offset 0 senza version.");
@@ -27,7 +28,6 @@ public sealed class FileSearchService(ServerSettings settings)
         int total = 0; bool complete = run.Issues.Count == 0 && selected.All(m => m.Complete);
         var warnings = run.Issues.Take(10).ToList();
         if (!complete) warnings.Add("Inventario parziale: totale dei nomi censiti, alcuni dati possono provenire dalla verifica precedente. Non dimostra assenza di altri file.");
-        var clock = Stopwatch.StartNew();
         foreach (var manifest in selected)
         {
             foreach(var entry in store.Entries(manifest))

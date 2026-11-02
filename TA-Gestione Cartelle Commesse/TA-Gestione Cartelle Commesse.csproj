@@ -6,7 +6,7 @@
 		<!-- Genera un eseguibile Windows grafico senza finestra console. -->
 		<OutputType>WinExe</OutputType>
 		<!-- Compila per .NET 10 su Windows, necessario per WPF. -->
-		<Version>2.15.1</Version><TargetFramework>net10.0-windows</TargetFramework>
+		<Version>2.16.0</Version><TargetFramework>net10.0-windows</TargetFramework>
 		<!-- Imposta il namespace di base per i tipi generati dal progetto. -->
 		<RootNamespace>TA_Gestione_Cartelle_Commesse</RootNamespace>
 		<!-- Abilita lʼanalisi statica dei riferimenti che possono contenere null. -->
@@ -27,4 +27,4 @@
 	<!-- Conclude lʼelemento ItemGroup e il suo contenuto. -->
 	</ItemGroup>
 <!-- Conclude lʼelemento Project e il suo contenuto. -->
-<ItemGroup><ProjectReference Include="../TA.Transport/TA.Transport.csproj" /></ItemGroup><PropertyGroup><UseWindowsForms>true</UseWindowsForms></PropertyGroup><ItemGroup><Using Remove="System.Windows.Forms"/><Using Remove="System.Drawing"/><Compile Include="../TA.Desktop/*.cs" Link="Desktop/%(Filename)%(Extension)"/></ItemGroup><ItemGroup><PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.13"/><Compile Include="../TA.ServiceManager/LogViews.cs" Link="Views/LogViews.cs"/></ItemGroup><ItemGroup><PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35"/><Content Include="Assets/Maps/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup></Project>
+<ItemGroup><ProjectReference Include="../TA.Transport/TA.Transport.csproj" /></ItemGroup><PropertyGroup><UseWindowsForms>true</UseWindowsForms></PropertyGroup><ItemGroup><Using Remove="System.Windows.Forms"/><Using Remove="System.Drawing"/><Compile Include="../TA.Desktop/*.cs" Link="Desktop/%(Filename)%(Extension)"/></ItemGroup><ItemGroup><PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.13"/><Compile Include="../TA.ServiceManager/LogViews.cs" Link="Views/LogViews.cs"/></ItemGroup><ItemGroup><PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35"/><Content Include="Assets/Maps/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup></Project>

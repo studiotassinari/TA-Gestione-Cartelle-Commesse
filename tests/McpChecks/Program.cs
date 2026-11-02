@@ -10,6 +10,8 @@ using ModelContextProtocol.Protocol;
 void Check(bool ok,string text){if(!ok)throw new Exception(text);Console.WriteLine("PASS: "+text);}
 string Session(bool contents=false)=>JsonSerializer.SerializeToElement(ConsultationSessions.Shared.Open(contents)).GetProperty("consultazione").GetString()!;
 void Denied(Action action){try{action();}catch(InvalidOperationException){return;}throw new Exception("Richiesta non rifiutata");}
+try { await McpErrors.Run<int>(()=>Task.FromException<int>(new TA.Transport.ServerRejectedException("Inventario parziale: usare elenca_documenti"))); throw new Exception("Errore non comunicato"); }
+catch(ModelContextProtocol.McpException ex) { Check(ex.Message.Contains("Inventario parziale"),"Errore del servizio comunicato al plugin senza nasconderlo come errore generico"); }
 var source=new FakeSource();var tools=new CommesseTools(source);
 using var search=JsonDocument.Parse(await tools.Search("C","Comune",0,1,Session()));
 Check(search.RootElement.GetProperty("total").GetInt32()==2 && search.RootElement.GetProperty("nextOffset").GetInt32()==1,"Ricerca e paginazione");

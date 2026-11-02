@@ -4,6 +4,13 @@ namespace TA_Gestione_Cartelle_Commesse.Contracts;
 public sealed record GeologicalReport
 {
     public string Id { get; init; } = "";
+    public string InventoryUnitId { get; init; } = "";
+    public string Year { get; init; } = "";
+    public string SuggestedProjectCode { get; init; } = "";
+    public string DetectionStatus { get; init; } = "Catalogata";
+    public string DetectionEvidence { get; init; } = "";
+    public DateTime? SourceCheckedUtc { get; init; }
+    public bool SourceComplete { get; init; } = true;
     public string Title { get; init; } = "";
     public string Kind { get; init; } = "Geologica";
     public string FileName { get; init; } = "";
@@ -29,7 +36,10 @@ public sealed record GeologicalReport
     public bool CanRead => !string.IsNullOrWhiteSpace(PhysicalPath) || (FolderId.Length == 64 && FolderId.All(Uri.IsHexDigit) && Category is "C" or "G" or "A");
 }
 
-public sealed record GeologyCatalog(int SchemaVersion, DateTime UpdatedUtc, List<GeologicalReport> Reports, List<string> Warnings);
+public sealed record GeologyCatalog(int SchemaVersion, DateTime UpdatedUtc, List<GeologicalReport> Reports, List<string> Warnings, string? Version = null);
 public sealed record GeologyQuery(string Search = "", string Code = "", bool OnlyLocated = false, int Offset = 0, int Limit = 100, string? Version = null);
 public sealed record GeologyPage(string Version, DateTime UpdatedUtc, int Total, int Offset, int? NextOffset, List<GeologicalReport> Reports, List<string> Warnings);
 public sealed record GeologicalReadQuery(string ReportId, int Offset = 0, int Length = 12000, string? Version = null);
+
+public sealed record GeologicalPositionUpdate(string ReportId, double Latitude, double Longitude, string Municipality, string Address, string Source, string Version);
+public sealed record GeologicalPosition(string ReportId, double Latitude, double Longitude, string Municipality, string Address, string Source, DateTime UpdatedUtc, string UpdatedBy);

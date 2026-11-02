@@ -14,10 +14,13 @@ public sealed class GeologyViewModel : Observable, IDisposable
     private List<GeologicalReport> all = [];
     private string search = "", status = "Apri il catalogo delle relazioni dal server.", kind = "Tutte", location = "Tutte";
     private GeologicalReport? selected;
-    private bool busy;
-    public GeologyViewModel(Func<CancellationToken, Task<GeologyCatalog>>? loader = null)
+    private bool busy, saving;
+    private readonly Func<GeologicalPositionUpdate, CancellationToken, Task>? save;
+    public string Version { get; private set; } = "";
+    public bool CanLocate => save != null && Selected != null && !busy && !saving;
+    public GeologyViewModel(Func<CancellationToken, Task<GeologyCatalog>>? loader = null, Func<GeologicalPositionUpdate, CancellationToken, Task>? savePosition = null)
     {
-        load = loader;
+        load = loader; save = savePosition;
         if (loader == null) status = "Collegare il client al server per caricare il catalogo delle relazioni.";
         RefreshCommand = new(() => _ = LoadAsync(), () => !busy && load != null);
     }
@@ -27,7 +30,7 @@ public sealed class GeologyViewModel : Observable, IDisposable
     public string Search { get => search; set { search = value; Notify(); ApplyFilter(); } }
     public string Kind { get => kind; set { kind = value; Notify(); ApplyFilter(); } }
     public string Location { get => location; set { location = value; Notify(); ApplyFilter(); } }
-    public GeologicalReport? Selected { get => selected; set { if (selected == value) return; selected = value; Notify(); SelectionChanged?.Invoke(); } }
+    public GeologicalReport? Selected { get => selected; set { if (selected == value) return; selected = value; Notify(); Notify(nameof(CanLocate)); SelectionChanged?.Invoke(); } }
     public string Status { get => status; private set { status = value; Notify(); } }
     public string CountText => $"{Rows.Count} relazioni su {all.Count} · {Rows.Count(r => r.HasPosition)} sulla mappa · {Rows.Count(r => !r.HasPosition)} da localizzare";
     public DateTime? UpdatedUtc { get; private set; }
@@ -38,7 +41,7 @@ public sealed class GeologyViewModel : Observable, IDisposable
     public async Task LoadAsync()
     {
         if (load == null || busy || lifetime.IsCancellationRequested) return;
-        busy = true; RefreshCommand.Refresh(); Status = "Caricamento del catalogo dal server...";
+        busy = true; Notify(nameof(CanLocate)); RefreshCommand.Refresh(); Status = "Caricamento del catalogo dal server...";
         try
         {
             var catalog = await load(lifetime.Token);
@@ -46,11 +49,12 @@ public sealed class GeologyViewModel : Observable, IDisposable
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
         catch (Exception ex) { Status = "Catalogo non aggiornato: " + ex.Message + (all.Count > 0 ? " Dati precedenti conservati." : ""); }
-        finally { busy = false; RefreshCommand.Refresh(); }
+        finally { busy = false; Notify(nameof(CanLocate)); RefreshCommand.Refresh(); }
     }
     public void Apply(GeologyCatalog catalog)
     {
         if (catalog.SchemaVersion != 1) throw new InvalidDataException("Versione del catalogo geologico non supportata.");
+        Version = catalog.Version ?? "";
         all = catalog.Reports.OrderBy(r => r.Municipality, StringComparer.CurrentCultureIgnoreCase).ThenBy(r => r.ProjectCode).ThenBy(r => r.Title).ToList();
         UpdatedUtc = catalog.UpdatedUtc; Notify(nameof(UpdatedUtc));
         Status = "Catalogo aggiornato il " + catalog.UpdatedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") + ". " + string.Join(" · ", catalog.Warnings.Take(3));
@@ -60,13 +64,22 @@ public sealed class GeologyViewModel : Observable, IDisposable
     {
         var id = Selected?.Id;
         var terms = search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var filtered = all.Where(r => (kind == "Tutte" || r.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase)) &&
+        var filtered = all.Where(r => (kind == "Tutte" || r.Kind.Contains(kind, StringComparison.OrdinalIgnoreCase)) &&
             (location == "Tutte" || (location == "Localizzate" ? r.HasPosition : !r.HasPosition)) &&
             terms.All(term => string.Join(' ', r.Title, r.FileName, r.Municipality, r.Address, r.ProjectCode, r.Client, r.Author, r.Kind, r.Notes)
                 .Contains(term, StringComparison.CurrentCultureIgnoreCase))).ToArray();
         Rows.Clear(); foreach (var row in filtered) Rows.Add(row);
         Selected = Rows.FirstOrDefault(r => r.Id == id);
         Notify(nameof(CountText)); RowsChanged?.Invoke();
+    }
+    public async Task SavePositionAsync(GeologicalPositionUpdate change)
+    {
+        if (!CanLocate || save == null) return;
+        saving = true; Notify(nameof(CanLocate));
+        try { await save(change, lifetime.Token); await LoadAsync(); }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception ex) { Status = "Posizione non salvata: " + ex.Message; }
+        finally { saving = false; Notify(nameof(CanLocate)); }
     }
     public void Select(string id) => Selected = Rows.FirstOrDefault(r => r.Id == id);
     public void Dispose() { lifetime.Cancel(); lifetime.Dispose(); }

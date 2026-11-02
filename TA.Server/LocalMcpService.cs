@@ -97,7 +97,7 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
             case "Children": return Reply.Ok(HierarchyService.Children(scans.Get(request.Category).State, request.FolderId ?? "", request.RelativePath));
             case "Progress": return Reply.Ok(scans.Progress);
             case "DailyReport": return Reply.Ok(scans.DailyReport());
-            case "Files": return Reply.Ok(files.Search(request.Files ?? new()));
+            case "Files": return Reply.Ok(files.Search(request.Files ?? new(), token));
             case "Analysis": return Reply.Ok(analysis.Query(request.Analysis ?? new()));
             default: throw new UnauthorizedAccessException("Comando non ammesso.");
         }
