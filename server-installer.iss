@@ -8,6 +8,7 @@
   #define InstallerOutput "artifacts\installer"
 #endif
 [Setup]
+SetupIconFile=TA-Gestione Cartelle Commesse\Assets\Brand\App.ico
 ; Identità distinta dal client, stabile negli aggiornamenti futuri.
 AppId={{07E5CE80-53A7-4B01-A6C7-E2898FBDF247}
 AppName=TA-Gestione Cartelle Commesse - Server

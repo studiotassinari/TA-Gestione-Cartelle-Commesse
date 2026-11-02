@@ -18,6 +18,7 @@
 #endif
 ; Apre la sezione [Setup] della configurazione Inno Setup.
 [Setup]
+SetupIconFile=TA-Gestione Cartelle Commesse\Assets\Brand\App.ico
 ; Mantiene lʼidentificativo stabile tra versioni per aggiornare la stessa installazione.
 AppId={{D0B63D8F-FF51-4B68-9553-4B49A78C7B3A}
 ; Definisce il nome mostrato dal programma di installazione e da Windows.

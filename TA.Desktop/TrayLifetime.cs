@@ -6,6 +6,8 @@ public sealed class TrayLifetime : IDisposable
 {
     private readonly Window window;
     private readonly Forms.NotifyIcon icon;
+    private readonly System.Drawing.Icon brandIcon;
+    private bool disposed;
     private bool exit;
     private DateTime lastNotice;
     private (string Title, string Message)? pending;
@@ -13,7 +15,20 @@ public sealed class TrayLifetime : IDisposable
     public TrayLifetime(Window window, string title, string component)
     {
         this.window = window; notices.Tick += (_, _) => { notices.Stop(); if (pending is { } next) { pending = null; Notify(next.Title, next.Message); } };
-        icon = new Forms.NotifyIcon { Text = title, Icon = System.Drawing.SystemIcons.Application, Visible = true };
+        // La risorsa multirisoluzione è incorporata anche nel gestore, senza dipendere da file esterni.
+        using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("TA.Desktop.App.ico")
+            ?? throw new InvalidOperationException("Icona aziendale non inclusa nell'applicazione."))
+        {
+            using var source = new System.Drawing.Icon(stream, Forms.SystemInformation.SmallIconSize);
+            brandIcon = (System.Drawing.Icon)source.Clone();
+            if (window.Icon == null)
+            {
+                stream.Position = 0;
+                var bitmap = System.Windows.Media.Imaging.BitmapFrame.Create(stream, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                bitmap.Freeze(); window.Icon = bitmap;
+            }
+        }
+        icon = new Forms.NotifyIcon { Text = title, Icon = brandIcon, Visible = true };
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Apri", null, (_, _) => Open());
         menu.Items.Add(component == "Server" ? "Esci dal gestore (servizio attivo)" : "Esci", null, (_, _) => { exit = true; Application.Current.Shutdown(); });
@@ -41,5 +56,5 @@ public sealed class TrayLifetime : IDisposable
         lastNotice = DateTime.UtcNow;
         icon.ShowBalloonTip(6000, title, message.Length > 240 ? message[..240] : message, Forms.ToolTipIcon.Info);
     }
-    public void Dispose() { notices.Stop(); icon.Visible = false; icon.Dispose(); }
+    public void Dispose() { if (disposed) return; disposed = true; notices.Stop(); icon.Visible = false; icon.Dispose(); brandIcon.Dispose(); }
 }

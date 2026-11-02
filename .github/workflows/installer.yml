@@ -15,6 +15,7 @@ on:
       # Include le modifiche alla configurazione dell'installatore.
       - 'installer.iss'
       - 'server-installer.iss'
+      - 'Directory.Build.targets'
       - 'TA.Contracts/**'
       - 'TA.Core/**'
       - 'TA.Transport/**'
