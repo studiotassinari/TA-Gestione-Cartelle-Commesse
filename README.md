@@ -1,16 +1,26 @@
-# TA-Gestione Cartelle Commesse — 2.17.0
+# TA-Gestione Cartelle Commesse — 2.18.0
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 
 ## Scarica
 
-- [Aggiornatore diretto 2.17.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.17.0/TA-Commesse-Aggiornatore-2.17.0.exe) — prima Server sulla VM, poi Client sui PC.
-- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.17.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.17.0.exe)
-- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.17.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.17.0.exe)
-- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.17.0/TA-Commesse-MCP-2.17.0.zip)
-- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.17.0)
+- [Aggiornatore diretto 2.18.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.18.0/TA-Commesse-Aggiornatore-2.18.0.exe) — prima Server sulla VM, poi Client sui PC.
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.18.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.18.0.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.18.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.18.0.exe)
+- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.18.0/TA-Commesse-MCP-2.18.0.zip)
+- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.18.0)
 
 Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. L’aggiornatore del server attende anche la chiusura effettiva del processo prima di sostituire i file. I pacchetti non sono firmati digitalmente.
+
+## Novità 2.18.0: localizzazione e percorsi delle relazioni
+
+Ricerca Nominatim su richiesta dal client, tramite il server autenticato: indirizzo visibile e modificabile prima dell'invio, scelta esplicita del risultato, coordinate salvate nei JSON con fonte e precisione come posizione indicativa da verificare. Cache condivisa persistente, limite complessivo di una richiesta al secondo, nessuna ricerca automatica durante digitazione o scansioni. Non inserire indirizzi personali o riservati nel servizio pubblico. Nessuna chiave o fatturazione configurata.
+
+Griglia con indirizzo e percorso sul server. Menu contestuale per aprire una copia del documento in sola lettura o selezionare il file in Esplora file; per ZIP/7z viene selezionato il contenitore. I percorsi aziendali vengono tradotti in Z: sul client. Comune e indirizzo restano visibili anche senza coordinate.
+
+Icona aziendale: cartella bianca con simbolo TA originale, scalato uniformemente. La stessa icona compare su client, gestore server, area di notifica, aggiornatore e installatori.
+
+Aggiornare prima Server e poi Client. Il tunnel MCP 2.17.0 rimane compatibile: questa versione non aggiunge strumenti al plugin e non richiede di reinserire la chiave runtime.
 
 ## Novità 2.17.0: catalogo JSON analizzato da ChatGPT
 
