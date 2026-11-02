@@ -6,7 +6,7 @@ using TA.Transport;
 
 namespace TA.Server;
 
-// Endpoint locale separato da TCP: ACL Windows, identità del chiamante e sola lettura.
+// Endpoint locale: ACL Windows, consultazioni e sola scrittura tipizzata del catalogo, se abilitata.
 public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null) : BackgroundService
 {
     public static PipeSecurity Security(SecurityIdentifier owner, SecurityIdentifier group, SecurityIdentifier? admins)
@@ -34,7 +34,7 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
                 using var pipe = NamedPipeServerStreamAcl.Create(LocalPipeConnection.PipeName, PipeDirection.InOut, 1,
                     PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.FirstPipeInstance, 4096, 4096,
                     Security(serviceIdentity.User!, group, admins));
-                logger.LogInformation("MCP locale pronto: sola lettura, accesso rete negato, gruppo {Group}", settings.AllowedGroup);
+                logger.LogInformation("MCP locale pronto: originali in sola lettura, scrittura catalogo={CatalogWrites}, accesso rete negato, gruppo {Group}", settings.EnableMcpGeologyWrites, settings.AllowedGroup);
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     await pipe.WaitForConnectionAsync(stoppingToken);
@@ -70,8 +70,8 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
                 allowed = principal.IsInRole(group) || (admins != null && principal.IsInRole(admins));
             });
             if (!allowed) throw new UnauthorizedAccessException("Account non autorizzato al canale MCP locale.");
-            LocalReadOnlyPolicy.Validate(request);
-            var reply = await Dispatch(request, timeout.Token);
+            LocalCatalogPolicy.Validate(request);
+            var reply = await Dispatch(request, timeout.Token, user);
             await LocalPipeProtocol.WriteReplyAsync(pipe, reply, timeout.Token);
             CommunicationLog.Write(Environment.MachineName, "pipe-locale", user, request.Operation, "Risposta inviata", "MCP su richiesta; strumento="+request.McpTool+"; client="+request.ClientVersion, request.CorrelationId);
         }
@@ -81,10 +81,13 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
             try { await LocalPipeProtocol.WriteReplyAsync(pipe, Reply.Fail(ex.Message), timeout.Token); } catch { /* Il chiamante può essersi disconnesso. */ }
         }
     }
-    private async Task<Reply> Dispatch(Request request,CancellationToken token)
+    private async Task<Reply> Dispatch(Request request,CancellationToken token,string user)
     {
         switch (request.Operation)
         {
+            case "PendingGeologicalAnalyses": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Pending(request.GeologicalPending ?? new(), token));
+            case "GeologicalDossiers": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Dossiers(request.GeologicalDossiers ?? new(), token));
+            case "SaveGeologicalAnalysis": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile.")).SaveAnalysisAsync(request.GeologicalAnalysis ?? throw new ArgumentException("Analisi mancante."), user, token));
             case "Geology": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).Query(request.Geology ?? new(), token));
             case "ReadGeologicalDocument": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).ReadAsync(request.GeologicalRead ?? throw new ArgumentException("Relazione mancante."), token));
             case "ReadDocument": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,request.Document,null,token)).Document);

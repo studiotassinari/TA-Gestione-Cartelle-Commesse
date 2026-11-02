@@ -1,5 +1,5 @@
 <!-- Definisce lʼapplicazione WPF e la finestra da aprire allʼavvio. -->
-<Application x:Class="TA_Gestione_Cartelle_Commesse.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:TA_Gestione_Cartelle_Commesse" StartupUri="MainWindow.xaml">
+<Application x:Class="TA_Gestione_Cartelle_Commesse.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:TA_Gestione_Cartelle_Commesse">
     <!-- Riserva lo spazio per le risorse condivise a livello applicazione. -->
     <Application.Resources>
          

@@ -113,6 +113,9 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
         switch (request.Operation)
         {
             case "SaveGeologicalPosition": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).SavePosition(request.GeologicalPosition ?? throw new ArgumentException("Posizione mancante."), user, token));
+            case "PendingGeologicalAnalyses": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Pending(request.GeologicalPending ?? new(), token));
+            case "GeologicalDossiers": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Dossiers(request.GeologicalDossiers ?? new(), token));
+            case "SaveGeologicalAnalysis": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile.")).SaveAnalysisAsync(request.GeologicalAnalysis ?? throw new ArgumentException("Analisi mancante."), user, token));
             case "Geology": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).Query(request.Geology ?? new(), token));
             case "ReadGeologicalDocument": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).ReadAsync(request.GeologicalRead ?? throw new ArgumentException("Relazione mancante."), token));
             case "ReadDocument": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,request.Document,null,token)).Document);

@@ -25,11 +25,14 @@
    <Grid.ColumnDefinitions><ColumnDefinition Width="6*" MinWidth="430"/><ColumnDefinition Width="8"/><ColumnDefinition Width="5*" MinWidth="360"/></Grid.ColumnDefinitions>
    <Grid>
     <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="8"/><RowDefinition Height="230" MinHeight="150"/></Grid.RowDefinitions>
-    <DataGrid x:Name="ReportsGrid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single" SelectionUnit="FullRow" EnableRowVirtualization="True" RowHeight="36" Background="White" BorderBrush="#D6E0E2">
+    <DataGrid x:Name="ReportsGrid" MouseDoubleClick="Reports_DoubleClick" ToolTip="Doppio clic: apri una copia del documento in sola lettura" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single" SelectionUnit="FullRow" EnableRowVirtualization="True" RowHeight="36" Background="White" BorderBrush="#D6E0E2">
+     <DataGrid.RowStyle><Style TargetType="DataGridRow"><Setter Property="ToolTip" Value="{Binding Title}"/></Style></DataGrid.RowStyle>
      <DataGrid.Columns>
-      <DataGridTextColumn Header="Relazione" Binding="{Binding Title}" Width="2*" MinWidth="140"/>
+      <DataGridTextColumn Header="Relazione" Binding="{Binding Title}" Width="240" MinWidth="220"/>
       <DataGridTextColumn Header="Località" Binding="{Binding Municipality}" Width="*" MinWidth="95"/>
       <DataGridTextColumn Header="Commessa" Binding="{Binding ProjectLabel}" Width="135"/>
+      <DataGridTextColumn Header="Fascicolo" Binding="{Binding DossierTitle}" Width="150"/>
+      <DataGridTextColumn Header="Analisi" Binding="{Binding AnalysisStatus}" Width="150"/>
       <DataGridTextColumn Header="Tipo" Binding="{Binding Kind}" Width="95"/>
      </DataGrid.Columns>
     </DataGrid>
@@ -39,6 +42,9 @@
       <StackPanel DataContext="{Binding Selected}">
        <TextBlock Text="{Binding Title, TargetNullValue=Seleziona una relazione nell’elenco o sulla mappa}" FontWeight="Bold" FontSize="16" TextWrapping="Wrap"/>
        <TextBlock Text="{Binding PositionLabel}" Foreground="#135F6E" Margin="0,8,0,0" TextWrapping="Wrap"/>
+       <Button Content="Apri documento" Command="{Binding DataContext.OpenDocumentCommand, RelativeSource={RelativeSource AncestorType=Window}}" HorizontalAlignment="Left"/>
+       <TextBlock Text="{Binding DossierTitle, StringFormat=Fascicolo: {0}}" TextWrapping="Wrap"/>
+       <TextBlock Text="{Binding AnalysisStatus}" TextWrapping="Wrap"/>
        <Button Content="Imposta posizione…" Click="Position_Click" HorizontalAlignment="Left" IsEnabled="{Binding DataContext.CanLocate, RelativeSource={RelativeSource AncestorType=Window}}"/>
        <TextBlock Text="{Binding ProjectLabel}" Margin="0,6,0,0"/><TextBlock Text="{Binding Client}"/>
        <TextBlock Text="{Binding Author}"/><TextBlock Text="{Binding FileName}" TextWrapping="Wrap" Margin="0,6,0,0"/>

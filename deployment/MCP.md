@@ -1,6 +1,12 @@
-# MCP: consultazioni e documenti su richiesta — 2.15.0
+# MCP: consultazioni, documenti e catalogazione JSON — 2.17.0
 
 TA.Mcp usa l'SDK ufficiale ModelContextProtocol e comunica via stdio con il tunnel. Il server TA continua a usare il proprio canale Windows autenticato, senza un sito web. Nessuna chiamata alle API dei modelli, nessun servizio IA avviato dalla scansione.
+
+## Catalogazione geologica su richiesta
+
+La 2.17.0 aggiunge `prossime_relazioni_da_analizzare`, `elenca_fascicoli_geologici` e `salva_analisi_geologica`: **15 strumenti**, di cui soltanto l'ultimo scrive. Il server deve avere `EnableMcpGeologyWrites=true`; l'impostazione predefinita è false. Gli originali restano sempre in sola lettura.
+
+Quando l'utente chiede analisi e catalogazione, aprire `inizia_consultazione(contenuti=true, analisiGeologiche=true)`: massimo 15 minuti e 60 operazioni, senza rinnovo automatico. Analizzare solo il gruppo richiesto, salvando brevi citazioni con offset, versione del documento, fascicolo e fonti della localizzazione. Non inventare posizioni o associare documenti per il solo nome del cliente. Rispettare le conferme di scrittura richieste da ChatGPT. [Procedura, JSON, limiti e collaborazione](GEOLOGIA.md).
 
 ## Quando vengono scambiati i dati
 

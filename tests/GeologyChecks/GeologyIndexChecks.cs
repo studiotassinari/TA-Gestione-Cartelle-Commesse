@@ -40,6 +40,14 @@ public static class GeologyIndexChecks
         var unsafeSettings=new ServerSettings{JobsRoot=settings.JobsRoot,ArchiveFolder=settings.JobsRoot};
         try{GeologyStorage.Root(unsafeSettings);throw new Exception("Sorgente scrivibile");}catch(InvalidOperationException){}
         try { TA.Transport.LocalReadOnlyPolicy.Validate(new("SaveGeologicalPosition", McpTool:"leggi_relazione_geologica", CorrelationId:Guid.NewGuid().ToString("N"))); throw new Exception("Scrittura via MCP consentita"); } catch(UnauthorizedAccessException) { }
+        var stamp = new DateTime(2026,1,2,10,0,0,DateTimeKind.Utc);
+        var entries = new List<InventoryEntry>{new("relazione-geologica.txt","file",Bytes:100,ModifiedUtc:stamp),new("rilievi.zip","archive",Bytes:1000,ModifiedUtc:stamp),new("relazione-geotecnica.txt","file","rilievi.zip",100,stamp)};
+        store.Save(unit,new(entries,[],true),default); var baseline=indexer.Refresh(default);
+        store.Save(unit,new(entries,[],true),default); var unchanged=indexer.Refresh(default);
+        Check(baseline.Reports.Select(r=>r.SourceFingerprint).SequenceEqual(unchanged.Reports.Select(r=>r.SourceFingerprint)),"Nuova scansione senza differenze conserva le firme e non invalida le analisi");
+        entries[1]=entries[1] with{Bytes=1100,ModifiedUtc=stamp.AddHours(1)};
+        store.Save(unit,new(entries,[],true),default);var archiveChange=indexer.Refresh(default);
+        Check(archiveChange.Reports.Single(r=>r.ArchiveEntry!=null).SourceFingerprint!=baseline.Reports.Single(r=>r.ArchiveEntry!=null).SourceFingerprint && archiveChange.Reports.Single(r=>r.ArchiveEntry==null).SourceFingerprint==baseline.Reports.Single(r=>r.ArchiveEntry==null).SourceFingerprint,"Archivio modificato invalida solo le sue relazioni, anche con date interne invariate");
         store.Save(unit,new([],[],true),default);
         Check(indexer.Refresh(default).Reports.Count==0,"Rimozioni confermate dall'inventario aggiornano il catalogo senza notifiche");
     }

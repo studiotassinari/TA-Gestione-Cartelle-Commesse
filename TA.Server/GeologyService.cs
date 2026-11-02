@@ -24,7 +24,7 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
         if (q.Version != null && q.Version != version) throw new IOException("Catalogo aggiornato: ripartire dalla prima pagina.");
         var terms = q.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var rows = catalog.Reports.Where(r => (!q.OnlyLocated || r.HasPosition) && r.ProjectCode.Contains(q.Code, StringComparison.OrdinalIgnoreCase) &&
-            terms.All(t => string.Join(' ', r.Title, r.FileName, r.Municipality, r.Address, r.ProjectCode, r.Client, r.Author, r.Kind, r.Notes).Contains(t, StringComparison.OrdinalIgnoreCase)))
+            terms.All(t => string.Join(' ', r.Title, r.FileName, r.Municipality, r.Address, r.ProjectCode, r.Client, r.Author, r.Kind, r.Notes, r.DossierTitle, r.AnalysisStatus).Contains(t, StringComparison.OrdinalIgnoreCase)))
             .OrderBy(r => r.Municipality, StringComparer.OrdinalIgnoreCase).ThenBy(r => r.ProjectCode, StringComparer.Ordinal).ThenBy(r => r.Title, StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal).ToArray();
         return new(version, catalog.UpdatedUtc, rows.Length, q.Offset, q.Offset + q.Limit < rows.Length ? q.Offset + q.Limit : null, rows.Skip(q.Offset).Take(q.Limit).ToList(), catalog.Warnings);
     }
@@ -50,17 +50,20 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
                 (r.Latitude.HasValue != r.Longitude.HasValue) || (r.Latitude.HasValue && !r.HasPosition))
                 throw new InvalidDataException("Relazione con identità, campi o coordinate non validi nel catalogo.");
         }
-        return MergePositions(catalog, bytes);
+        var analyzed = MergeAnalyses(catalog, bytes);
+        return MergePositions(analyzed.Catalog, analyzed.Bytes);
     }
     public async Task<DocumentPage> ReadAsync(GeologicalReadQuery q, CancellationToken token)
     {
         ValidateRead(q);
         var report = ReadCatalog(token).Catalog.Reports.SingleOrDefault(r => r.Id == q.ReportId) ?? throw new KeyNotFoundException("Relazione non presente nel catalogo.");
         if (!report.CanRead) throw new IOException("Il catalogo non contiene ancora il collegamento al documento originale.");
+        DocumentPage page;
         if (string.IsNullOrWhiteSpace(report.PhysicalPath))
-            return (await documents.ExecuteAsync(report.Category, new(report.FolderId, report.RelativePath, report.ArchiveEntry, q.Offset, q.Length, q.Version), null, token)).Document!;
-        var work = ResolveDocument(settings, report, q);
-        return (await documents.ExecuteWorkAsync(work, token)).Document!;
+            page = (await documents.ExecuteAsync(report.Category, new(report.FolderId, report.RelativePath, report.ArchiveEntry, q.Offset, q.Length, q.Version), null, token)).Document!;
+        else page = (await documents.ExecuteWorkAsync(ResolveDocument(settings, report, q), token)).Document!;
+        evidence.Remember(report.Id, page);
+        return page;
     }
     public static DocumentWork ResolveDocument(ServerSettings settings, GeologicalReport report, GeologicalReadQuery q)
     {

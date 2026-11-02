@@ -11,8 +11,8 @@ namespace TA.Mcp;
 public sealed class CommesseTools(IReadOnlySource source)
 {
     [McpServerTool(Name="inizia_consultazione",ReadOnly=true,Destructive=false,OpenWorld=false)]
-    [Description("Aprire SOLO in risposta a una richiesta esplicita dell'utente riguardante commesse, gare o archivio. Non aprire per sincronizzazione, indicizzazione, monitoraggio, preparazione automatica o in background. Restituisce consultazione da passare agli altri strumenti: scade in 2 minuti o 20 operazioni, non va rinnovata automaticamente. contenuti=true SOLO se l'utente ha chiesto il testo di documenti specifici. Non legge dati dal server.")]
-    public string Start(bool contenuti=false)=>JsonSerializer.Serialize(ConsultationSessions.Shared.Open(contenuti));
+    [Description("Aprire SOLO in risposta a una richiesta esplicita dell'utente riguardante commesse, gare o archivio. Non aprire per sincronizzazione, indicizzazione, monitoraggio, preparazione automatica o in background. Restituisce consultazione da passare agli altri strumenti: scade in 2 minuti o 20 operazioni, non va rinnovata automaticamente. contenuti=true SOLO se l'utente ha chiesto il testo di documenti specifici. Non legge dati dal server. SOLO per la richiesta esplicita di catalogazione geologica, analisiGeologiche=true insieme a contenuti=true apre un gruppo di lavoro di 15 minuti/60 operazioni con salvataggio dei risultati JSON; mai rinnovo automatico. Questa modalità usa ChatGPT, non API del modello chiamate dal server.")]
+    public string Start(bool contenuti=false, bool analisiGeologiche=false)=>JsonSerializer.Serialize(ConsultationSessions.Shared.Open(contenuti,analisiGeologiche));
 
     [McpServerTool(Name = "stato_scansione", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Consulta la fase della scansione oraria, unità completate, totale e percentuale quando stimabile, ultima conclusione e prossima esecuzione. Non avvia scansioni. La percentuale riguarda la fase, non il tempo residuo.")]

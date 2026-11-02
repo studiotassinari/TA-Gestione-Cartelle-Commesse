@@ -16,6 +16,17 @@ namespace TA_Gestione_Cartelle_Commesse
     public partial class App : Application
     // Inizio del blocco di istruzioni o della definizione precedente.
     {
+        // Il processo di copia su richiesta non avvia finestre, connessioni o controlli aggiornamento.
+        protected override async void OnStartup(StartupEventArgs e)
+        {
+            if (e.Args.Length == 1 && e.Args[0] == "--geological-copy-worker")
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                await Services.GeologyDocumentCopy.RunWorkerAsync(); Shutdown(); return;
+            }
+            StartupUri = new Uri("MainWindow.xaml", UriKind.Relative);
+            base.OnStartup(e);
+        }
     // Fine del blocco di istruzioni o della definizione corrente.
     }
 

@@ -12,7 +12,7 @@ public static class GeologyClassifier
     private static readonly Regex Geology = new(@"\b(?:geologic\w*|geologi[ae]|geological)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Geotechnics = new(@"\b(?:geotecnic\w*|geotechnic\w*)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Coordinates = new(@"\blat(?:itudine)?\s*[=:]?\s*(?<lat>[+-]?\d{1,2}[.,]\d{3,9})\s*[;_ ]+\s*lon(?:gitudine)?\s*[=:]?\s*(?<lon>[+-]?\d{1,3}[.,]\d{3,9})(?!\d)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    public static GeologicalReport? Classify(InventoryManifest manifest, InventoryEntry entry)
+    public static GeologicalReport? Classify(InventoryManifest manifest, InventoryEntry entry, string containerStamp = "", DateTime? containerModifiedUtc = null)
     {
         if (entry.Kind == "directory") return null;
         var location = entry.Location ?? FileLocator.Locate(manifest.Unit, entry);
@@ -34,7 +34,13 @@ public static class GeologyClassifier
             double.TryParse(match.Groups["lon"].Value.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var longitude) && latitude is >= -90 and <= 90 && longitude is >= -180 and <= 180)
         { lat = latitude; lon = longitude; }
         var classified = manifest.Unit.Classification == "censita";
+        // Per gli archivi, una modifica del contenitore invalida anche voci con data interna invariata.
+        var stamp = string.Join('|', location.Id, entry.Bytes?.ToString(System.Globalization.CultureInfo.InvariantCulture), entry.ModifiedUtc?.ToString("O"), containerStamp);
+        if (entry.Bytes == null || entry.ModifiedUtc == null || location.InternalPath != null && containerStamp.Length == 0) stamp += "|" + manifest.Generation;
+        var fingerprint = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(stamp)));
         return new GeologicalReport {
+            SourceMetadataComplete = entry.Bytes.HasValue && entry.ModifiedUtc.HasValue && (location.InternalPath == null || containerStamp.Length > 0 && !containerStamp.StartsWith("unknown:", StringComparison.Ordinal)),
+            SourceFingerprint = fingerprint, SourceBytes = entry.Bytes, SourceModifiedUtc = containerModifiedUtc > entry.ModifiedUtc || entry.ModifiedUtc == null ? containerModifiedUtc : entry.ModifiedUtc,
             Id = location.Id, Title = Path.GetFileNameWithoutExtension(location.Name), FileName = location.Name,
             PhysicalPath = location.PhysicalPath, ArchiveEntry = location.InternalPath, Category = manifest.Unit.Category,
             FolderId = manifest.Unit.Id, RelativePath = entry.RelativePath, InventoryUnitId = manifest.Unit.Id,

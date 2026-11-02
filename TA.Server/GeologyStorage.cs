@@ -38,5 +38,5 @@ public static class GeologyStorage
     }
 }
 
-public sealed record GeologicalUnitIndex(string Generation, List<GeologicalReport> Reports);
+public sealed record GeologicalUnitIndex(string Generation, List<GeologicalReport> Reports, int SchemaVersion = 1);
 public sealed record GeologicalPositions(List<GeologicalPosition> Positions);

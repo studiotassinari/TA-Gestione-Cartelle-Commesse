@@ -1,18 +1,26 @@
-# TA-Gestione Cartelle Commesse — 2.16.0
+# TA-Gestione Cartelle Commesse — 2.17.0
 
-Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali o estrarre archivi su disco.
+Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 
 ## Scarica
 
-- [Aggiornatore diretto 2.16.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.16.0/TA-Commesse-Aggiornatore-2.16.0.exe) — prima Server sulla VM, poi Client sui PC.
-- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.16.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.16.0.exe)
-- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.16.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.16.0.exe)
-- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.16.0/TA-Commesse-MCP-2.16.0.zip)
-- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.16.0)
+- [Aggiornatore diretto 2.17.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.17.0/TA-Commesse-Aggiornatore-2.17.0.exe) — prima Server sulla VM, poi Client sui PC.
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.17.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.17.0.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.17.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.17.0.exe)
+- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.17.0/TA-Commesse-MCP-2.17.0.zip)
+- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.17.0)
 
 Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. L’aggiornatore del server attende anche la chiusura effettiva del processo prima di sostituire i file. I pacchetti non sono firmati digitalmente.
 
-## Novità 2.16.0: catalogo geologico e mappa
+## Novità 2.17.0: catalogo JSON analizzato da ChatGPT
+
+Le relazioni possono essere analizzate su richiesta in ChatGPT e salvate nei JSON condivisi: classificazione, sintesi, sito, coordinate proposte con fonte, fascicoli omogenei e citazioni riscontrate. Nessuna API del modello chiamata dal server. La coda mostra documenti nuovi/modificati; le analisi invariate restano disponibili, quelle superate sono segnalate e lo storico non viene sovrascritto.
+
+Il client mostra fascicolo e stato dell'analisi. Il doppio clic su una riga apre una copia locale in sola lettura del documento, anche da ZIP/7z. Gli originali restano invariati. La copia è prodotta solo su richiesta, con limiti di dimensione, tempo e memoria.
+
+Il plugin offre **15 strumenti**, incluso il salvataggio tipizzato del catalogo. La scrittura richiede una richiesta esplicita di catalogazione e l'abilitazione server `EnableMcpGeologyWrites`; il valore predefinito è disattivato. Aggiornare anche il pacchetto MCP e ricaricare gli strumenti. [Guida completa e struttura JSON](deployment/GEOLOGIA.md).
+
+## Catalogo geologico e mappa introdotti nella 2.16.0
 
 Catalogo geologico e geotecnico autonomo: generato dai nomi e dalle cartelle tematiche dell'inventario, anche dentro ZIP/7z. Candidati da verificare, commesse non attribuite senza evidenza, nessuna lettura automatica dei contenuti.
 
@@ -22,7 +30,7 @@ Catalogo e cache suddivisi per categoria, anno e commessa sotto ArchiveFolder/ge
 
 MCP: cerca_relazioni_geologiche e leggi_relazione_geologica. La ricerca dei file può consultare le unità già censite prima della fine del primo inventario generale, dichiarandole parziali. Gli errori applicativi sono espliciti. Navigazione diretta e lettura di un singolo documento restano disponibili indipendentemente dall'inventario globale.
 
-Vedere [guida del catalogo geologico](deployment/GEOLOGIA.md) e [collaborazione al progetto](CONTRIBUTING.md). Aggiornare anche il componente MCP e ricaricare i dodici strumenti per usare la nuova area.
+Vedere [guida del catalogo geologico](deployment/GEOLOGIA.md) e [collaborazione al progetto](CONTRIBUTING.md). Aggiornare anche il componente MCP e ricaricare i quindici strumenti per usare la nuova area.
 
 ## Correzioni 2.15.1: scansione e salvataggi JSON
 
@@ -62,7 +70,7 @@ Quando occorre aggiornare il pacchetto MCP sulla VM: fermare il vecchio tunnel, 
 
 ## Configurazione e verifiche
 
-Il servizio usa TCP dedicato e autenticazione Windows Kerberos con protezione mutua; il canale MCP locale espone solo consultazioni e verifica gruppo autorizzato e servizio. Sulle sorgenti servono Lettura/Elenco; le scritture sono limitate all'archivio JSON applicativo separato. Il client non legge direttamente il catalogo di rete.
+Il servizio usa TCP dedicato e autenticazione Windows Kerberos con protezione mutua; il canale MCP locale verifica gruppo autorizzato e servizio, espone consultazioni e una scrittura opzionale limitata al catalogo geologico derivato. Sulle sorgenti servono Lettura/Elenco; le scritture sono limitate all'archivio JSON applicativo separato. Il client non legge direttamente il catalogo di rete.
 
 - [Installazione, account e SPN](deployment/SERVER-CLIENT.md)
 - [Inventario JSON, calendario, ricerca file e limiti](deployment/ANALISI-NOMI.md)

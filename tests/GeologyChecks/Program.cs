@@ -58,6 +58,8 @@ internal static class Program
             Reject<ModelContextProtocol.McpException>(()=>McpInvocation.Begin("leggi_relazione_geologica",session));
             Check(true,"MCP distingue consultazione dei metadati da lettura dei contenuti");
 
+            GeologyAnalysisChecks.Run(root).GetAwaiter().GetResult();
+            GeologyOpenChecks.Run(root).GetAwaiter().GetResult();
             GeologyIndexChecks.Run(root);
             AppContext.SetSwitch("TA.Tests.DisableMapNetwork",true);
             var app=new Application {ShutdownMode=ShutdownMode.OnExplicitShutdown};

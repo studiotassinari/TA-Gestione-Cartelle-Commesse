@@ -10,7 +10,7 @@ public sealed class LocalPipeConnection
     public const string PipeName = "TACommesseServer.Mcp.ReadOnly.v1";
     public async Task<T> SendAsync<T>(Request request, CancellationToken token = default)
     {
-        LocalReadOnlyPolicy.Validate(request);
+        LocalCatalogPolicy.Validate(request);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
         using var pipe = new NamedPipeClientStream(".", PipeName, PipeAccessRights.ReadWrite,

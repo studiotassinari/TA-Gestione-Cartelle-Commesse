@@ -2,6 +2,15 @@ using TA_Gestione_Cartelle_Commesse.ViewModels;
 namespace TA_Gestione_Cartelle_Commesse.Views;
 public partial class GeologyWindow : System.Windows.Window
 {
+    // Intestazioni, barre di scorrimento e spazio vuoto non attivano l'apertura.
+    private async void Reports_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != System.Windows.Input.MouseButton.Left || DataContext is not GeologyViewModel model ||
+            e.OriginalSource is not System.Windows.DependencyObject source ||
+            System.Windows.Controls.ItemsControl.ContainerFromElement(ReportsGrid, source) is not System.Windows.Controls.DataGridRow row ||
+            row.Item is not Contracts.GeologicalReport report) return;
+        e.Handled = true; model.Selected = report; await model.OpenSelectedAsync();
+    }
     private void Position_Click(object sender, System.Windows.RoutedEventArgs e) => EditPosition();
     private void PositionPicked(double lat, double lon) => EditPosition(lat, lon);
     private async void EditPosition(double? lat = null, double? lon = null)

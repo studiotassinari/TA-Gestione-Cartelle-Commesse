@@ -1,54 +1,66 @@
-# Relazioni geologiche e geotecniche — 2.16.0
+# Catalogo geologico, fascicoli e analisi ChatGPT — 2.17.0
 
-Il catalogo è generato autonomamente dal server a partire dai nomi dei file già censiti. Non richiede un catalogo esterno, chiavi API o servizi di IA a pagamento. Gli originali restano sempre in sola lettura.
+Il database è composto da JSON condivisi. Il servizio riconosce i candidati dai nomi già censiti; ChatGPT interpreta il testo e propone classificazione, fascicolo e localizzazione **solo quando l'utente avvia l'analisi nella chat**. Nessuna chiamata del server alle API dei modelli, nessuna attività pianificata e nessuna modifica dei documenti originali.
 
-## Catalogazione autonoma
+## Archivio JSON
 
-Un componente del servizio lavora all'avvio e poi ogni ora esclusivamente sui JSON dell'inventario. Consulta anche le unità già completate durante il primo censimento, senza aspettare il report globale. Non apre documenti e non riesamina i contenuti degli archivi.
-
-Riconosce termini geologici/geotecnici nei nomi di PDF, Word, testi e altri documenti; include come candidati anche i documenti nelle cartelle tematiche. Le voci ZIP/7z sono trattate allo stesso modo, mantenendo contenitore e percorso interno distinti. Sono escluse le cartelle, i file temporanei Office e i formati non documentali come DWG. I risultati sono **da verificare**: il nome non dimostra che si tratti effettivamente di una relazione. Le unità non classificate non diventano commesse ufficiali.
-
-La posizione non viene dedotta dal solo committente o dal codice numerico. Solo coordinate esplicitamente etichettate lat/lon nei nomi vengono proposte, con indicazione che non sono verificate. Negli altri casi la posizione resta sconosciuta finché viene indicata da un utente. Nessuna geocodifica esterna automatica.
-
-I risultati vengono conservati in:
+La cartella è `<ArchiveFolder>\geologia`, normalmente `\\ingtassinari.it\data\amministrazione\_GESTIONE COMMESSE\geologia`:
 
 ```text
-<ArchiveFolder>\geologia\catalogo.json
-<ArchiveFolder>\geologia\unita\<categoria>\<anno>\<codice>\<id-unita>.json
-<ArchiveFolder>\geologia\posizioni.json
+catalogo.json
+unita/<categoria>/<anno>/<commessa>/<id-unita>.json
+posizioni.json
+analisi/indice.json
+analisi/<anno>/<commessa>/<id-documento>/revisioni/<revisione>.json
+fascicoli/<id-fascicolo>/revisioni/<revisione>.json
 ```
 
-Nel sistema aziendale `ArchiveFolder` è normalmente `\\ingtassinari.it\data\amministrazione\_GESTIONE COMMESSE`. Il primo file è il catalogo aggregato; i file delle unità vengono rigenerati solo se cambia la generazione dell'inventario. Le posizioni manuali sono separate e non vengono sovrascritte dal censimento. Le scritture usano sostituzione atomica; le modifiche alle posizioni usano anche un lock tra processi e il controllo della versione.
+L'indice delle analisi è il punto di commit atomico: collega le revisioni immutabili di documenti e fascicoli. Ogni risultato conserva identità del documento, firma dei metadati, checksum del contenuto letto, classificazione, sintesi, autore se rilevato, sito, coordinate quando documentabili, motivazione del raggruppamento, citazioni con offset, limiti, data e account Windows del salvataggio. Le posizioni indicate manualmente restano prioritarie rispetto alle proposte IA. Le analisi sono conservate anche quando una fonte scompare dall'inventario.
 
-Il catalogo conserva gli ultimi dati in caso di errore e segnala letture parziali o unità non disponibili. Una rimozione viene applicata quando l'inventario dell'unità la conferma. I risultati possono comprendere dati della verifica precedente; ogni relazione espone la data e la completezza della sua unità. L'assenza di una voce in un catalogo parziale non prova l'assenza del documento. Nessuna notifica delle differenze viene inviata.
+Le revisioni non contengono copie integrali dei documenti. Contengono soltanto metadati, risultati e brevi citazioni necessarie a ricostruire la provenienza. Il parser tiene temporaneamente in memoria le porzioni lette per riscontrare le citazioni; dopo un riavvio occorre rileggere il documento prima di salvare un nuovo risultato.
 
-Limiti: 50.000 candidati e 20 MiB per catalogo aggregato; eventuali limiti raggiunti sono espliciti. `GeologyCatalogPath`, se valorizzato in `server-settings.json`, seleziona un catalogo esterno compatibile e disattiva la generazione automatica: non è necessario per l'uso ordinario. Tutti i salvataggi geologici devono essere fuori dalle radici sorgenti.
+## Aggiornamento incrementale
 
-## Finestra del client
+Il servizio continua il censimento orario delle sorgenti. Il catalogo geologico lavora all'avvio e ogni ora **sui JSON già prodotti**, senza aggiungere una scansione dei contenuti o degli archivi. Riutilizza le unità senza differenze e riclassifica quelle nuove o modificate; considera anche modifiche, aggiunte e rimozioni nei livelli inferiori. La sola data della directory non è usata come prova di assenza di modifiche.
 
-**Analisi → Relazioni geologiche e geotecniche** apre una finestra indipendente, non modale e a istanza unica. Il comando riporta in primo piano la finestra già aperta; la chiusura o riconnessione del client la chiude.
+Per ogni documento si conserva una firma di identità, dimensione e ultima modifica; per ZIP/7z entra anche la versione dei metadati del contenitore. Se i metadati sono incompleti, il documento non viene considerato invariato con certezza. La coda per ChatGPT presenta prima i documenti con modifica più recente e omette quelli già analizzati sulla stessa firma. Un aggiornamento del file rende l'analisi precedente «da aggiornare», mantenendone lo storico. Prima di salvare, il server ricontrolla anche il checksum effettivo del documento.
 
-La ricerca dinamica filtra titolo, nome file, località, indirizzo, commessa, committente, autore e note nella fotografia caricata. Filtri aggiuntivi: tipo di relazione e presenza della posizione. L'elenco e la mappa si selezionano reciprocamente. Relazioni nella stessa posizione sono raggruppate in un simbolo numerato con scelta individuale. Le relazioni senza coordinate restano nell'elenco.
+La prima raccolta può essere parziale, soprattutto durante la scansione iniziale di grandi archivi. Sono esplicitati dati mancanti e limiti. Nomi generici fuori dalle cartelle tematiche possono sfuggire alla selezione dei candidati: il riconoscimento dai nomi non garantisce un censimento esaustivo. Non vengono emesse notifiche delle differenze.
 
-Per localizzare una relazione: selezionarla e usare **Imposta posizione…**, oppure fare clic destro sulla mappa. La finestra propone coordinate WGS84, località, indirizzo e fonte/precisione. Il salvataggio è esplicito e riguarda soltanto il catalogo; registra account Windows e data sul server. Gli utenti già autorizzati al client possono contribuire alle posizioni. Una modifica concorrente richiede di ricaricare prima di salvare. Il plugin MCP non dispone di questo comando di scrittura.
+## Analisi avviata da ChatGPT
 
-## Mappa senza servizi a pagamento
+Esempio di richiesta: «Usa TA – Gestione Commesse per analizzare fino a cinque relazioni geologiche nuove o modificate della commessa C26001, raggrupparle in fascicoli omogenei e salvare il catalogo JSON. Individua il sito dalle fonti e segnala le posizioni non certe».
 
-Leaflet 1.9.4 è incluso nei file dell'applicazione. La cartografia è OpenStreetMap, con attribuzione visibile, identificazione dell'applicazione e cache standard di WebView2. Nessuna chiave o fatturazione richiesta. Vengono richieste solo le tessere della vista interattiva: nessun download di aree, scansione delle mappe o modalità offline. Al fornitore cartografico non sono inviati nomi, percorsi o contenuti dei documenti; i simboli sono generati localmente. Occorrono Internet e Microsoft Edge WebView2 Runtime. In assenza di cartografia l'elenco resta utilizzabile; il servizio cartografico pubblico non offre disponibilità garantita.
+1. `inizia_consultazione(contenuti=true, analisiGeologiche=true)`: gruppo di lavoro esplicito, massimo 15 minuti/60 operazioni. Nessun rinnovo automatico.
+2. `prossime_relazioni_da_analizzare`: massimo dieci candidati, normalmente cinque, filtrabili per commessa e nome. Non legge il testo.
+3. `leggi_relazione_geologica`: leggere soltanto i documenti scelti e le porzioni pertinenti, mantenendo la versione e gli offset restituiti. PDF testuali, DOCX, XLSX e testi; anche ZIP e 7z. Limiti 50 MiB, 20 secondi e 200.000 caratteri. OCR, DOC/XLS legacy e file cifrati non inclusi.
+4. `elenca_fascicoli_geologici`: verificare se esiste già un fascicolo relativo allo stesso intervento e sito. Stesso cliente, stesso comune o nomi simili da soli non bastano.
+5. `salva_analisi_geologica`: salvare il risultato e brevi citazioni esatte. `SourceFingerprint` e `AnalysisRevision` provengono dal catalogo; `DocumentVersion` dalla lettura. `ExpectedRevision` deve coincidere con `AnalysisRevision` (vuoto solo alla prima registrazione). `DossierId` vuoto crea un fascicolo, un ID noto vi associa il documento. Il server rifiuta versioni superate, citazioni non riscontrate e aggiornamenti concorrenti.
 
-Riferimenti ufficiali: [Leaflet](https://leafletjs.com/download.html), [condizioni di uso delle tessere OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/). Licenza Leaflet inclusa in `Assets/Maps/Leaflet-LICENSE.txt`.
+Il nuovo strumento di salvataggio è dichiarato **write**: ChatGPT può richiedere la conferma secondo le impostazioni dell'utente/workspace. Scrive esclusivamente il catalogo derivato. Non offre scritture generiche, spostamenti o modifiche dei file sorgente. La richiesta di analisi abilita il gruppo di lavoro, non un servizio autonomo: a fine richiesta, scadenza o limite, l'elaborazione si ferma.
 
-## MCP e contenuti
+Riferimento: [MCP personalizzato in ChatGPT](https://developers.openai.com/api/docs/guides/custom-mcp-server). L'uso resta soggetto ai [limiti del piano ChatGPT](https://learn.chatgpt.com/docs/pricing); non viene configurata una fatturazione API aggiuntiva da questa applicazione.
 
-- `cerca_relazioni_geologiche`: ricerca per parole, commessa e presenza di coordinate, con totale, data, versione e paginazione. Restituisce candidati e motivazione del riconoscimento; non apre i documenti.
-- `leggi_relazione_geologica`: legge il singolo documento identificato dal catalogo, esclusivamente con consultazione aperta con `contenuti=true`.
+## Localizzazione
 
-Il lettore isolato del server supporta PDF testuali, DOCX, XLSX e testi Unicode, anche in ZIP/7z. Nessun OCR, macro o contenuto cifrato. DOC/XLS/RTF/ODT possono essere individuati dal nome ma la lettura del loro contenuto non è supportata. Limiti condivisi con `leggi_documento`: 50 MiB, 20 secondi, due letture contemporanee, 200.000 caratteri e pagine di massimo 24.000 caratteri. Nessuna estrazione su disco, memorizzazione del testo o lettura massiva in background.
+ChatGPT deve distinguere il sito indagato dalle sedi di committente, geologo e progettista. Comune e indirizzo devono essere sostenuti da una citazione. Le coordinate devono provenire dal documento oppure da una fonte geografica verificabile, riportata come URL HTTPS e collegata alla località citata. Specificare la precisione: sito, indirizzo, località o centro del comune. Non inventare coordinate; se mancano evidenze, lasciarle vuote.
 
-`cerca_file` può ora consultare i JSON delle unità già censite prima della conclusione del primo inventario generale. I risultati sono dichiarati parziali. `elenca_documenti` e `leggi_documento` continuano a funzionare indipendentemente dalla ricerca globale, appena una cartella è presente nel censimento. Gli errori applicativi vengono comunicati esplicitamente al plugin, senza stack trace e senza presentarli come assenza di file.
+Le coordinate IA sono mostrate sulla mappa come **proposte da verificare**. Un fascicolo con documenti che indicano posizioni discordanti non riceve una posizione unica. Nessun geocoder viene chiamato automaticamente dal server; un'eventuale ricerca geografica avviene nella richiesta ChatGPT con gli strumenti disponibili e le relative autorizzazioni.
 
-## Verifiche
+## Client e doppio clic
 
-`GeologyChecks` verifica generazione da inventari, file ZIP, associazioni non confermate, posizioni assenti, protezione degli originali, salvataggi per anno/commessa, aggiornamenti e concorrenza delle posizioni, catalogo parziale, paginazione, finestra unica e lettura isolata dei contenuti.
+**Analisi → Relazioni geologiche e geotecniche** apre una finestra indipendente a istanza unica, con ricerca dinamica, fascicolo, stato dell'analisi e mappa OpenStreetMap. Le selezioni di elenco e mappa sono collegate. Gli elementi privi di coordinate restano nell'elenco.
 
-`node tests/GeologyChecks/map-checks.cjs` verifica raggruppamento, filtri e selezione. `dotnet run --project tests/GeologyChecks -c Release -- --map-browser` verifica anche WebView2 e Leaflet reali con tessere simulate: nessun traffico automatico verso OpenStreetMap. I test non utilizzano documenti aziendali. Restano le verifiche MCP, canale Windows, ricerca file, lettore documenti e interfaccia client.
+Il doppio clic su una riga e il pulsante **Apri documento** aprono il file nell'applicazione Windows associata. Per proteggere gli originali viene preparata una copia locale con attributo di sola lettura e protezione Office, anche quando il documento è contenuto in ZIP/7z. Si legge soltanto la voce scelta; nessuna estrazione dell'intero archivio. Il processo è separato e limitato a 25 secondi/512 MiB/50 MiB di documento. Le copie si trovano in `%LOCALAPPDATA%\Tassinari\CommesseClient\DocumentiConsultazione`. Non sono un nuovo archivio condiviso e possono essere eliminate dall'utente dopo la consultazione.
+
+La mappa usa Leaflet 1.9.4 e tasselli OpenStreetMap, senza chiave o fatturazione configurata; richiede WebView2 e Internet. Solo le tessere della vista sono richieste. Nessun geocoding, prefetch o download offline automatico. Attribuzione visibile e cache normale del browser.
+
+## Configurazione e aggiornamento
+
+Installare/aggiornare Server, Client e pacchetto MCP 2.17.0. Sul server impostare `EnableMcpGeologyWrites: true` in `C:\ProgramData\Tassinari\CommesseServer\server-settings.json` e riavviare il servizio: il valore predefinito è `false`. Account, gruppo Windows e isolamento delle sorgenti restano gli stessi. Il canale MCP ammette una sola scrittura tipizzata al catalogo, soggetta a questa impostazione.
+
+Riavviare il tunnel con il pacchetto nuovo e aggiornare gli strumenti del plugin: **15 strumenti**, di cui uno di scrittura del catalogo. La chiave runtime si inserisce solo nella finestra del client ufficiale. Un `GeologyCatalogPath` esplicito continua a usare un catalogo esterno; per quello generato dal servizio lasciare il valore vuoto.
+
+## Collaborazione con Giuseppe
+
+Giuseppe può sviluppare il motore di riconoscimento e interpretazione come componente separato o applicazione autonoma. I contratti `GeologicalAnalysisDraft`, `GeologicalAnalysisRecord` e `GeologicalDossier` definiscono lo scambio con il catalogo centrale; la parte di salvataggio/versionamento resta sul server. Le estensioni future ai parametri geotecnici devono riportare unità, fonte e stato di verifica e mantenere la compatibilità dello schema.

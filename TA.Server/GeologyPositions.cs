@@ -16,7 +16,7 @@ public sealed partial class GeologyService
             PositionSource = p.Source, PositionAccuracy = "Indicata da " + p.UpdatedBy + " il " + p.UpdatedUtc.ToString("dd/MM/yyyy HH:mm 'UTC'")
         } : r).ToList();
         var version = Convert.ToHexString(SHA256.HashData(bytes.Concat(JsonSerializer.SerializeToUtf8Bytes(positions)).ToArray()));
-        return (catalog with { Reports = reports }, version);
+        return (catalog with { Reports = reports, UpdatedUtc = positions.Select(p => p.UpdatedUtc).Append(catalog.UpdatedUtc).Max() }, version);
     }
     private List<GeologicalPosition> ReadPositions()
     {

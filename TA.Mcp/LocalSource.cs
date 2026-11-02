@@ -3,7 +3,7 @@ using TA_Gestione_Cartelle_Commesse.Contracts;
 
 namespace TA.Mcp;
 
-public sealed class LocalSource : IReadOnlySource
+public sealed class LocalSource : IReadOnlySource, IGeologyAnalysisSource
 {
     private readonly LocalPipeConnection connection = new();
     public Task<CategoryState> State(string category, CancellationToken token) => Send<CategoryState>(new Request("State", category), token);
@@ -16,5 +16,8 @@ public sealed class LocalSource : IReadOnlySource
     public Task<DocumentPage> GeologicalDocument(GeologicalReadQuery query,CancellationToken token) => Send<DocumentPage>(new Request("ReadGeologicalDocument",GeologicalRead:query), token);
     public Task<DocumentPage> Document(string category,DocumentQuery query,CancellationToken token) => Send<DocumentPage>(new Request("ReadDocument",category,Document:query), token);
     public Task<DocumentListPage> Documents(string category,DocumentListQuery query,CancellationToken token) => Send<DocumentListPage>(new Request("ListDocuments",category,Documents:query), token);
+    public Task<GeologicalAnalysisQueue> PendingGeology(GeologicalAnalysisQueueQuery query, CancellationToken token) => Send<GeologicalAnalysisQueue>(new("PendingGeologicalAnalyses", GeologicalPending: query), token);
+    public Task<GeologicalAnalysisRecord> SaveGeologicalAnalysis(GeologicalAnalysisDraft draft, CancellationToken token) => Send<GeologicalAnalysisRecord>(new("SaveGeologicalAnalysis", GeologicalAnalysis: draft), token);
+    public Task<GeologicalDossierPage> GeologicalDossiers(GeologicalDossierQuery query, CancellationToken token) => Send<GeologicalDossierPage>(new("GeologicalDossiers", GeologicalDossiers: query), token);
     private Task<T> Send<T>(Request request, CancellationToken token) { var tagged = McpInvocation.Tag(request); return McpErrors.Run(() => connection.SendAsync<T>(tagged, token)); }
 }

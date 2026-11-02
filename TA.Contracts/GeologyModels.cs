@@ -11,6 +11,18 @@ public sealed record GeologicalReport
     public string DetectionEvidence { get; init; } = "";
     public DateTime? SourceCheckedUtc { get; init; }
     public bool SourceComplete { get; init; } = true;
+    // La firma dei metadati permette di conservare l'analisi finché il documento non cambia.
+    public bool SourceMetadataComplete { get; init; }
+    public bool OriginalAvailable { get; init; } = true;
+    public string SourceFingerprint { get; init; } = "";
+    public DateTime? SourceModifiedUtc { get; init; }
+    public long? SourceBytes { get; init; }
+    public string AnalysisRevision { get; init; } = "";
+    public DateTime? AnalysisSavedUtc { get; init; }
+    public bool AnalysisCurrent { get; init; }
+    public string AnalysisStatus { get; init; } = "Da analizzare con ChatGPT";
+    public string DossierId { get; init; } = "";
+    public string DossierTitle { get; init; } = "";
     public string Title { get; init; } = "";
     public string Kind { get; init; } = "Geologica";
     public string FileName { get; init; } = "";
@@ -33,7 +45,7 @@ public sealed record GeologicalReport
     public bool HasPosition => Latitude is >= -90 and <= 90 && Longitude is >= -180 and <= 180;
     public string PositionLabel => HasPosition ? string.Join(" · ", new[] { Municipality, Address, PositionAccuracy }.Where(s => !string.IsNullOrWhiteSpace(s))) : "Posizione da individuare";
     public string ProjectLabel => string.IsNullOrWhiteSpace(ProjectCode) ? "Non associata" : ProjectCode;
-    public bool CanRead => !string.IsNullOrWhiteSpace(PhysicalPath) || (FolderId.Length == 64 && FolderId.All(Uri.IsHexDigit) && Category is "C" or "G" or "A");
+    public bool CanRead => OriginalAvailable && (!string.IsNullOrWhiteSpace(PhysicalPath) || (FolderId.Length == 64 && FolderId.All(Uri.IsHexDigit) && Category is "C" or "G" or "A"));
 }
 
 public sealed record GeologyCatalog(int SchemaVersion, DateTime UpdatedUtc, List<GeologicalReport> Reports, List<string> Warnings, string? Version = null);
