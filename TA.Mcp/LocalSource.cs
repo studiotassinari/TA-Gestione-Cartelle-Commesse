@@ -12,6 +12,8 @@ public sealed class LocalSource : IReadOnlySource
     public Task<FileSearchPage> Files(FileSearchQuery query, CancellationToken token) => connection.SendAsync<FileSearchPage>(McpInvocation.Tag(new Request("Files", Files: query)), token);
     public Task<AnalysisPage> Analysis(AnalysisQuery query, CancellationToken token) => connection.SendAsync<AnalysisPage>(McpInvocation.Tag(new Request("Analysis", Analysis: query)), token);
     public Task<string> DailyReport(CancellationToken token) => connection.SendAsync<string>(McpInvocation.Tag(new Request("DailyReport")), token);
+    public Task<GeologyPage> Geology(GeologyQuery query,CancellationToken token) => connection.SendAsync<GeologyPage>(McpInvocation.Tag(new Request("Geology",Geology:query)),token);
+    public Task<DocumentPage> GeologicalDocument(GeologicalReadQuery query,CancellationToken token) => connection.SendAsync<DocumentPage>(McpInvocation.Tag(new Request("ReadGeologicalDocument",GeologicalRead:query)),token);
     public Task<DocumentPage> Document(string category,DocumentQuery query,CancellationToken token) => connection.SendAsync<DocumentPage>(McpInvocation.Tag(new Request("ReadDocument",category,Document:query)),token);
     public Task<DocumentListPage> Documents(string category,DocumentListQuery query,CancellationToken token) => connection.SendAsync<DocumentListPage>(McpInvocation.Tag(new Request("ListDocuments",category,Documents:query)),token);
 }

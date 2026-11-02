@@ -26,6 +26,7 @@ builder.Services.AddSingleton(settings);
 builder.Services.AddSingleton(new ChangeHub(false));
 builder.Services.AddSingleton<AnalysisService>();
 builder.Services.AddSingleton<FileSearchService>();
+builder.Services.AddSingleton<GeologyService>();
 builder.Services.AddSingleton<TA.Server.Documents.DocumentService>();
 builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();

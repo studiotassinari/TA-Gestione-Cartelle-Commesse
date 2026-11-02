@@ -44,5 +44,5 @@ var host = Environment.GetEnvironmentVariable("TA_MCP_SERVER")
 var port = int.Parse(Environment.GetEnvironmentVariable("TA_MCP_PORT") ?? "5443");
 builder.Services.AddSingleton<IReadOnlySource>(new WindowsSource(host, port));
 }
-builder.Services.AddMcpServer().WithStdioServerTransport().WithTools<CommesseTools>();
+builder.Services.AddMcpServer().WithStdioServerTransport().WithTools<CommesseTools>().WithTools<GeologyTools>();
 await builder.Build().RunAsync();

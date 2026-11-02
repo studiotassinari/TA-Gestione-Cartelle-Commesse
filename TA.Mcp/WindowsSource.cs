@@ -6,6 +6,8 @@ namespace TA.Mcp;
 // Il contratto non offre comandi generici, scansioni, amministrazione o scrittura.
 public interface IReadOnlySource
 {
+    Task<GeologyPage> Geology(GeologyQuery query,CancellationToken token) => throw new NotSupportedException();
+    Task<DocumentPage> GeologicalDocument(GeologicalReadQuery query,CancellationToken token) => throw new NotSupportedException();
     Task<DocumentPage> Document(string category,DocumentQuery query,CancellationToken token) => throw new NotSupportedException();
     Task<DocumentListPage> Documents(string category,DocumentListQuery query,CancellationToken token) => throw new NotSupportedException();
     Task<CategoryState> State(string category, CancellationToken token);
@@ -29,6 +31,8 @@ public sealed class WindowsSource(string host, int port) : IReadOnlySource
     public Task<AnalysisPage> Analysis(AnalysisQuery query, CancellationToken token) => connection.SendAsync<AnalysisPage>(McpInvocation.Tag(new Request("Analysis", Analysis: query)), token);
     public Task<string> DailyReport(CancellationToken token) =>
         connection.SendAsync<string>(McpInvocation.Tag(new Request("DailyReport")), token);
+    public Task<GeologyPage> Geology(GeologyQuery query,CancellationToken token) => connection.SendAsync<GeologyPage>(McpInvocation.Tag(new Request("Geology",Geology:query)),token);
+    public Task<DocumentPage> GeologicalDocument(GeologicalReadQuery query,CancellationToken token) => connection.SendAsync<DocumentPage>(McpInvocation.Tag(new Request("ReadGeologicalDocument",GeologicalRead:query)),token);
     public Task<DocumentPage> Document(string category,DocumentQuery query,CancellationToken token) => connection.SendAsync<DocumentPage>(McpInvocation.Tag(new Request("ReadDocument",category,Document:query)),token);
     public Task<DocumentListPage> Documents(string category,DocumentListQuery query,CancellationToken token) => connection.SendAsync<DocumentListPage>(McpInvocation.Tag(new Request("ListDocuments",category,Documents:query)),token);
 }

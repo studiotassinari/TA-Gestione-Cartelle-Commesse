@@ -60,7 +60,7 @@ var transport=new StdioClientTransport(new StdioClientTransportOptions{
 });
 await using var client=await McpClient.CreateAsync(transport,cancellationToken:timeout.Token);
 var catalog=await client.ListToolsAsync(cancellationToken:timeout.Token);
-Check(catalog.Select(t=>t.Name).Order().SequenceEqual(new[]{"analisi_file","cerca_cartelle","cerca_file","dettaglio_cartella","elenca_documenti","inizia_consultazione","leggi_documento","report_giornaliero","sottocartelle","stato_scansione"}),"Dieci strumenti autorizzati");
+Check(catalog.Select(t=>t.Name).Order().SequenceEqual(new[]{"analisi_file","cerca_cartelle","cerca_file","cerca_relazioni_geologiche","dettaglio_cartella","elenca_documenti","inizia_consultazione","leggi_documento","leggi_relazione_geologica","report_giornaliero","sottocartelle","stato_scansione"}),"Dodici strumenti autorizzati");
 await Task.Delay(300);
 Check(connections==0,"Avvio, catalogo e inattività senza connessioni al servizio");
 var noSession=await client.CallToolAsync("cerca_cartelle",new Dictionary<string,object?>{["category"]="C"},cancellationToken:timeout.Token);
@@ -73,6 +73,8 @@ var invalid=await client.CallToolAsync("cerca_cartelle",new Dictionary<string,ob
 Check(invalid.IsError==true && connections==0,"Errore MCP strutturato senza connessione");
 var refusedContent=await client.CallToolAsync("leggi_documento",new Dictionary<string,object?>{["category"]="C",["id"]=source.Rows[0].Id,["relativePath"]="prova.txt",["consultazione"]=session},cancellationToken:timeout.Token);
 Check(refusedContent.IsError==true && connections==0,"Sessione metadati non abilita lettura contenuti");
+var deniedGeology=await client.CallToolAsync("leggi_relazione_geologica",new Dictionary<string,object?>{["id"]="geo-1",["consultazione"]=session},cancellationToken:timeout.Token);
+Check(deniedGeology.IsError==true && connections==0,"Relazione geologica richiede consultazione contenuti prima di accedere al servizio");
 var valid=await client.CallToolAsync("cerca_cartelle",new Dictionary<string,object?>{["category"]="C",["consultazione"]=session},cancellationToken:timeout.Token);
 Check(valid.IsError==true && connections==1,"Una richiesta esplicita produce un solo collegamento, nessun ritentativo automatico");
 await Task.Delay(500);Check(connections==1,"Nessuna attività residua dopo la risposta");

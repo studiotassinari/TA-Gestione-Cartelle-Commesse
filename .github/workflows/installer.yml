@@ -100,10 +100,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Test trasporto fallito' }
       - name: Verifica aggiornamento viste, archivio annuale e riscontri
         run: |
-          foreach ($test in @('ClientChecks','LiveIndexChecks','AnnualArchiveChecks','ReliabilityChecks','AcknowledgementChecks','NightlyChecks','HourlyChecks','DirectoryProgressChecks','ClientStatusChecks','ArchiveSourceChecks','UpdaterChecks','InventoryChecks','FileSearchChecks','McpChecks','LocalMcpChecks','DocumentChecks')) {
+          foreach ($test in @('ClientChecks','LiveIndexChecks','AnnualArchiveChecks','ReliabilityChecks','AcknowledgementChecks','NightlyChecks','HourlyChecks','DirectoryProgressChecks','ClientStatusChecks','ArchiveSourceChecks','UpdaterChecks','InventoryChecks','FileSearchChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks')) {
             dotnet run --project "tests/$test" -c Release
             if ($LASTEXITCODE -ne 0) { throw "Test fallito: $test" }
           }
+      - name: Verifica selezione e raggruppamento sulla mappa
+        run: node tests/GeologyChecks/map-checks.cjs
       - name: Anteprime WPF con dati di prova
         uses: actions/upload-artifact@v4
         with:

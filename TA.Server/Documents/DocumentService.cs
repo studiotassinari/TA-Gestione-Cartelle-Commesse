@@ -16,8 +16,12 @@ public sealed class DocumentService(ServerSettings settings,ScanCoordinator scan
         var roots=new[]{settings.JobsRoot,settings.BidsRoot,settings.ArchivedJobsRoot};
         var full=Path.GetFullPath(record.Path);
         var allowed=roots.FirstOrDefault(r=>full.StartsWith(Path.GetFullPath(r).TrimEnd('\\')+"\\",StringComparison.OrdinalIgnoreCase))??throw new UnauthorizedAccessException("Sorgente esclusa.");
+        return await ExecuteWorkAsync(new(allowed,record.Path,read,list),token);
+    }
+    internal async Task<DocumentWorkReply> ExecuteWorkAsync(DocumentWork work,CancellationToken token)
+    {
         if(!await slots.WaitAsync(0,token))throw new IOException("Due letture documentali già in corso. Riprovare su richiesta, senza accodare scansioni.");
-        try{return await RunWorkerAsync(new(allowed,record.Path,read,list),token);}finally{slots.Release();}
+        try{return await RunWorkerAsync(work,token);}finally{slots.Release();}
     }
     public static async Task<DocumentWorkReply> RunWorkerAsync(DocumentWork work,CancellationToken token)
     {

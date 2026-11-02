@@ -11,7 +11,7 @@ public sealed class McpInvocation : IDisposable
     public string Id {get;}=Guid.NewGuid().ToString("N");
     public string Tool {get;}
     private McpInvocation(string tool){Tool=tool;previous=current.Value;current.Value=this;Console.Error.WriteLine($"MCP richiesta {Id}: {Tool} avviata");}
-    public static McpInvocation Begin(string tool,string consultation) { ConsultationSessions.Shared.Use(consultation,tool=="leggi_documento");return new(tool); }
+    public static McpInvocation Begin(string tool,string consultation) { ConsultationSessions.Shared.Use(consultation,tool is "leggi_documento" or "leggi_relazione_geologica");return new(tool); }
     public static TA.Transport.Request Tag(TA.Transport.Request request)
     {
         var call=current.Value;
