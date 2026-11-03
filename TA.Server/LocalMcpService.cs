@@ -7,7 +7,7 @@ using TA.Transport;
 namespace TA.Server;
 
 // Endpoint locale: ACL Windows, consultazioni e sola scrittura tipizzata del catalogo, se abilitata.
-public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null) : BackgroundService
+public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null) : BackgroundService
 {
     public static PipeSecurity Security(SecurityIdentifier owner, SecurityIdentifier group, SecurityIdentifier? admins)
     {
@@ -85,6 +85,10 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
     {
         switch (request.Operation)
         {
+            case "IpripiRules": return Reply.Ok(IpripiRegulation.Get());
+            case "Ipripi": return Reply.Ok((ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).Query(request.Ipripi ?? new(), token));
+            case "ReadIpripi": return Reply.Ok(await (ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).ReadAsync(request.IpripiRead ?? throw new ArgumentException("Documento mancante."), token));
+            case "SaveIpripi": return Reply.Ok(await (ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).SaveAsync(request.IpripiAnalysis ?? throw new ArgumentException("Analisi mancante."), user, token));
             case "PendingGeologicalAnalyses": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Pending(request.GeologicalPending ?? new(), token));
             case "GeologicalDossiers": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Dossiers(request.GeologicalDossiers ?? new(), token));
             case "SaveGeologicalAnalysis": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile.")).SaveAnalysisAsync(request.GeologicalAnalysis ?? throw new ArgumentException("Analisi mancante."), user, token));

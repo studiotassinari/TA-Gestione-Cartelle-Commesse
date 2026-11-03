@@ -44,8 +44,12 @@ public sealed class DocumentService(ServerSettings settings,ScanCoordinator scan
             {
                 deadline.Token.ThrowIfCancellationRequested();
                 if(output.IsFaulted)await output;if(errors.IsFaulted)await errors;
-                process.Refresh();
-                if(process.PrivateMemorySize64>512L*1024*1024)throw new IOException("Documento troppo complesso: limite memoria raggiunto.");
+                try
+                {
+                    process.Refresh();
+                    if(process.PrivateMemorySize64>512L*1024*1024)throw new IOException("Documento troppo complesso: limite memoria raggiunto.");
+                }
+                catch(InvalidOperationException) when(process.HasExited) { break; }
                 await Task.Delay(100,deadline.Token);
             }
             var json=await output;await errors;

@@ -6,6 +6,10 @@ public static class LocalCatalogPolicy
     public static void Validate(Request request)
     {
         var expected = request.Operation switch {
+            "Ipripi" => "cerca_mur_ipripi",
+            "IpripiRules" => "regole_ipripi",
+            "ReadIpripi" => "leggi_mur_ipripi",
+            "SaveIpripi" => "salva_analisi_ipripi",
             "PendingGeologicalAnalyses" => "prossime_relazioni_da_analizzare",
             "SaveGeologicalAnalysis" => "salva_analisi_geologica",
             "GeologicalDossiers" => "elenca_fascicoli_geologici",

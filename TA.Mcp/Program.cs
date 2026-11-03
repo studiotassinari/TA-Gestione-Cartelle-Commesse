@@ -44,6 +44,7 @@ var host = Environment.GetEnvironmentVariable("TA_MCP_SERVER")
 var port = int.Parse(Environment.GetEnvironmentVariable("TA_MCP_PORT") ?? "5443");
 builder.Services.AddSingleton<IReadOnlySource>(new WindowsSource(host, port));
 }
+builder.Services.AddSingleton<IIpripiSource>(sp => (IIpripiSource)sp.GetRequiredService<IReadOnlySource>());
 builder.Services.AddSingleton<IGeologyAnalysisSource>(sp => (IGeologyAnalysisSource)sp.GetRequiredService<IReadOnlySource>());
-builder.Services.AddMcpServer().WithStdioServerTransport().WithTools<CommesseTools>().WithTools<GeologyTools>().WithTools<GeologyAnalysisTools>();
+builder.Services.AddMcpServer().WithStdioServerTransport().WithTools<CommesseTools>().WithTools<GeologyTools>().WithTools<GeologyAnalysisTools>().WithTools<IpripiTools>();
 await builder.Build().RunAsync();

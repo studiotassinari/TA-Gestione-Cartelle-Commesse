@@ -158,7 +158,7 @@
             <MenuItem Header="_Apri">
                 <MenuItem Header="Apri cartella in Esplora file" Command="{Binding ActiveCategory.OpenFolderCommand}"/>
             </MenuItem>
-            <MenuItem Header="_Analisi"><MenuItem Header="Relazioni geologiche e geotecniche..." Command="{Binding GeologyCommand}"/></MenuItem>
+            <MenuItem Header="_Analisi"><MenuItem Header="Relazioni geologiche e geotecniche..." Command="{Binding GeologyCommand}"/><MenuItem Header="IPRiPI — analisi MUR A.1/D.1..." Command="{Binding IpripiCommand}"/></MenuItem>
             <MenuItem Header="_Report"><MenuItem Header="Non conformità..." Command="{Binding NonconformityReportCommand}"/></MenuItem>
             <MenuItem Header="_Export">
                 <MenuItem Header="Scarica ultimo report orario" Command="{Binding DailyReportCommand}"/>
