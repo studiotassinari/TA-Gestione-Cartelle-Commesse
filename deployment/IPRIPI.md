@@ -1,6 +1,6 @@
 # IPRiPI: analisi dei PDF MUR A.1/D.1 tramite ChatGPT
 
-Funzionalità del branch `codex/ipripi-pdf-analysis`. Il menu **Analisi > IPRiPI — analisi MUR A.1/D.1** apre una finestra indipendente, non modale, a istanza unica. Il servizio usa il plugin ChatGPT già previsto dal progetto: non richiede chiavi API OpenAI e non chiama modelli dal server.
+Funzionalità introdotta nella versione **2.19.0**. Il menu **Analisi > IPRiPI — analisi MUR A.1/D.1** apre una finestra indipendente, non modale, a istanza unica. Il servizio usa il plugin ChatGPT già previsto dal progetto: non richiede chiavi API OpenAI e non chiama modelli dal server.
 
 ## Utilizzo
 
@@ -37,7 +37,15 @@ I dati derivati sono salvati in `ArchiveFolder/ipripi/indice.json`, con revision
 
 ## Attivazione
 
-Compilare e distribuire **server, client e componente MCP dello stesso branch** in un ambiente di prova. Non è stata creata una release né modificata la VM. La versione di produzione resta 2.18.0: assegnare una nuova versione e svolgere il collaudo prima della distribuzione.
+Distribuire **server, client e componente MCP 2.19.0**. La pubblicazione su GitHub non aggiorna automaticamente la VM.
+
+1. Sulla VM arrestare il tunnel precedente con **Ctrl+C** nella sua console.
+2. Usare l'aggiornatore 2.19.0 per aggiornare prima il Server, quindi i Client. Verificare che il servizio server sia avviato e il canale TCP pronto.
+3. Estrarre il pacchetto `TA-Commesse-MCP-2.19.0.zip` in una nuova cartella. Rendere disponibile il client ufficiale già utilizzato in `Tunnel/tunnel-client.exe`, oppure indicarne il percorso con `-TunnelClient`. Conservare il vecchio pacchetto per eventuale ripristino.
+4. Per consentire il salvataggio, modificare soltanto la proprietà `EnableMcpIpripiWrites` nella sezione `Server` della configurazione server esistente, conservando tutte le altre impostazioni, poi riavviare il servizio dal gestore server.
+5. Da PowerShell nella cartella del nuovo pacchetto eseguire `./Start-McpTunnel.ps1 -Server <server-usato-prima> -TunnelId <tunnel_id-esistente> -Transport <kerberos-o-local> -CheckConnection`, sostituendo i segnaposto con gli stessi valori usati in precedenza. Conservare anche l'eventuale porta personalizzata tramite `-Port`. Inserire la chiave runtime soltanto nel prompt locale e lasciare aperta la console.
+6. Ricaricare gli strumenti del plugin ChatGPT: devono essere disponibili i quattro comandi IPRiPI elencati sotto (19 strumenti complessivi). Una semplice ripartenza del vecchio eseguibile non li aggiunge.
+7. Nella finestra IPRiPI cancellare eventuali filtri (per esempio `b.4.c`), cercare la commessa e premere **Cerca / aggiorna**. Se necessario selezionare **Tutti i PDF**. La ricerca dipende dal censimento dei nomi/metadati già effettuato dal server; i contenuti e le classificazioni non sono analizzati automaticamente.
 
 Nel file server-settings.json, sezione `Server`, impostare `EnableMcpIpripiWrites: true` solo per abilitare il salvataggio richiesto; il valore predefinito è `false`. Sono utilizzabili anche le variabili di configurazione già previste, per esempio `TA_Server__EnableMcpIpripiWrites=true`. La chiave è indipendente da `EnableMcpGeologyWrites`. L'archivio derivato deve restare fuori dalle sorgenti.
 
