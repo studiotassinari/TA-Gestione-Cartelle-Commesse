@@ -7,14 +7,7 @@ namespace TA.Server;
 // Censisce nomi e metadati dai JSON server: nessuna lettura automatica dei contenuti.
 public sealed class IpripiIndexer(ServerSettings settings, IpripiService service, ILogger<IpripiIndexer> logger) : BackgroundService
 {
-    public static DateTime NextRun(DateTime utc)
-    {
-        var zone = TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time");
-        var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone);
-        var next = local.Date.AddHours(23);
-        if (next <= local) next = next.AddDays(1);
-        return TimeZoneInfo.ConvertTimeToUtc(next, zone);
-    }
+    public static DateTime NextRun(DateTime utc) => DailyScanSchedule.Next(utc);
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
@@ -85,7 +78,7 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
         foreach (var id in groups.Keys.Where(id => !seen.Contains(id)).ToList())
             groups[id] = groups[id].Select(r => r with { OriginalAvailable = false }).ToList();
         var result = Publish(false);
-        logger.LogInformation("Censimento MUR completato: {Count} candidati da {Units} unità; successiva scansione alle 23", result.Documents.Count, processed);
+        logger.LogInformation("Censimento MUR completato: {Count} candidati da {Units} unità; successiva scansione alle 00:00", result.Documents.Count, processed);
         return result;
     }
     private static IEnumerable<string> Children(string path) => Directory.Exists(path)

@@ -212,7 +212,7 @@ public sealed partial class MainViewModel : Observable
             try { serverVersion = await connection.SendAsync<string>(new("Info"), timeout.Token); }
             catch { serverVersion = "Non disponibile (server non raggiungibile o versione precedente)"; }
         }
-        System.Windows.MessageBox.Show($"TA-Gestione Cartelle Commesse\n\nClient: {version}\nServer: {serverVersion}\nConnessione: {ServerHost}:{ServerPort}\n\nScansione completa ogni ora: commesse, gare e archivio, nomi dei file e voci ZIP/7z. Log delle cartelle correnti nelle schede inferiori, senza scansioni sovrapposte. Differenze nel report, notifiche sospese.\n\nStudio Tassinari", "Informazioni", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        System.Windows.MessageBox.Show($"TA-Gestione Cartelle Commesse\n\nClient: {version}\nServer: {serverVersion}\nConnessione: {ServerHost}:{ServerPort}\n\nScansione completa all'avvio del server e alle 00:00 italiane: commesse, gare e archivio, nomi dei file e voci ZIP/7z. Log delle cartelle correnti nelle schede inferiori, senza scansioni sovrapposte. Differenze nel report, notifiche sospese.\n\nStudio Tassinari", "Informazioni", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
     private async Task CreateReport(bool daily = false, bool analysis = false)
     {

@@ -3,6 +3,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using UglyToad.PdfPig;
+using UglyToad.PdfPig.AcroForms;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace TA.Server.Documents;
@@ -48,6 +49,21 @@ public sealed class DocumentText
         int pages=Math.Min(pdf.NumberOfPages,1000);if(pages<pdf.NumberOfPages)Truncated=true;
         for(int p=1;p<=pages;p++)
         {if(Full){Truncated=true;break;}var value=ContentOrderTextExtractor.GetText(pdf.GetPage(p));Add($"\n[Pagina {p}]\n"+value+"\n");if(string.IsNullOrWhiteSpace(value))Warnings.Add($"Pagina {p}: nessun testo estraibile; eventuali immagini non lette.");}
+        // I valori AcroForm non fanno parte del testo della pagina: riportarli separatamente.
+        if (!Full && pdf.TryGetForm(out var form))
+        {
+            Add("\n[Campi interattivi PDF - valori dichiarati, non verifica delle firme]\n");
+            int count = 0;
+            foreach (var field in form.GetFields())
+            {
+                if (Full || ++count > 10000) { Truncated = true; break; }
+                var value = field.GetFieldValue().Value;
+                if (string.IsNullOrWhiteSpace(value)) continue;
+                var info = field.Information;
+                Add($"[Campo {count}; pagina {field.PageNumber?.ToString() ?? "non indicata"}; nome {info.PartialName}; etichetta {info.AlternateName}]\n{value}\n");
+            }
+            Warnings.Add("Campi interattivi estratti separatamente: verificare nomi, caselle e corrispondenza con l'aspetto visivo; nessuna validazione delle firme.");
+        }
         Warnings.Add("Testo PDF: ordine di lettura, tabelle e disegni possono richiedere verifica visiva. Nessun OCR.");
     }
     private static XDocument Xml(ZipArchive zip,string name)

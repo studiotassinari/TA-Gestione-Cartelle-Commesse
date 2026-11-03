@@ -1,14 +1,14 @@
-# TA-Gestione Cartelle Commesse — 2.21.0
+# TA-Gestione Cartelle Commesse — 2.21.1
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 
-## Novità 2.21.0: censimento MUR giornaliero e DOCX
+## Novità 2.21.1: scansione completa a mezzanotte e campi PDF
 
-Il catalogo MUR dispone di un indice JSON dedicato, generato a ogni avvio del servizio (anche dopo gli aggiornamenti) e ogni giorno alle **23:00, ora italiana**. Ricerca e apertura non ripetono più la scansione globale a ogni richiesta. PDF e DOCX sono censiti in Commesse e Archivio, incluse sottocartelle e contenitori ZIP/7z, con risultati progressivi e segnalazione delle fonti parziali. Le analisi salvate restano separate dal censimento dei nomi. Nessuna API OpenAI automatica: riconoscimento e compilazione avvengono tramite ChatGPT su richiesta. Corretto anche l'avvio manuale del tunnel con Windows PowerShell 5.1.
+Il catalogo MUR dispone di un indice JSON dedicato, generato a ogni avvio del servizio (anche dopo gli aggiornamenti) e ogni giorno alle **00:00, ora italiana**. Ricerca e apertura non ripetono più la scansione globale a ogni richiesta. PDF e DOCX sono censiti in Commesse e Archivio, incluse sottocartelle e contenitori ZIP/7z, con risultati progressivi e segnalazione delle fonti parziali. Le analisi salvate restano separate dal censimento dei nomi. Nessuna API OpenAI automatica: riconoscimento e compilazione avvengono tramite ChatGPT su richiesta. Corretto anche l'avvio manuale del tunnel con Windows PowerShell 5.1.
 
 ## Catalogo MUR e mappa
 
-Catalogo MUR A.1/D.1 con progettisti, ruoli, tipologie, indirizzo, comune e coordinate. Ricerca esclusivamente in Commesse e Archivio, anche nei PDF di ZIP/7z; Gare escluse. Mappa OpenStreetMap con selezione collegata all'elenco. Le analisi e le fonti sono conservate nei JSON del server; gli originali restano in sola lettura. I dati mancanti richiedono analisi su richiesta tramite ChatGPT. Aggiornare client, server e MCP alla 2.21.0; il tunnel va avviato manualmente sulla VM con la chiave runtime.
+Catalogo MUR A.1/D.1 con progettisti, ruoli, tipologie, indirizzo, comune e coordinate. Ricerca esclusivamente in Commesse e Archivio, anche nei PDF di ZIP/7z; Gare escluse. Mappa OpenStreetMap con selezione collegata all'elenco. Le analisi e le fonti sono conservate nei JSON del server; gli originali restano in sola lettura. I dati mancanti richiedono analisi su richiesta tramite ChatGPT. Aggiornare client, server e MCP alla 2.21.1; il tunnel va avviato manualmente sulla VM con la chiave runtime.
 
 ## Politica delle scritture client
 
@@ -20,11 +20,11 @@ La nuova finestra **Analisi > IPRiPI — analisi MUR A.1/D.1** consulta PDF e ri
 
 ## Scarica la versione di produzione
 
-- [Aggiornatore diretto 2.21.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.0/TA-Commesse-Aggiornatore-2.21.0.exe) — prima Server sulla VM, poi Client sui PC.
-- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.21.0.exe)
-- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.21.0.exe)
-- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.0/TA-Commesse-MCP-2.21.0.zip)
-- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.21.0)
+- [Aggiornatore diretto 2.21.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.1/TA-Commesse-Aggiornatore-2.21.1.exe) — prima Server sulla VM, poi Client sui PC.
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.1/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.21.1.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.1/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.21.1.exe)
+- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.1/TA-Commesse-MCP-2.21.1.zip)
+- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.21.1)
 
 Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. L’aggiornatore del server attende anche la chiusura effettiva del processo prima di sostituire i file. I pacchetti non sono firmati digitalmente.
 
@@ -52,7 +52,7 @@ Catalogo geologico e geotecnico autonomo: generato dai nomi e dalle cartelle tem
 
 Client: menu Analisi, finestra indipendente a istanza unica, ricerca dinamica, filtri e mappa OpenStreetMap con simboli selezionabili. Nessuna chiave API o fatturazione; richiede Internet e WebView2. Le posizioni possono essere indicate esplicitamente e salvate nei soli JSON condivisi con account e data.
 
-Catalogo e cache suddivisi per categoria, anno e commessa sotto ArchiveFolder/geologia. Aggiornamento all'avvio e ogni ora dai JSON, conservazione dei dati precedenti in caso di errore, nessuna notifica delle differenze.
+Catalogo e cache suddivisi per categoria, anno e commessa sotto ArchiveFolder/geologia. Aggiornamento all'avvio e dopo ogni scansione completa dai JSON, conservazione dei dati precedenti in caso di errore, nessuna notifica delle differenze.
 
 MCP: cerca_relazioni_geologiche e leggi_relazione_geologica. La ricerca dei file può consultare le unità già censite prima della fine del primo inventario generale, dichiarandole parziali. Gli errori applicativi sono espliciti. Navigazione diretta e lettura di un singolo documento restano disponibili indipendentemente dall'inventario globale.
 
@@ -74,15 +74,15 @@ Il componente MCP non interroga il servizio all'avvio o quando è inattivo. Ogni
 
 **Per il passaggio da versioni precedenti alla 2.15.0, aggiornare sia il servizio sia il pacchetto MCP sulla VM**, riavviare il tunnel e ricaricare gli strumenti del plugin: devono risultare dieci. Il nuovo canale locale rifiuta i componenti MCP precedenti; il collegamento Kerberos dei client resta disponibile.
 
-## Scansione ogni ora e interfaccia
+## Scansione all'avvio e a mezzanotte
 
-La scansione oraria include elenchi, dimensioni, gerarchie e inventario di tutti i nomi accessibili sotto lavori, gare e archivio. La prima scansione parte all'avvio se manca il checkpoint; le successive alla prima ora intera dopo la conclusione, con tolleranza di un minuto. Nessuna sovrapposizione o recupero in coda delle ore occupate. Il checkpoint evita ripetizioni dopo un riavvio. Questa frequenza sostituisce il precedente controllo ogni minuto e la scansione delle 23; il monitor degli eventi non avvia elaborazioni aggiuntive.
+La scansione completa di lavori, gare e archivio parte a ogni avvio del servizio e ogni giorno alle 00:00 italiane. Include elenchi, dimensioni, gerarchie e inventario dei nomi, con salvataggio JSON e successivo aggiornamento dei cataloghi MUR e geologico. Nessuna sovrapposizione: una scansione lunga termina prima della successiva. I contenuti dei documenti vengono letti soltanto su richiesta; il lettore PDF include anche i valori AcroForm e le caselle selezionate.
 
 In basso sono sempre disponibili quattro schede: **Scansione**, **Connessione**, **Archivio JSON** e **Messaggi**. Il divisore orizzontale permette di regolarne l’altezza. La scansione mostra le ultime dodici rilevazioni delle cartelle in lettura, con categoria, fase e percorso; per gli archivi il separatore ` > ` distingue il file ZIP/7z dalla directory interna. Il client osserva il percorso corrente ogni tre secondi durante il lavoro: è un riepilogo di attività, non un elenco completo di ogni cartella attraversata. La percentuale testuale, quando stimabile, riguarda le unità della fase e non il tempo residuo. Nessuna barra animata né pannello laterale.
 
 **Report > Non conformità** apre una finestra collegata al client con dati già censiti dal server, ricerca, filtro per categoria e salvataggio HTML della vista. Distingue nomi non conformi, problemi di lettura e preventivi da verificare; indica dati mancanti e verifiche dei file ancora da eseguire. Non avvia nuove scansioni.
 
-Gli elenchi si aggiornano silenziosamente alla conclusione. Le differenze sono consultabili in **Export > Report sintetico analisi nomi e differenze**; le notifiche delle differenze restano sospese. **Export > Scarica ultimo report orario** recupera il report di dimensioni e gerarchie. Il comando manuale **Aggiorna elenco** verifica solo l'elenco della categoria.
+Gli elenchi si aggiornano silenziosamente alla conclusione. Le differenze sono consultabili in **Export > Report sintetico analisi nomi e differenze**; le notifiche delle differenze restano sospese. **Export > Scarica ultimo report giornaliero** recupera il report di dimensioni e gerarchie. Il comando manuale **Aggiorna elenco** verifica solo l'elenco della categoria.
 
 Le schede Commesse, Gare e Archivio condividono le colonne Codice, Anno, Numero, Committente, Argomento e Dimensione. Una commessa ufficiale viene riconosciuta solo al primo livello delle cartelle annuali. Le altre strutture sono censite senza promuovere le sottocartelle a commesse. Il pannello della gerarchia mostra i rami salvati; il doppio clic apre Esplora file traducendo la condivisione aziendale nel percorso Z del client.
 
@@ -102,4 +102,4 @@ Il servizio usa TCP dedicato e autenticazione Windows Kerberos con protezione mu
 - [Inventario JSON, calendario, ricerca file e limiti](deployment/ANALISI-NOMI.md)
 - [Collegamento MCP e tunnel](deployment/MCP.md)
 
-Il workflow GitHub verifica protocollo, autenticazione locale, archivio, inventario ZIP/7z, ricerca e paginazione, calendario orario e riavvio, avanzamento e controlli WPF, aggiornamento e installazione/disinstallazione prima di pubblicare i pacchetti.
+Il workflow GitHub verifica protocollo, autenticazione locale, archivio, inventario ZIP/7z, ricerca e paginazione, calendario giornaliero e riavvio, avanzamento e controlli WPF, aggiornamento e installazione/disinstallazione prima di pubblicare i pacchetti.

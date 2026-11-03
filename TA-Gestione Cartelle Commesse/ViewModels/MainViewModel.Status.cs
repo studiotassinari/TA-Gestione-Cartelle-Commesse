@@ -26,7 +26,7 @@ public sealed partial class MainViewModel
         {
             static string Local(DateTime value) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(value,DateTimeKind.Utc),TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time")).ToString("dd/MM HH:mm");
             return (scanProgress.FinishedUtc is { } end ? "Ultima: "+Local(end)+" • " : "") +
-                (scanProgress.NextRunUtc is { } next ? "Prossima: "+Local(next)+" (Italia)" : "Elaborazione completa ogni ora");
+                (scanProgress.NextRunUtc is { } next ? "Prossima: "+Local(next)+" (Italia)" : "Elaborazione completa all'avvio del server e alle 00:00 italiane");
         }
     }
     public void ApplyProgress(ScanProgress value)

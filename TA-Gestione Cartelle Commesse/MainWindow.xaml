@@ -161,7 +161,7 @@
             <MenuItem Header="_Analisi"><MenuItem Header="Relazioni geologiche e geotecniche..." Command="{Binding GeologyCommand}"/><MenuItem Header="IPRiPI — analisi MUR A.1/D.1..." Command="{Binding IpripiCommand}"/></MenuItem>
             <MenuItem Header="_Report"><MenuItem Header="Non conformità..." Command="{Binding NonconformityReportCommand}"/></MenuItem>
             <MenuItem Header="_Export">
-                <MenuItem Header="Scarica ultimo report orario" Command="{Binding DailyReportCommand}"/>
+                <MenuItem Header="Scarica ultimo report giornaliero" Command="{Binding DailyReportCommand}"/>
                 <MenuItem Header="Report sintetico analisi nomi e differenze" Command="{Binding AnalysisReportCommand}"/>
                 <MenuItem Header="Crea report cartelle e non conformità" Command="{Binding ReportCommand}"/>
             </MenuItem>

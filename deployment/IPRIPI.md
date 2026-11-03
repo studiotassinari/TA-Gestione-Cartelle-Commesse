@@ -4,7 +4,7 @@ Funzionalità introdotta nella versione **2.19.0**. Il menu **Analisi > IPRiPI �
 
 ## Catalogo territoriale MUR
 
-Il servizio genera `ipripi/candidati.json` a ogni avvio (quindi dopo ogni aggiornamento) e ogni giorno alle **23:00, ora italiana**, senza attività pianificate di Windows. Usa i JSON dell'inventario generale orario, senza aprire i contenuti. Gli indici delle unità sono in `ipripi/unita/<categoria>/<anno>/<commessa>/`; il catalogo è pubblicato progressivamente ed evita la rilettura dell'intero inventario a ogni apertura della finestra. Le fonti parziali sono segnalate. Se l'inventario non è ancora disponibile, riprova dopo cinque minuti.
+Il servizio genera `ipripi/candidati.json` a ogni avvio (quindi dopo ogni aggiornamento) e ogni giorno alle **00:00, ora italiana**, senza attività pianificate di Windows. Viene eseguito dopo la scansione completa delle sorgenti, e usa i nuovi JSON dell'inventario generale, senza aprire i contenuti. Gli indici delle unità sono in `ipripi/unita/<categoria>/<anno>/<commessa>/`; il catalogo è pubblicato progressivamente ed evita la rilettura dell'intero inventario a ogni apertura della finestra. Le fonti parziali sono segnalate. Se l'inventario non è ancora disponibile, riprova dopo cinque minuti.
 
 Sono supportati PDF e DOCX, anche negli archivi. La scansione dei metadati rende disponibili candidati nuovi o modificati; il riconoscimento e la compilazione dei campi avvengono tramite analisi ChatGPT su richiesta. Le analisi già salvate restano in `ipripi/indice.json` con revisioni separate e non vengono sovrascritte dal censimento automatico.
 
@@ -70,3 +70,5 @@ Riavviare il componente MCP aggiornato e ricaricare gli strumenti del plugin: qu
 `dotnet run --project tests/IpripiChecks -c Release` verifica il flusso su PDF e ZIP sintetici, classificazioni, citazioni, revisioni, modifica delle fonti, sessioni e finestra WPF. Un percorso PNG come argomento salva un'anteprima della finestra con dati sintetici. Eseguire inoltre i controlli DocumentChecks, McpChecks, LocalMcpChecks, FileSearchChecks e GeologyChecks e compilare la soluzione in Release. I test non inviano documenti aziendali né interrogano ChatGPT.
 
 Prima dell'uso operativo collaudare con MUR rappresentativi dello Studio, inclusi caselle selezionate, più interventi, revisioni discordanti e scansioni. Il test sintetico verifica il software, non misura l'accuratezza di ChatGPT sui moduli reali.
+
+Il lettore PDF include i campi AcroForm (nome, etichetta, pagina quando disponibile, valore), separati dal testo di pagina. I valori non convalidano firme o corrispondenza visiva; nessun OCR.

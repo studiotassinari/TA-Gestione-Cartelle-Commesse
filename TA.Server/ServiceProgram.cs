@@ -28,15 +28,15 @@ builder.Services.AddSingleton<AnalysisService>();
 builder.Services.AddSingleton<FileSearchService>();
 builder.Services.AddSingleton<GeologyService>();
 builder.Services.AddSingleton<IpripiService>();
-builder.Services.AddHostedService<GeologyIndexer>();
-builder.Services.AddHostedService<IpripiIndexer>();
+builder.Services.AddSingleton<GeologyIndexer>();
+builder.Services.AddSingleton<IpripiIndexer>();
 builder.Services.AddSingleton<TA.Server.Documents.DocumentService>();
 builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());
 builder.Services.AddHostedService<TcpService>();
 builder.Services.AddHostedService<LocalMcpService>();
-// Gli eventi filesystem non avviano scansioni fuori dalla cadenza oraria.
+// Gli eventi filesystem non avviano scansioni fuori dalla scansione iniziale e giornaliera.
 using var host = builder.Build();
 var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
 lifetime.ApplicationStarted.Register(() => StartupLog.Write("Host avviato; attendere TCP pronto per la disponibilita delle connessioni."));

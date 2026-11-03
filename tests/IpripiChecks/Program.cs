@@ -145,8 +145,8 @@ internal static class Program
         Check(indexed.Documents.Any(d => d.FileName.EndsWith(".docx")) && indexed.Documents.All(d => d.Category is "C" or "A"), "Indice giornaliero include DOCX ed esclude Gare");
         Check(File.Exists(Path.Combine(service.Root,"candidati.json")) && service.Query(new(),default).Documents.Any(d => d.FileName.EndsWith(".docx")), "Catalogo candidati JSON consultabile senza rileggere tutti i file");
         Check((await service.ReadAsync(new(wordRow.Id,"C26001"),default)).Text.Contains("Progettista di prova"), "Indice individua direttamente l'unità del documento senza ricerca globale");
-        Check(IpripiIndexer.NextRun(new DateTime(2026,11,3,10,0,0,DateTimeKind.Utc)) == new DateTime(2026,11,3,22,0,0,DateTimeKind.Utc), "Scansione giornaliera alle 23 italiane");
-        Check(IpripiIndexer.NextRun(new DateTime(2026,7,3,10,0,0,DateTimeKind.Utc)) == new DateTime(2026,7,3,21,0,0,DateTimeKind.Utc), "Scansione giornaliera rispetta ora legale italiana");
+        Check(IpripiIndexer.NextRun(new DateTime(2026,11,3,10,0,0,DateTimeKind.Utc)) == new DateTime(2026,11,3,23,0,0,DateTimeKind.Utc), "Scansione giornaliera alle 00:00 italiane");
+        Check(IpripiIndexer.NextRun(new DateTime(2026,7,3,10,0,0,DateTimeKind.Utc)) == new DateTime(2026,7,3,22,0,0,DateTimeKind.Utc), "Scansione giornaliera rispetta ora legale italiana");
         return row with { Saved=saved };
     }
 }

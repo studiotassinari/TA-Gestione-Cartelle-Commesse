@@ -162,7 +162,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             lock (gate) latest = state.Snapshot!;
             persistence.Enqueue(latest, source.Token);
             await persistence.Completion;
-            lock (gate) state = state with { Message = $"Metadati verificati per {completed} cartelle. Prossima elaborazione oraria." };
+            lock (gate) state = state with { Message = $"Metadati verificati per {completed} cartelle. Prossima elaborazione giornaliera." };
             logger.LogInformation("Metadati {Category}: completati {Count}, durata {Seconds:F1}s", prefix, completed, (DateTime.UtcNow - started).TotalSeconds);
         }
         catch (OperationCanceledException) { lock (gate) { progress=progress with {HasErrors=true}; state = state with { Message = "Metadati interrotti; risultati disponibili conservati" }; } }

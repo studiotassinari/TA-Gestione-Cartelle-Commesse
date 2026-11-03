@@ -15,7 +15,7 @@ public static class DailyReports
     public static string Latest(string directory)
     {
         var file = Directory.Exists(directory) ? Directory.EnumerateFiles(directory, "*.html").OrderDescending().FirstOrDefault() : null;
-        return file == null ? throw new IOException("Nessun report disponibile. Attendere il completamento della prima scansione oraria.") : File.ReadAllText(file);
+        return file == null ? throw new IOException("Nessun report disponibile. Attendere il completamento della prima scansione giornaliera.") : File.ReadAllText(file);
     }
     public static void Save(string directory, DateTime date, IEnumerable<CategoryWorker> workers, DateTimeOffset started, bool hourly = false)
     {
