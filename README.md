@@ -1,10 +1,14 @@
-# TA-Gestione Cartelle Commesse — 2.19.1
+# TA-Gestione Cartelle Commesse — 2.20.0
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 
-## Correzione 2.19.1: nessun log automatico del client
+## Novità 2.20.0: catalogo MUR e mappa
 
-Rimossa la scrittura automatica di heartbeat, connessioni e differenze nella cartella condivisa `TA/Client/log` e nella cartella locale di ripiego. Aggiornare e riavviare tutti i client: quelli precedenti continuano a scrivere. I file già esistenti non vengono eliminati. I messaggi nell'interfaccia, i registri server/aggiornatore e le esportazioni esplicite restano disponibili. Server e MCP 2.19.0 sono compatibili; per questa correzione non serve riavviare il tunnel già aggiornato.
+Catalogo MUR A.1/D.1 con progettisti, ruoli, tipologie, indirizzo, comune e coordinate. Ricerca esclusivamente in Commesse e Archivio, anche nei PDF di ZIP/7z; Gare escluse. Mappa OpenStreetMap con selezione collegata all'elenco. Le analisi e le fonti sono conservate nei JSON del server; gli originali restano in sola lettura. I dati mancanti richiedono analisi su richiesta tramite ChatGPT. Aggiornare client, server e MCP alla 2.20.0; il tunnel va avviato manualmente sulla VM con la chiave runtime.
+
+## Politica delle scritture client
+
+Il client non salva log di connessione, heartbeat o notifiche su disco o sulle condivisioni. Anche l'aggiornatore client mostra i messaggi soltanto nella propria finestra. Restano consentiti aggiornamenti, impostazioni, copie locali per aprire i documenti ed esportazioni richieste dall'utente. Download, file scompattati e backup dell'aggiornatore client utilizzano `%LOCALAPPDATA%\Tassinari\CommesseClient\Updates`, non la cartella da cui è stato scaricato o avviato l'installatore. I registri del servizio sulla VM restano disponibili per la diagnostica. Le vecchie copie del client devono essere aggiornate e riavviate per interrompere le loro scritture.
 
 ## Novità 2.19.0: analisi IPRiPI
 
@@ -12,11 +16,11 @@ La nuova finestra **Analisi > IPRiPI — analisi MUR A.1/D.1** consulta PDF e ri
 
 ## Scarica la versione di produzione
 
-- [Aggiornatore diretto 2.19.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.19.1/TA-Commesse-Aggiornatore-2.19.1.exe) — prima Server sulla VM, poi Client sui PC.
-- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.19.1/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.19.1.exe)
-- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.19.1/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.19.1.exe)
-- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.19.1/TA-Commesse-MCP-2.19.1.zip)
-- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.19.1)
+- [Aggiornatore diretto 2.20.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.20.0/TA-Commesse-Aggiornatore-2.20.0.exe) — prima Server sulla VM, poi Client sui PC.
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.20.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.20.0.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.20.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.20.0.exe)
+- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.20.0/TA-Commesse-MCP-2.20.0.zip)
+- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.20.0)
 
 Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. L’aggiornatore del server attende anche la chiusura effettiva del processo prima di sostituire i file. I pacchetti non sono firmati digitalmente.
 

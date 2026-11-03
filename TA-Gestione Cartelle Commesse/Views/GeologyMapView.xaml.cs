@@ -14,6 +14,7 @@ public partial class GeologyMapView : UserControl, IDisposable
     private bool ready, starting, disposed;
     public event Action<string>? ReportSelected;
     public event Action<double, double>? PositionPicked;
+    public bool AllowPositionPicking { get; set; } = true;
     public GeologyMapView() { InitializeComponent(); Loaded += async (_, _) => await StartAsync(); }
     public void SetReports(IEnumerable<GeologicalReport> reports) { rows = reports.Where(r => r.HasPosition).ToArray(); Send("rows", rows.Select(r => new { id = r.Id, title = r.Title, code = r.ProjectLabel, lat = r.Latitude, lng = r.Longitude })); }
     public void Select(string? id) { selection = id; Send("selection", id); }
@@ -55,11 +56,11 @@ public partial class GeologyMapView : UserControl, IDisposable
                         case "selected":
                             if (json.RootElement.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String && rows.Any(r => r.Id == id.GetString())) ReportSelected?.Invoke(id.GetString()!);
                             break;
-                        case "position":
+                        case "position" when AllowPositionPicking:
                             if (selection != null && json.RootElement.TryGetProperty("lat", out var lat) && json.RootElement.TryGetProperty("lng", out var lng) && lat.ValueKind == JsonValueKind.Number && lng.ValueKind == JsonValueKind.Number && lat.TryGetDouble(out var a) && lng.TryGetDouble(out var b) && a is >= -90 and <= 90 && b is >= -180 and <= 180) PositionPicked?.Invoke(a, b);
                             break;
                         case "tiles-error": MapStatus.Text = "Cartografia non disponibile. Elenco e posizioni restano consultabili; verifica la connessione Internet."; break;
-                        case "tiles-loaded": MapStatus.Text = "Clic sui simboli: selezione. Clic destro sulla mappa: proponi una posizione per la relazione selezionata."; break;
+                        case "tiles-loaded": MapStatus.Text = AllowPositionPicking ? "Clic sui simboli: selezione. Clic destro sulla mappa: proponi una posizione per la relazione selezionata." : "Clic sui simboli: seleziona il modulo nel catalogo. Posizioni senza coordinate o da rianalizzare non mostrate."; break;
                     }
                 }
                 catch (JsonException) { /* I messaggi della pagina non sono comandi generici. */ }

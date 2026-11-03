@@ -39,7 +39,8 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
             ?? throw new IOException("Inventario non disponibile: non equivale ad assenza di MUR.");
         var watch = Stopwatch.StartNew(); var rows = new List<IpripiDocument>();
         var warnings = run.Issues.Take(10).ToList();
-        foreach (var manifest in run.Inventories.Where(m => code.Length == 0 || m.Unit.Code.StartsWith(code, StringComparison.OrdinalIgnoreCase)))
+        foreach (var manifest in run.Inventories.Where(m => m.Unit.Category is "C" or "A")
+            .Where(m => code.Length == 0 || m.Unit.Code.StartsWith(code, StringComparison.OrdinalIgnoreCase)))
         {
             if (!manifest.Complete && warnings.Count < 20) warnings.Add("Inventario parziale: " + manifest.Unit.Code);
             foreach (var entry in store.Entries(manifest))
@@ -78,13 +79,15 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
         if (query.Code == null || query.Code.Length > 40 || query.Search == null || query.Search.Length > 300 || query.Offset < 0 || query.Offset > 50000 || query.Limit is < 1 or > 100 || query.Offset > 0 && query.Version == null)
             throw new ArgumentException("Pagina IPRiPI non valida.");
         // Include anche analisi di PDF rinominati e documenti non più censiti, senza perderne lo storico.
-        var saved = ReadIndex().Where(r => query.Code.Length == 0 || r.Source.ProjectCode.StartsWith(query.Code, StringComparison.OrdinalIgnoreCase)).ToDictionary(r => r.Source.Id);
+        var saved = ReadIndex().Where(r => r.Source.Category is "C" or "A")
+            .Where(r => query.Code.Length == 0 || r.Source.ProjectCode.StartsWith(query.Code, StringComparison.OrdinalIgnoreCase)).ToDictionary(r => r.Source.Id);
         var (sources, warnings) = Sources(query.Code, query.AllPdfs, token, saved.Keys.ToHashSet());
         var ids = sources.Select(r => r.Id).ToHashSet();
         var rows = sources.Where(r => query.AllPdfs || IsCandidate(r.FileName) || saved.ContainsKey(r.Id))
             .Select(r => r with { Saved = saved.GetValueOrDefault(r.Id) })
             .Concat(saved.Values.Where(s => !ids.Contains(s.Source.Id)).Select(s => s.Source with { Saved = s, OriginalAvailable = false }))
-            .Where(r => string.Join(' ', r.ProjectCode, r.FileName, r.Codes, r.Status).Contains(query.Search, StringComparison.OrdinalIgnoreCase))
+            .Where(r => !query.RecognizedOnly || r.FormType == "MUR A.1/D.1")
+            .Where(r => string.Join(' ', r.ProjectCode, r.Year, r.FileName, r.Codes, r.Status, r.Designers, r.Typologies, r.Address, r.Municipality, r.Location).Contains(query.Search, StringComparison.OrdinalIgnoreCase))
             .OrderBy(r => r.ProjectCode, StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal).ToList();
         var version = Hash(JsonSerializer.Serialize(new { rows, warnings }));
         if (query.Version != null && query.Version != version) throw new IOException("Catalogo cambiato: ripartire dalla prima pagina.");
@@ -142,6 +145,20 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
             d.Outcome is not ("IPRiPI individuati" or "Da verificare" or "Nessun IPRiPI dichiarato" or "Non pertinente" or "Non leggibile") ||
             d.Interventions == null || d.Interventions.Count > 50 || !Quotes(d.FormEvidence) ||
             d.Warnings == null || d.Warnings.Count > 20 || d.Warnings.Any(s => !Text(s,500))) throw new ArgumentException("Analisi IPRiPI non valida.");
+        foreach (var designer in d.Designers ?? [])
+        {
+            if (designer == null || !Text(designer.Name,200) || string.IsNullOrWhiteSpace(designer.Name) ||
+                !Text(designer.Role,200) || string.IsNullOrWhiteSpace(designer.Role) || !Quotes(designer.Evidence) || designer.Evidence.Count == 0 ||
+                !designer.Evidence.Any(e => e.Quote.Contains(designer.Name, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException("Progettista privo di nome, ruolo o citazione del nominativo.");
+        }
+        if (d.Designers?.Count > 20) throw new ArgumentException("Troppi progettisti nel modulo.");
+        if (d.Position is { } position && (!Text(position.Address,500) || !Text(position.Municipality,200) ||
+            !Text(position.Source,1000) || string.IsNullOrWhiteSpace(position.Source) || !Quotes(position.Evidence) || position.Evidence.Count == 0 ||
+            position.Latitude.HasValue != position.Longitude.HasValue ||
+            position.Latitude is { } lat && (!double.IsFinite(lat) || lat < -90 || lat > 90) ||
+            position.Longitude is { } lon && (!double.IsFinite(lon) || lon < -180 || lon > 180)))
+            throw new ArgumentException("Posizione non valida: indicare fonte, citazioni e coordinate WGS84 valide oppure entrambe assenti.");
         if (d.Outcome == "Non leggibile")
         {
             if (d.FormType != "Non leggibile" || d.Interventions.Count != 0) throw new ArgumentException("Un PDF non leggibile non consente classificazioni.");

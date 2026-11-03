@@ -62,7 +62,7 @@ internal static class Program
         Check(IpripiService.IsCandidate("MUR_A1_D1.pdf") && IpripiService.IsCandidate("MUR A.1 D.1 firmato.pdf") && !IpripiService.IsCandidate("muro.pdf"), "Ricerca nomi MUR senza falso positivo muro");
         var settings = new ServerSettings { JobsRoot = Path.Combine(root,"lavori"), BidsRoot = Path.Combine(root,"gare"), ArchivedJobsRoot = Path.Combine(root,"archivio"), ArchiveFolder = Path.Combine(root,"json") };
         var folder = Directory.CreateDirectory(Path.Combine(settings.JobsRoot,"2026","C26001 - Prova")).FullName;
-        const string text = "MUR A.1/D.1. Intervento B.4.4.a: demolizione di divisori interni non strutturali.";
+        const string text = "MUR A.1/D.1. Intervento B.4.4.a: demolizione di divisori interni non strutturali. Progettista Mario Rossi. Via Roma 10, Bologna.";
         var path = Path.Combine(folder,"MUR_A1_D1.pdf"); File.WriteAllBytes(path,Pdf(text));
         File.WriteAllBytes(Path.Combine(folder,"rinominato.pdf"),Pdf(text));
         var zipPath = Path.Combine(folder,"pratica.zip");
@@ -73,10 +73,18 @@ internal static class Program
         InventoryEntry Entry(string name) => new(name,"file",Bytes:new FileInfo(Path.Combine(folder,name)).Length,ModifiedUtc:File.GetLastWriteTimeUtc(Path.Combine(folder,name)));
         void Inventory(bool complete = true) => store.Save(unit,new([Entry("MUR_A1_D1.pdf"),Entry("rinominato.pdf"),new("pratica.zip","archive",Bytes:new FileInfo(zipPath).Length,ModifiedUtc:File.GetLastWriteTimeUtc(zipPath)),new("MUR_A1_D1.pdf","file","pratica.zip",100,stamp)],[],complete),default);
         Inventory();
+        var bidUnit = unit with { Id = new string('B',64), Category = "G", Code = "G26001" };
+        store.Save(bidUnit,new([Entry("MUR_A1_D1.pdf")],[],true),default);
+        var archiveUnit = unit with { Id = new string('C',64), Category = "A", Code = "C25001", Year = "2025" };
+        store.Save(archiveUnit,new([new("MUR_A1_D1.pdf","file","pratica.zip",100,stamp)],[],true),default);
         var scans = new ScanCoordinator(settings,NullLogger<ScanCoordinator>.Instance,new ChangeHub(false),new AnalysisService(settings,NullLogger<AnalysisService>.Instance));
         var service = new IpripiService(settings,new DocumentService(settings,scans));
         var catalog = service.Query(new(Code:"C26001"),default);
+        Check(service.Query(new(Code:"G26001",AllPdfs:true),default).Total == 0 && service.Query(new(),default).Documents.All(d => d.Category is "C" or "A"),
+            "Gare escluse dalla ricerca MUR anche con Tutti i PDF");
         Check(catalog.Total == 2 && service.Query(new(Code:"C26001",AllPdfs:true),default).Total == 3, "PDF candidati e rinominati, inclusi ZIP");
+        var archiveRow = service.Query(new(Code:"C25001"),default).Documents.Single();
+        Check(archiveRow.Category == "A" && (await service.ReadAsync(new(archiveRow.Id,"C25001"),default)).Text.Contains("MUR"), "Ricerca e lettura MUR anche nell'Archivio");
         var row = catalog.Documents.Single(r => r.ArchiveEntry == null);
         var page = await service.ReadAsync(new(row.Id,"C26001"),default);
         var quote = "B.4.4.a"; var form = "MUR A.1/D.1";
@@ -84,11 +92,23 @@ internal static class Program
         var draft = new IpripiAnalysisDraft(row.Id,"C26001",row.SourceFingerprint,page.Version,"MUR A.1/D.1","IPRiPI individuati","Demolizione di divisori dichiarata nel modulo.",[item],[new(page.Text.IndexOf(form,StringComparison.Ordinal),form)],[]);
         await Denied<UnauthorizedAccessException>(() => service.SaveAsync(draft,"test",default));
         settings.EnableMcpIpripiWrites = true;
+        var designerQuote = "Progettista Mario Rossi";
+        var addressQuote = "Via Roma 10, Bologna";
+        draft = draft with { Designers = [new("Mario Rossi", "Progettista", [new(page.Text.IndexOf(designerQuote, StringComparison.Ordinal), designerQuote)])],
+            Position = new("Via Roma 10", "Bologna", 44.49, 11.34, "Coordinate sintetiche di test", [new(page.Text.IndexOf(addressQuote, StringComparison.Ordinal), addressQuote)]) };
+        await Denied<ArgumentException>(() => service.SaveAsync(draft with { Designers = [new("Persona inventata", "Progettista", draft.Designers[0].Evidence)] }, "test", default));
+        await Denied<ArgumentException>(() => service.SaveAsync(draft with { Position = draft.Position with { Latitude = 100 } }, "test", default));
+        await Denied<ArgumentException>(() => service.SaveAsync(draft with { Position = draft.Position with { Longitude = null } }, "test", default));
         await Denied<ArgumentException>(() => service.SaveAsync(draft with {Interventions=[item with {RuleCode="B.99.1"}]},"test",default));
         await Denied<ArgumentException>(() => service.SaveAsync(draft with {Interventions=[item with {Level="L2"}]},"test",default));
         await Denied<ArgumentException>(() => service.SaveAsync(draft with {Interventions=[item with {Basis="Dedotto",MissingData=["Dimensioni"]}]},"test",default));
         await Denied<ArgumentException>(() => service.SaveAsync(draft with {FormEvidence=[new(0,"Citazione inventata")]},"test",default));
         var saved = await service.SaveAsync(draft,"utente-test",default);
+        Check(service.Query(new(Search: "Mario Rossi", RecognizedOnly: true), default).Total == 1 &&
+            service.Query(new(Search: "divisori"), default).Total == 1 && service.Query(new(Search: "Bologna"), default).Total == 1,
+            "Catalogo ricercabile per progettista, tipologia e indirizzo");
+        Check(new IpripiService(settings,new DocumentService(settings,scans)).Query(new(RecognizedOnly:true),default).Documents.Single().Latitude == 44.49,
+            "Posizione e progettisti conservati nei JSON dopo riavvio");
         await Denied<IOException>(() => service.SaveAsync(draft,"altro-utente",default));
         Check(service.Query(new(),default).Documents.Single(r => r.Id==row.Id).AnalysisCurrent && saved.SavedBy=="utente-test", "Salvataggio persistente, identità e concorrenza");
         await Denied<IOException>(() => Task.Run(() => service.Query(new(Version:catalog.Version),default)));

@@ -17,7 +17,12 @@ public sealed class UpdateEngine(string component, string root, Action<string, b
     private string Interface => component == "Server" ? Path.Combine(root, "Manager", "TA.ServiceManager.exe") : Exe;
     private void Note(string message, bool show = true)
     {
-        Directory.CreateDirectory(Cache); File.AppendAllText(Path.Combine(Cache, "update.log"), $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}");
+        // Sul client i messaggi rimangono soltanto nella finestra dell'aggiornatore.
+        if (component == "Server")
+        {
+            Directory.CreateDirectory(Cache);
+            File.AppendAllText(Path.Combine(Cache, "update.log"), $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}");
+        }
         progress(message, show);
     }
     public static bool IsAdministrator()

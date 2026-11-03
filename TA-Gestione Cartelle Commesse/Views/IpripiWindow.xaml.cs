@@ -11,8 +11,24 @@ public partial class IpripiWindow : Window
     public IpripiWindow(IpripiViewModel model)
     {
         InitializeComponent(); this.model = model; DataContext = model;
+        Map.AllowPositionPicking = false;
+        void RefreshMap() => Map.SetReports(model.Rows.Select(r => new Contracts.GeologicalReport
+        {
+            Id = r.Id, Title = r.FileName, ProjectCode = r.ProjectCode, Address = r.Address, Municipality = r.Municipality,
+            Latitude = r.AnalysisCurrent ? r.Latitude : null, Longitude = r.AnalysisCurrent ? r.Longitude : null
+        }));
+        void SelectionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(model.CountText)) RefreshMap();
+            if (e.PropertyName != nameof(model.Selected)) return;
+            Map.Select(model.Selected?.Id);
+            if (model.Selected != null) ReportsGrid.ScrollIntoView(model.Selected);
+        }
+        void Pick(string id) => model.Selected = model.Rows.FirstOrDefault(r => r.Id == id);
+        model.PropertyChanged += SelectionChanged;
+        Map.ReportSelected += Pick;
         Loaded += async (_, _) => await model.LoadAsync();
-        Closed += (_, _) => model.Dispose();
+        Closed += (_, _) => { model.PropertyChanged -= SelectionChanged; Map.ReportSelected -= Pick; Map.Dispose(); model.Dispose(); };
     }
     private void Copy_Click(object sender, RoutedEventArgs e)
     {
