@@ -44,14 +44,14 @@ try
     await coordinator.StartAsync(token);
     while(coordinator.Progress.FinishedUtc==null)await Task.Delay(30,token);
     Check(!coordinator.Progress.IsRunning && coordinator.Progress.NextRunUtc>coordinator.Progress.FinishedUtc,"Coordinatore completa la prima scansione e pianifica la successiva");
-    Check(coordinator.DailyReport().Contains("Report orario"),"Report orario leggibile dal server");
+    Check(coordinator.DailyReport().Contains("Report giornaliero"),"Report giornaliero leggibile dal server");
     var completed=coordinator.Progress.FinishedUtc;
     await coordinator.StopAsync(token);coordinator.Dispose();coordinator=null;
-    Check(HourlySchedule.Load(Path.Combine(cache,"report-orari"))==completed,"Checkpoint persistente solo dopo report completato");
+    Check(HourlySchedule.Load(Path.Combine(cache,"report-giornalieri"))==completed,"Checkpoint persistente solo dopo report completato");
     coordinator=new(settings,NullLogger<ScanCoordinator>.Instance,new(false),analysis);
     await coordinator.StartAsync(token);
-    while(coordinator.Progress.Phase=="Avvio")await Task.Delay(30,token);
-    Check(!coordinator.Progress.IsRunning && coordinator.Progress.FinishedUtc==completed,"Riavvio conserva lo slot completato senza riscan immediata");
+    while(coordinator.Progress.FinishedUtc==null)await Task.Delay(30,token);
+    Check(!coordinator.Progress.IsRunning && coordinator.Progress.FinishedUtc>completed,"Riavvio esegue una nuova scansione completa anche con checkpoint recente");
     await coordinator.StopAsync(token);coordinator.Dispose();coordinator=null;
     Directory.Move(jobs,jobs+"-offline");
     worker.Start(token);await worker.Completion.WaitAsync(token);

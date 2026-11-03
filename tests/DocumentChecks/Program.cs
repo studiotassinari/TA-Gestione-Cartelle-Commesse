@@ -14,6 +14,21 @@ static void Check(bool value,string message){if(!value)throw new Exception(messa
 static void Denied(Action action,string message){try{action();}catch(Exception e)when(e is ArgumentException or IOException or InvalidDataException or UnauthorizedAccessException){Check(true,message);return;}throw new Exception("Non rifiutato: "+message);}
 static byte[] Package(params (string Name,string Xml)[] parts)
 {using var memory=new MemoryStream();using(var zip=new ZipArchive(memory,ZipArchiveMode.Create,true))foreach(var part in parts){using var w=new StreamWriter(zip.CreateEntry(part.Name).Open(),new UTF8Encoding(false));w.Write(part.Xml);}return memory.ToArray();}
+static byte[] FormPdf()
+{
+    var objects = new[] {
+        "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R 5 0 R] >> >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> /Annots [4 0 R 5 0 R] >>",
+        "<< /Type /Annot /Subtype /Widget /FT /Tx /T (Comune) /TU (Comune intervento) /V (LUGO) /Rect [10 10 100 30] /P 3 0 R >>",
+        "<< /Type /Annot /Subtype /Widget /FT /Btn /T (IPRiPI) /V /Yes /AS /Yes /Rect [10 40 30 60] /P 3 0 R >>" };
+    var b = new StringBuilder("%PDF-1.4\n"); var offsets = new List<int>();
+    for (int i=0;i<objects.Length;i++) { offsets.Add(b.Length); b.Append($"{i+1} 0 obj\n{objects[i]}\nendobj\n"); }
+    int xref=b.Length; b.Append($"xref\n0 {objects.Length+1}\n0000000000 65535 f \n");
+    foreach (var offset in offsets) b.Append($"{offset:D10} 00000 n \n");
+    b.Append($"trailer\n<< /Size {objects.Length+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+    return Encoding.ASCII.GetBytes(b.ToString());
+}
 var root=Path.Combine(Path.GetTempPath(),"TA-DocumentChecks-"+Guid.NewGuid().ToString("N"));
 var source=Directory.CreateDirectory(Path.Combine(root,"lavori")).FullName;
 var folder=Directory.CreateDirectory(Path.Combine(source,"2026","C26198 - Cliente - Progetto")).FullName;
@@ -21,6 +36,8 @@ var id=new string('A',64);var text="Documento di prova: costo 125,00 euro. Nessu
 try
 {
     File.WriteAllText(Path.Combine(folder,"relazione.txt"),text,new UTF8Encoding(false));
+    var interactive=DocumentText.Read(FormPdf(),"modulo.pdf");
+    Check(interactive.Text.Contains("LUGO") && interactive.Text.Contains("IPRiPI") && interactive.Text.Contains("True"),"PDF: valori AcroForm testuali e casella selezionata anche senza testo di pagina");
     var docx=Package(("word/document.xml","<w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'><w:body><w:p><w:r><w:t>Relazione Word con tabella</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>Valore 42</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>"));
     File.WriteAllBytes(Path.Combine(folder,"relazione.docx"),docx);
     var xlsx=Package(("xl/workbook.xml","<workbook xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships'><sheets><sheet name='Computo' sheetId='1' r:id='r1'/></sheets></workbook>"),
