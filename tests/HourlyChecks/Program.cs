@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using TA.Server;
 using TA_Gestione_Cartelle_Commesse.Contracts;
 using TA_Gestione_Cartelle_Commesse.Models;
@@ -35,6 +36,19 @@ try
     release.Set();await worker.Completion.WaitAsync(token);
     Check(!worker.Progress.IsRunning && worker.Progress.Percentage==100 && !worker.Progress.HasErrors,"Lettura completata aggiorna il contatore");
     var settings=new ServerSettings{JobsRoot=jobs,BidsRoot=bids,ArchivedJobsRoot=archives,ArchiveFolder=cache};
+    var registrations = new ServiceCollection();
+    registrations.AddLogging(); registrations.AddSingleton(settings); registrations.AddSingleton(new ChangeHub(false));
+    registrations.AddSingleton<AnalysisService>(); registrations.AddSingleton<ScanCoordinator>();
+    registrations.AddSingleton<TA.Server.Documents.DocumentService>(); registrations.AddSingleton<IpripiService>();
+    registrations.AddSingleton<IpripiIndexer>(); registrations.AddSingleton<GeologyIndexer>();
+    using (var provider = registrations.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild=true, ValidateScopes=true }))
+    {
+        var integrated = provider.GetRequiredService<ScanCoordinator>();
+        await integrated.StartAsync(token);
+        while (integrated.Progress.FinishedUtc == null) await Task.Delay(30, token);
+        await integrated.StopAsync(token);
+        Check(File.Exists(Path.Combine(cache,"ipripi","candidati.json")),"Host completo: nessuna dipendenza circolare e catalogo MUR aggiornato dopo inventario");
+    }
     var analysis=new AnalysisService(settings,NullLogger<AnalysisService>.Instance);
     var progress=new List<ScanProgress>();
     await analysis.RunAsync([worker.State,new('G',bids,false,"","",null),new('A',archives,false,"","",null)],token,progress.Add);

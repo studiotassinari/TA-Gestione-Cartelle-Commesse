@@ -1,9 +1,10 @@
 using TA_Gestione_Cartelle_Commesse.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 namespace TA.Server;
 
 // Una sola elaborazione giornaliera comprende elenchi, metadati e inventario dei nomi.
 public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordinator> logger, ChangeHub changes, AnalysisService analysis,
-    IpripiIndexer? mur = null, GeologyIndexer? geology = null) : BackgroundService
+    IServiceProvider? catalogServices = null) : BackgroundService
 {
     private readonly Dictionary<char, CategoryWorker> workers = new()
     {
@@ -58,8 +59,16 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
                 p => { warnings |= p.HasErrors; SetProgress(p with { StartedUtc = started, HasErrors = warnings }); });
             SetProgress(new(true, "Salvataggio report", 0, null, "Pubblicazione dei risultati", started));
             // I cataloghi devono vedere gli inventari appena completati, non quelli del giorno precedente.
-            if (mur != null) { SetProgress(new(true, "Catalogo MUR", 0, null, "Aggiornamento JSON MUR", started)); await Task.Run(() => mur.Refresh(token), token); }
-            if (geology != null) { SetProgress(new(true, "Catalogo geologico", 0, null, "Aggiornamento JSON geologia", started)); await Task.Run(() => geology.Refresh(token), token); }
+            // Risoluzione dopo la costruzione dell'host: DocumentService dipende dal coordinatore.
+            if (catalogServices != null)
+            {
+                var mur = catalogServices.GetRequiredService<IpripiIndexer>();
+                var geology = catalogServices.GetRequiredService<GeologyIndexer>();
+                SetProgress(new(true, "Catalogo MUR", 0, null, "Aggiornamento JSON MUR", started));
+                await Task.Run(() => mur.Refresh(token), token);
+                SetProgress(new(true, "Catalogo geologico", 0, null, "Aggiornamento JSON geologia", started));
+                await Task.Run(() => geology.Refresh(token), token);
+            }
             DailyReports.Save(ReportsDirectory, DailyReports.ItalianTime(new DateTimeOffset(started)), workers.Values, new DateTimeOffset(started));
             var finished = DateTime.UtcNow;
             HourlySchedule.Save(ReportsDirectory, finished);
