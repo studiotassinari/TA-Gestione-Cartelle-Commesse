@@ -67,7 +67,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.19.0"
+          $version = "2.19.1"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -269,10 +269,9 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
-          Nuova finestra Analisi > IPRiPI per i PDF MUR A.1/D.1: ricerca nell'inventario, risultati per commessa, citazioni e storico delle revisioni. Classificazione proposta tramite il plugin ChatGPT secondo la DGR Emilia-Romagna 2272/2016, Allegato 1; nessuna API OpenAI dal server.
-          Quattro nuovi strumenti MCP: cerca_mur_ipripi, regole_ipripi, leggi_mur_ipripi, salva_analisi_ipripi. Salvataggio disattivato per impostazione predefinita: abilitare Server.EnableMcpIpripiWrites nella configurazione esistente e riavviare il servizio.
-          Aggiornare Server, Client e pacchetto MCP alla 2.19.0. Arrestare il vecchio tunnel con Ctrl+C, avviare Start-McpTunnel.ps1 dal nuovo pacchetto con gli stessi parametri e reinserire la chiave runtime nel prompt locale. Ricaricare gli strumenti del plugin. Guida inclusa: IPRIPI.md.
-          Gli originali restano in sola lettura. Lettura testuale senza OCR: scansioni e caselle grafiche richiedono controllo visivo. Risultati da verificare dal progettista; i test sintetici non misurano l'accuratezza di ChatGPT sui moduli reali.
+          Disattivati i log automatici del client: non viene più creata la cartella condivisa TA/Client/log e non vengono scritti registri locali di ripiego. Messaggi di connessione, heartbeat e differenze restano disponibili nell'interfaccia senza salvataggio automatico su file.
+          Aggiornare tutti i client e riavviarli: le versioni precedenti continuano a scrivere finché rimangono in esecuzione. I log già esistenti non vengono cancellati automaticamente. Restano invariati i registri del servizio server, dell'aggiornatore e le esportazioni richieste dall'utente.
+          Le funzionalità IPRiPI della 2.19.0 sono incluse. Server e tunnel MCP 2.19.0 restano compatibili: questa correzione dei log non richiede il riavvio del tunnel già aggiornato. Per migrare un MCP precedente alla 2.19.0 seguire IPRIPI.md.
           Installatori, aggiornatore e pacchetti con impronte SHA256 e runtime incluso. Pacchetti non firmati digitalmente.
           '@
           # Salva le note UTF-8 in un file per preservare accenti e interruzioni di riga.
