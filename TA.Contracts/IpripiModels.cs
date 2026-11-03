@@ -14,7 +14,7 @@ public sealed record IpripiAnalysisDraft(string DocumentId, string Code, string 
 public sealed record IpripiAnalysisRecord(string Revision, DateTime SavedUtc, string SavedBy, IpripiDocument Source, IpripiAnalysisDraft Analysis);
 public sealed record IpripiDocument(string Id, string Category, string FolderId, string ProjectCode, string Year,
     string FileName, string PhysicalPath, string? ArchiveEntry, string SourceFingerprint, bool SourceComplete,
-    IpripiAnalysisRecord? Saved = null, bool OriginalAvailable = true)
+    IpripiAnalysisRecord? Saved = null, bool OriginalAvailable = true, string InventoryCode = "")
 {
     public bool AnalysisCurrent => OriginalAvailable && Saved?.Analysis.SourceFingerprint == SourceFingerprint;
     public string Status => Saved == null ? "Candidato da analizzare" : !OriginalAvailable ? "Originale non censito — analisi conservata" :
@@ -33,3 +33,5 @@ public sealed record IpripiPage(string Version, int Total, int Offset, int? Next
 public sealed record IpripiRule(string Code, string Text, List<string> Levels, int PdfPage);
 public sealed record IpripiRules(string Reference, string SourceUrl, string SourceSha256, string GeneralRequirements, List<IpripiRule> Rules);
 public sealed record IpripiAnalysisIndex(int SchemaVersion, List<IpripiAnalysisRecord> Records);
+public sealed record IpripiCandidateCatalog(int SchemaVersion, DateTime CheckedUtc, bool Running, List<IpripiDocument> Documents, List<string> Warnings);
+public sealed record IpripiUnitIndex(string Generation, List<IpripiDocument> Documents, int SchemaVersion = 0);

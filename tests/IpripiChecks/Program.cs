@@ -134,6 +134,19 @@ internal static class Program
         await Denied<UnauthorizedAccessException>(()=>Task.Run(()=>LocalCatalogPolicy.Validate(new("SaveIpripi",McpTool:"cerca_mur_ipripi",CorrelationId:Guid.NewGuid().ToString("N")))));
         LocalCatalogPolicy.Validate(new("SaveIpripi",McpTool:"salva_analisi_ipripi",CorrelationId:Guid.NewGuid().ToString("N")));
         Check(true,"Sessioni IPRiPI separate dalla geologia e policy strumento verificata");
+        using (var docx = ZipFile.Open(Path.Combine(folder,"MUR_A1_D1.docx"),ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(docx.CreateEntry("word/document.xml").Open()))
+            writer.Write("<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>MUR A.1/D.1 Progettista di prova</w:t></w:r></w:p></w:body></w:document>");
+        store.Save(unit,new([Entry("MUR_A1_D1.pdf"),Entry("MUR_A1_D1.docx")],[],true),default);
+        var wordRow = service.Query(new(Code:"C26001"),default).Documents.Single(d => d.FileName.EndsWith(".docx"));
+        Check((await service.ReadAsync(new(wordRow.Id,"C26001"),default)).Text.Contains("Progettista di prova"), "Lettura contenuto MUR DOCX attraverso il servizio");
+        var indexer = new IpripiIndexer(settings, service, NullLogger<IpripiIndexer>.Instance);
+        var indexed = indexer.Refresh(default);
+        Check(indexed.Documents.Any(d => d.FileName.EndsWith(".docx")) && indexed.Documents.All(d => d.Category is "C" or "A"), "Indice giornaliero include DOCX ed esclude Gare");
+        Check(File.Exists(Path.Combine(service.Root,"candidati.json")) && service.Query(new(),default).Documents.Any(d => d.FileName.EndsWith(".docx")), "Catalogo candidati JSON consultabile senza rileggere tutti i file");
+        Check((await service.ReadAsync(new(wordRow.Id,"C26001"),default)).Text.Contains("Progettista di prova"), "Indice individua direttamente l'unità del documento senza ricerca globale");
+        Check(IpripiIndexer.NextRun(new DateTime(2026,11,3,10,0,0,DateTimeKind.Utc)) == new DateTime(2026,11,3,22,0,0,DateTimeKind.Utc), "Scansione giornaliera alle 23 italiane");
+        Check(IpripiIndexer.NextRun(new DateTime(2026,7,3,10,0,0,DateTimeKind.Utc)) == new DateTime(2026,7,3,21,0,0,DateTimeKind.Utc), "Scansione giornaliera rispetta ora legale italiana");
         return row with { Saved=saved };
     }
 }

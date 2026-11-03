@@ -29,6 +29,7 @@ builder.Services.AddSingleton<FileSearchService>();
 builder.Services.AddSingleton<GeologyService>();
 builder.Services.AddSingleton<IpripiService>();
 builder.Services.AddHostedService<GeologyIndexer>();
+builder.Services.AddHostedService<IpripiIndexer>();
 builder.Services.AddSingleton<TA.Server.Documents.DocumentService>();
 builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
