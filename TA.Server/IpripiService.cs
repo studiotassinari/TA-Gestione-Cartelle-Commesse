@@ -13,7 +13,7 @@ namespace TA.Server;
 public sealed class IpripiService(ServerSettings settings, DocumentService documents)
 {
     private readonly IpripiEvidenceStore evidence = new();
-    private string Root
+    public string Root
     {
         get
         {
@@ -49,7 +49,7 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
                 if (watch.Elapsed > TimeSpan.FromSeconds(15)) throw new IOException("Ricerca troppo ampia: specificare la commessa.");
                 if (entry.Kind == "directory") continue;
                 var location = entry.Location ?? FileLocator.Locate(manifest.Unit, entry);
-                if (!location.Extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) ||
+                if (!Supported(location.Extension) ||
                     documentId != null && location.Id != documentId ||
                     !allPdfs && !IsCandidate(location.Name) && savedIds?.Contains(location.Id) != true) continue;
                 // Gli archivi e le date mancanti richiedono una nuova analisi dopo il ricensimento (scelta conservativa).
@@ -74,6 +74,16 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
             throw new InvalidDataException("Indice IPRiPI non valido; dati precedenti conservati.");
         return saved.Records;
     }
+    public static bool Supported(string extension) => extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) || extension.Equals(".docx", StringComparison.OrdinalIgnoreCase);
+    public HashSet<string> SavedIds() => ReadIndex().Select(r => r.Source.Id).ToHashSet();
+    public static IpripiDocument Describe(InventoryManifest manifest, InventoryEntry entry)
+    {
+        var location = entry.Location ?? FileLocator.Locate(manifest.Unit, entry);
+        var stamp = string.Join('|', location.Id, entry.Bytes, entry.ModifiedUtc?.ToString("O"),
+            entry.Container != null || entry.Bytes == null || entry.ModifiedUtc == null ? manifest.Generation : "");
+        return new(location.Id, manifest.Unit.Category, manifest.Unit.Id, manifest.Unit.Classification == "censita" ? manifest.Unit.Code : "",
+            manifest.Unit.Year, location.Name, location.PhysicalPath, location.InternalPath, Hash(stamp), manifest.Complete, InventoryCode: manifest.Unit.Code);
+    }
     public IpripiPage Query(IpripiQuery query, CancellationToken token)
     {
         if (query.Code == null || query.Code.Length > 40 || query.Search == null || query.Search.Length > 300 || query.Offset < 0 || query.Offset > 50000 || query.Limit is < 1 or > 100 || query.Offset > 0 && query.Version == null)
@@ -81,7 +91,16 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
         // Include anche analisi di PDF rinominati e documenti non più censiti, senza perderne lo storico.
         var saved = ReadIndex().Where(r => r.Source.Category is "C" or "A")
             .Where(r => query.Code.Length == 0 || r.Source.ProjectCode.StartsWith(query.Code, StringComparison.OrdinalIgnoreCase)).ToDictionary(r => r.Source.Id);
-        var (sources, warnings) = Sources(query.Code, query.AllPdfs, token, saved.Keys.ToHashSet());
+        var catalogPath = Path.Combine(Root, "candidati.json");
+        List<IpripiDocument> sources; List<string> warnings;
+        if (!query.AllPdfs && File.Exists(catalogPath))
+        {
+            var catalog = InventoryStore.Read<IpripiCandidateCatalog>(catalogPath);
+            sources = catalog.Documents.Where(r => r.Category is "C" or "A").Where(r => query.Code.Length == 0 || r.ProjectCode.StartsWith(query.Code, StringComparison.OrdinalIgnoreCase)).ToList();
+            warnings = catalog.Warnings.ToList();
+            warnings.Insert(0, "Scansione MUR: " + catalog.CheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") + (catalog.Running ? " — in corso" : " — completata"));
+        }
+        else (sources, warnings) = Sources(query.Code, query.AllPdfs, token, saved.Keys.ToHashSet());
         var ids = sources.Select(r => r.Id).ToHashSet();
         var rows = sources.Where(r => query.AllPdfs || IsCandidate(r.FileName) || saved.ContainsKey(r.Id))
             .Select(r => r with { Saved = saved.GetValueOrDefault(r.Id) })
@@ -94,8 +113,32 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
         return new(version, rows.Count, query.Offset, query.Offset + query.Limit < rows.Count ? query.Offset + query.Limit : null,
             rows.Skip(query.Offset).Take(query.Limit).ToList(), warnings);
     }
-    private IpripiDocument Find(string id, string code, CancellationToken token) => Sources(code, true, token, documentId: id).Rows.SingleOrDefault(r => r.Id == id)
-        ?? throw new KeyNotFoundException("PDF non presente nell'inventario della commessa: aggiornare la ricerca.");
+    private IpripiDocument Find(string id, string code, CancellationToken token)
+    {
+        var catalogPath = Path.Combine(Root, "candidati.json");
+        if (File.Exists(catalogPath) && InventoryStore.Read<IpripiCandidateCatalog>(catalogPath).Documents.FirstOrDefault(r => r.Id == id) is { } cached)
+        {
+            if (cached.Category is not ("C" or "A")) throw new ArgumentException("Categoria non prevista per il catalogo MUR.");
+            if (code.Length > 0 && !cached.ProjectCode.StartsWith(code, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Commessa diversa dal documento scelto.");
+            var inventoryCode = cached.InventoryCode.Length > 0 ? cached.InventoryCode : cached.ProjectCode;
+            if (inventoryCode.Length > 0)
+            {
+                var store = new InventoryStore(settings.ArchiveFolder);
+                var unit = new InventoryUnit(cached.FolderId,cached.Category,cached.Year,inventoryCode,"","","","");
+                var manifest = InventoryStore.Read<InventoryManifest>(Path.Combine(store.UnitDirectory(unit),"latest.json"));
+                if (!store.UnitDirectory(unit).Equals(store.UnitDirectory(manifest.Unit),StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Unità inventario MUR non coerente.");
+                foreach (var entry in store.Entries(manifest))
+                {
+                    token.ThrowIfCancellationRequested();
+                    var location = entry.Location ?? FileLocator.Locate(manifest.Unit,entry);
+                    if (location.Id == id && Supported(location.Extension)) return Describe(manifest,entry);
+                }
+                throw new KeyNotFoundException("Documento non più censito nella sua unità.");
+            }
+        }
+        return Sources(code, true, token, documentId: id).Rows.SingleOrDefault(r => r.Id == id)
+            ?? throw new KeyNotFoundException("PDF/DOCX non presente nell'inventario: aggiornare la ricerca.");
+    }
     public async Task<DocumentPage> ReadAsync(IpripiReadQuery query, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(query.DocumentId) || query.DocumentId.Length > 128) throw new ArgumentException("ID documento non valido.");

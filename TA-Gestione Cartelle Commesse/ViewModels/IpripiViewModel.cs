@@ -67,7 +67,7 @@ public sealed class IpripiViewModel : Observable, IDisposable
     {
         if (Selected == null) throw new InvalidOperationException("Seleziona prima un PDF da analizzare.");
         var row = Selected;
-        return $"Analizza e salva nel catalogo IPRiPI il PDF MUR A.1/D.1 selezionato della commessa {row.ProjectCode}: {row.FileName}. " +
+        return $"Analizza e salva nel catalogo IPRiPI il documento PDF/DOCX MUR A.1/D.1 selezionato della commessa {row.ProjectCode}: {row.FileName}. " +
             $"ID documento: {row.Id}. Usa il plugin TA – Gestione Commesse: inizia_consultazione con contenuti=true e analisiIpripi=true, " +
             "cerca_mur_ipripi, regole_ipripi, leggi_mur_ipripi e salva_analisi_ipripi. " +
             "Individua gli interventi secondo la DGR Emilia-Romagna 2272/2016, Allegato 1. " +

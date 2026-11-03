@@ -1,10 +1,14 @@
-# TA-Gestione Cartelle Commesse — 2.20.0
+# TA-Gestione Cartelle Commesse — 2.21.0
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 
-## Novità 2.20.0: catalogo MUR e mappa
+## Novità 2.21.0: censimento MUR giornaliero e DOCX
 
-Catalogo MUR A.1/D.1 con progettisti, ruoli, tipologie, indirizzo, comune e coordinate. Ricerca esclusivamente in Commesse e Archivio, anche nei PDF di ZIP/7z; Gare escluse. Mappa OpenStreetMap con selezione collegata all'elenco. Le analisi e le fonti sono conservate nei JSON del server; gli originali restano in sola lettura. I dati mancanti richiedono analisi su richiesta tramite ChatGPT. Aggiornare client, server e MCP alla 2.20.0; il tunnel va avviato manualmente sulla VM con la chiave runtime.
+Il catalogo MUR dispone di un indice JSON dedicato, generato a ogni avvio del servizio (anche dopo gli aggiornamenti) e ogni giorno alle **23:00, ora italiana**. Ricerca e apertura non ripetono più la scansione globale a ogni richiesta. PDF e DOCX sono censiti in Commesse e Archivio, incluse sottocartelle e contenitori ZIP/7z, con risultati progressivi e segnalazione delle fonti parziali. Le analisi salvate restano separate dal censimento dei nomi. Nessuna API OpenAI automatica: riconoscimento e compilazione avvengono tramite ChatGPT su richiesta. Corretto anche l'avvio manuale del tunnel con Windows PowerShell 5.1.
+
+## Catalogo MUR e mappa
+
+Catalogo MUR A.1/D.1 con progettisti, ruoli, tipologie, indirizzo, comune e coordinate. Ricerca esclusivamente in Commesse e Archivio, anche nei PDF di ZIP/7z; Gare escluse. Mappa OpenStreetMap con selezione collegata all'elenco. Le analisi e le fonti sono conservate nei JSON del server; gli originali restano in sola lettura. I dati mancanti richiedono analisi su richiesta tramite ChatGPT. Aggiornare client, server e MCP alla 2.21.0; il tunnel va avviato manualmente sulla VM con la chiave runtime.
 
 ## Politica delle scritture client
 
@@ -16,11 +20,11 @@ La nuova finestra **Analisi > IPRiPI — analisi MUR A.1/D.1** consulta PDF e ri
 
 ## Scarica la versione di produzione
 
-- [Aggiornatore diretto 2.20.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.20.0/TA-Commesse-Aggiornatore-2.20.0.exe) — prima Server sulla VM, poi Client sui PC.
-- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.20.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.20.0.exe)
-- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.20.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.20.0.exe)
-- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.20.0/TA-Commesse-MCP-2.20.0.zip)
-- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.20.0)
+- [Aggiornatore diretto 2.21.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.0/TA-Commesse-Aggiornatore-2.21.0.exe) — prima Server sulla VM, poi Client sui PC.
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.21.0.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.21.0.exe)
+- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.21.0/TA-Commesse-MCP-2.21.0.zip)
+- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.21.0)
 
 Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. L’aggiornatore del server attende anche la chiusura effettiva del processo prima di sostituire i file. I pacchetti non sono firmati digitalmente.
 

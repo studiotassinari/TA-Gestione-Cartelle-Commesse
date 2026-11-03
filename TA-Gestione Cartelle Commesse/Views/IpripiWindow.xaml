@@ -19,18 +19,18 @@
             <StackPanel Margin="0,0,12,6"><TextBlock Text="Codice commessa"/><TextBox Width="145" Padding="6" Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Codice commessa"/></StackPanel>
             <StackPanel Margin="0,0,12,6"><TextBlock Text="Progettista, tipologia, indirizzo o nome"/><TextBox Width="280" Padding="6" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Ricerca documenti"/></StackPanel>
             <CheckBox Content="Solo moduli riconosciuti" IsChecked="{Binding RecognizedOnly}" VerticalAlignment="Center" Margin="0,12,16,0"/>
-            <CheckBox Content="Tutti i PDF (anche rinominati)" IsChecked="{Binding AllPdfs}" VerticalAlignment="Center" Margin="0,12,16,0"/>
+            <CheckBox Content="Tutti i PDF/DOCX (anche rinominati)" IsChecked="{Binding AllPdfs}" VerticalAlignment="Center" Margin="0,12,16,0"/>
             <Button Content="Cerca / aggiorna" Command="{Binding RefreshCommand}" Padding="16,8" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
         </WrapPanel>
         <DockPanel Grid.Row="2" Margin="0,0,0,12" LastChildFill="False">
             <TextBlock Text="{Binding CountText}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
             <Button Content="Esporta vista JSON" Click="Export_Click" DockPanel.Dock="Right" Padding="10,6" Margin="8,0,0,0"/>
             <Button Content="Copia richiesta per ChatGPT" Click="Copy_Click" DockPanel.Dock="Right" Padding="10,6" Margin="8,0,0,0"/>
-            <Button Content="Apri copia PDF" Command="{Binding OpenCommand}" DockPanel.Dock="Right" Padding="10,6"/>
+            <Button Content="Apri documento" Command="{Binding OpenCommand}" DockPanel.Dock="Right" Padding="10,6"/>
         </DockPanel>
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions><ColumnDefinition Width="3*" MinWidth="370"/><ColumnDefinition Width="10"/><ColumnDefinition Width="2*" MinWidth="280"/></Grid.ColumnDefinitions>
-            <DataGrid x:Name="ReportsGrid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="White" AutomationProperties.Name="PDF MUR e analisi IPRiPI">
+            <DataGrid x:Name="ReportsGrid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="White" AutomationProperties.Name="PDF/DOCX MUR e analisi IPRiPI">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Commessa" Binding="{Binding ProjectCode}" Width="90"/>
                     <DataGridTextColumn Header="Anno" Binding="{Binding Year}" Width="65"/>

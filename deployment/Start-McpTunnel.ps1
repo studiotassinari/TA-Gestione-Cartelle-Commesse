@@ -5,9 +5,13 @@ param(
     [ValidateRange(1024,65535)][int]$Port = 5443,
     [ValidateSet('kerberos','local')][string]$Transport = 'kerberos',
     [switch]$CheckConnection,
-    [string]$TunnelClient = (Join-Path $PSScriptRoot 'Tunnel\tunnel-client.exe')
+    [string]$TunnelClient = ''
 )
 $ErrorActionPreference = 'Stop'
+# Risolve il percorso dopo il binding dei parametri, anche con Windows PowerShell 5.1.
+if ([string]::IsNullOrWhiteSpace($TunnelClient)) {
+    $TunnelClient = Join-Path $PSScriptRoot 'Tunnel\tunnel-client.exe'
+}
 # Nessun segreto persistente: richiesta nascosta e variabile limitata al processo.
 $mcp = Join-Path $PSScriptRoot 'Mcp\TA.Mcp.exe'
 if (!(Test-Path -LiteralPath $mcp) -or !(Test-Path -LiteralPath $TunnelClient)) {

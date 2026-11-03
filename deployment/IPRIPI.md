@@ -4,6 +4,10 @@ Funzionalità introdotta nella versione **2.19.0**. Il menu **Analisi > IPRiPI �
 
 ## Catalogo territoriale MUR
 
+Il servizio genera `ipripi/candidati.json` a ogni avvio (quindi dopo ogni aggiornamento) e ogni giorno alle **23:00, ora italiana**, senza attività pianificate di Windows. Usa i JSON dell'inventario generale orario, senza aprire i contenuti. Gli indici delle unità sono in `ipripi/unita/<categoria>/<anno>/<commessa>/`; il catalogo è pubblicato progressivamente ed evita la rilettura dell'intero inventario a ogni apertura della finestra. Le fonti parziali sono segnalate. Se l'inventario non è ancora disponibile, riprova dopo cinque minuti.
+
+Sono supportati PDF e DOCX, anche negli archivi. La scansione dei metadati rende disponibili candidati nuovi o modificati; il riconoscimento e la compilazione dei campi avvengono tramite analisi ChatGPT su richiesta. Le analisi già salvate restano in `ipripi/indice.json` con revisioni separate e non vengono sovrascritte dal censimento automatico.
+
 Il catalogo ricerca e analizza esclusivamente **Commesse (C) e Archivio (A)**, comprese sottocartelle e PDF censiti dentro ZIP/7z. Le Gare sono escluse anche da lettura e salvataggio MCP. Eventuali schede pregresse delle Gare restano conservate nei JSON, ma non vengono mostrate.
 
 Ogni scheda può contenere progettisti e ruoli con citazioni, tipologie, indirizzo dell'intervento, comune, coordinate WGS84 e fonte della posizione. La ricerca comprende questi campi. Il filtro **Solo moduli riconosciuti** distingue i moduli identificati tramite lettura dai semplici candidati individuati per nome; include anche i MUR senza IPRiPI dichiarati. Nessuna scansione dei soli nomi può garantire il riconoscimento dei PDF rinominati o scansionati senza testo.
