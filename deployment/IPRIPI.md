@@ -2,6 +2,16 @@
 
 Funzionalità introdotta nella versione **2.19.0**. Il menu **Analisi > IPRiPI — analisi MUR A.1/D.1** apre una finestra indipendente, non modale, a istanza unica. Il servizio usa il plugin ChatGPT già previsto dal progetto: non richiede chiavi API OpenAI e non chiama modelli dal server.
 
+## Catalogo territoriale MUR
+
+Il catalogo ricerca e analizza esclusivamente **Commesse (C) e Archivio (A)**, comprese sottocartelle e PDF censiti dentro ZIP/7z. Le Gare sono escluse anche da lettura e salvataggio MCP. Eventuali schede pregresse delle Gare restano conservate nei JSON, ma non vengono mostrate.
+
+Ogni scheda può contenere progettisti e ruoli con citazioni, tipologie, indirizzo dell'intervento, comune, coordinate WGS84 e fonte della posizione. La ricerca comprende questi campi. Il filtro **Solo moduli riconosciuti** distingue i moduli identificati tramite lettura dai semplici candidati individuati per nome; include anche i MUR senza IPRiPI dichiarati. Nessuna scansione dei soli nomi può garantire il riconoscimento dei PDF rinominati o scansionati senza testo.
+
+La mappa OpenStreetMap riutilizza il controllo del catalogo geologico: selezione sincronizzata fra riga e segnaposto. Sono visualizzate solo posizioni di analisi ancora aggiornate; schede prive di coordinate o non più aggiornate rimangono consultabili nell'elenco. Non si attribuisce una posizione alla sola sede del progettista. Dati e revisioni sono salvati nei JSON del server, senza log di connessione sul client.
+
+Il riferimento di classificazione attualmente validato è l'Allegato 1 della DGR 2272/2016, elenchi A/B. L'Allegato 2 riguarda le varianti non sostanziali: non confondere i relativi riferimenti con i codici IPRiPI dell'Allegato 1.
+
 ## Utilizzo
 
 1. Cercare il codice commessa nella nuova finestra. Per impostazione iniziale sono mostrati i nomi MUR/IPRiPI/A1-D1 e le analisi già salvate. Attivare **Tutti i PDF** per moduli rinominati; i nomi non provano la natura del documento. La ricerca usa l'inventario JSON e include ZIP/7z, senza lettura automatica dei contenuti.

@@ -8,7 +8,7 @@ public sealed class IpripiViewModel : Observable, IDisposable
 {
     private readonly Func<IpripiQuery, CancellationToken, Task<IpripiPage>>? load;
     private readonly CancellationTokenSource lifetime = new();
-    private bool busy, allPdfs, opening, disposed;
+    private bool busy, allPdfs, opening, disposed, recognizedOnly;
     private string code = "", search = "", status = "Cerca una commessa o consulta i candidati MUR censiti.";
     private IpripiDocument? selected;
     public IpripiViewModel(Func<IpripiQuery, CancellationToken, Task<IpripiPage>>? load)
@@ -24,6 +24,7 @@ public sealed class IpripiViewModel : Observable, IDisposable
     public string Code { get => code; set { code = value; Notify(); } }
     public string Search { get => search; set { search = value; Notify(); } }
     public bool AllPdfs { get => allPdfs; set { allPdfs = value; Notify(); } }
+    public bool RecognizedOnly { get => recognizedOnly; set { recognizedOnly = value; Notify(); } }
     public string Status { get => status; private set { status = value; Notify(); } }
     public string CountText => $"{Rows.Count} documenti · {Rows.Count(r => r.AnalysisCurrent)} analisi aggiornate ai metadati censiti";
     public IpripiDocument? Selected
@@ -38,6 +39,9 @@ public sealed class IpripiViewModel : Observable, IDisposable
             if (Selected == null) return "Seleziona un documento per vedere interventi, motivazioni e citazioni.";
             var row = Selected; var text = new StringBuilder();
             text.AppendLine(row.FileName).AppendLine("Commessa: " + (row.ProjectCode.Length == 0 ? "Non attribuita" : row.ProjectCode))
+                .AppendLine("Progettisti: " + (row.Designers.Length == 0 ? "Non ancora identificati" : row.Designers))
+                .AppendLine("Indirizzo: " + row.Address + " · " + row.Municipality)
+                .AppendLine("Fonte posizione: " + row.Saved?.Analysis.Position?.Source)
                 .AppendLine(row.Status).AppendLine(row.Location).AppendLine();
             if (row.Saved is not { } saved) return text.AppendLine("Nessuna analisi salvata. Copia la richiesta e inviala a ChatGPT con il plugin TA – Gestione Commesse.").ToString();
             text.AppendLine($"Revisione {saved.Revision} · {saved.SavedUtc.ToLocalTime():dd/MM/yyyy HH:mm} · {saved.SavedBy}")
@@ -51,6 +55,9 @@ public sealed class IpripiViewModel : Observable, IDisposable
                 foreach (var evidence in intervention.Evidence) text.AppendLine($"Citazione (offset {evidence.Offset}): «{evidence.Quote}»");
             }
             text.AppendLine().AppendLine("Prove di riconoscimento del modulo / esito:");
+            foreach (var designer in saved.Analysis.Designers ?? [])
+                foreach (var evidence in designer.Evidence) text.AppendLine($"{designer.Name} · {designer.Role} · offset {evidence.Offset}: «{evidence.Quote}»");
+            foreach (var evidence in saved.Analysis.Position?.Evidence ?? []) text.AppendLine($"Ubicazione · offset {evidence.Offset}: «{evidence.Quote}»");
             foreach (var evidence in saved.Analysis.FormEvidence) text.AppendLine($"Offset {evidence.Offset}: «{evidence.Quote}»");
             foreach (var warning in saved.Analysis.Warnings) text.AppendLine("• " + warning);
             return text.ToString();
@@ -73,7 +80,7 @@ public sealed class IpripiViewModel : Observable, IDisposable
         busy = true; RefreshCommand.Refresh(); Status = "Consultazione dell'inventario e delle analisi salvate...";
         try
         {
-            var query = new IpripiQuery(Code.Trim(), Search.Trim(), AllPdfs);
+            var query = new IpripiQuery(Code.Trim(), Search.Trim(), AllPdfs, RecognizedOnly: RecognizedOnly);
             var rows = new List<IpripiDocument>(); IpripiPage? page = null;
             do
             {

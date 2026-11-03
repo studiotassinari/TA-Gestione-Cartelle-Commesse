@@ -30,7 +30,7 @@ public sealed class IpripiEvidenceStore
         {
             if (!receipts.TryGetValue(draft.DocumentId + ":" + draft.DocumentVersion, out var receipt) || receipt.Expires <= DateTime.UtcNow)
                 throw new IOException("Leggere prima il PDF con leggi_mur_ipripi nella versione indicata.");
-            foreach (var item in draft.FormEvidence.Concat(draft.Interventions.SelectMany(i => i.Evidence)))
+            foreach (var item in draft.FormEvidence.Concat(draft.Interventions.SelectMany(i => i.Evidence)).Concat((draft.Designers ?? []).SelectMany(d => d.Evidence)).Concat(draft.Position?.Evidence ?? []))
                 if (!receipt.Pages.Any(p => item.Offset >= p.Offset && item.Offset + item.Quote.Length <= p.Offset + p.Text.Length &&
                     p.Text.AsSpan(item.Offset - p.Offset, item.Quote.Length).SequenceEqual(item.Quote)))
                     throw new ArgumentException("Citazione non riscontrata nel PDF letto.");
