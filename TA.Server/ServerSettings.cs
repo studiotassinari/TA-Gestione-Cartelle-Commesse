@@ -6,6 +6,23 @@ public sealed class ServerSettings
     public string JobsRoot { get; set; } = "";
     public string BidsRoot { get; set; } = ""; public string ArchivedJobsRoot { get; set; } = @"\\ingtassinari.it\data\archivio";
     public string ArchiveFolder { get; set; } = "";
+    public string DatabaseFolder { get; set; } = "";
+    public string InventoryFolder
+    {
+        get
+        {
+            var target=Path.GetFullPath(string.IsNullOrWhiteSpace(DatabaseFolder)?ArchiveFolder:DatabaseFolder);
+            foreach(var source in new[]{JobsRoot,BidsRoot,ArchivedJobsRoot}.Where(p=>!string.IsNullOrWhiteSpace(p)))
+            {
+                var root=Path.GetFullPath(source).TrimEnd('\\','/');
+                if(target.Equals(root,StringComparison.OrdinalIgnoreCase)||target.StartsWith(root+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase))
+                    throw new IOException("Il database deve essere esterno alle cartelle originali.");
+            }
+            return target;
+        }
+    }
+    public int MaxConcurrentScans { get; set; } = 2;
+    public int BackupRetention { get; set; } = 7;
     public string GeologyCatalogPath { get; set; } = "";
     // Modificabile dall'amministratore per passare a un'istanza Nominatim aziendale senza aggiornare il client.
     public string NominatimSearchUrl { get; set; } = "https://nominatim.openstreetmap.org/search";

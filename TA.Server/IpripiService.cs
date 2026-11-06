@@ -34,7 +34,7 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
     private (List<IpripiDocument> Rows, List<string> Warnings) Sources(string code, bool allPdfs, CancellationToken token, HashSet<string>? savedIds = null, string? documentId = null)
     {
         if (code == null || code.Length > 40) throw new ArgumentException("Codice commessa non valido.");
-        var store = new InventoryStore(settings.ArchiveFolder);
+        var store = new InventoryStore(settings.InventoryFolder);
         var run = InventoryAvailability.Load(store, code: code, token: token)
             ?? throw new IOException("Inventario non disponibile: non equivale ad assenza di MUR.");
         var watch = Stopwatch.StartNew(); var rows = new List<IpripiDocument>();
@@ -66,9 +66,9 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
 
     private List<IpripiAnalysisRecord> ReadIndex()
     {
-        if (!File.Exists(Index)) return [];
-        if (new FileInfo(Index).Length > 32 * 1024 * 1024) throw new IOException("Indice IPRiPI oltre 32 MiB.");
-        var saved = InventoryStore.Read<IpripiAnalysisIndex>(Index);
+        if (!CatalogStorage.Exists(settings,Index)) return [];
+        if (CatalogStorage.Bytes(settings,Index).Length > 32 * 1024 * 1024) throw new IOException("Indice IPRiPI oltre 32 MiB.");
+        var saved = CatalogStorage.Read<IpripiAnalysisIndex>(settings,Index);
         if (saved.SchemaVersion != 1 || saved.Records == null || saved.Records.Any(r => r == null || r.Source == null || r.Analysis == null) ||
             saved.Records.Select(r => r.Source.Id).Distinct().Count() != saved.Records.Count)
             throw new InvalidDataException("Indice IPRiPI non valido; dati precedenti conservati.");
@@ -93,9 +93,9 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
             .Where(r => query.Code.Length == 0 || r.Source.ProjectCode.StartsWith(query.Code, StringComparison.OrdinalIgnoreCase)).ToDictionary(r => r.Source.Id);
         var catalogPath = Path.Combine(Root, "candidati.json");
         List<IpripiDocument> sources; List<string> warnings;
-        if (!query.AllPdfs && File.Exists(catalogPath))
+        if (!query.AllPdfs && CatalogStorage.Exists(settings,catalogPath))
         {
-            var catalog = InventoryStore.Read<IpripiCandidateCatalog>(catalogPath);
+            var catalog = CatalogStorage.Read<IpripiCandidateCatalog>(settings,catalogPath);
             sources = catalog.Documents.Where(r => r.Category is "C" or "A").Where(r => query.Code.Length == 0 || r.ProjectCode.StartsWith(query.Code, StringComparison.OrdinalIgnoreCase)).ToList();
             warnings = catalog.Warnings.ToList();
             warnings.Insert(0, "Scansione MUR: " + catalog.CheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") + (catalog.Running ? " — in corso" : " — completata"));
@@ -116,16 +116,16 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
     private IpripiDocument Find(string id, string code, CancellationToken token)
     {
         var catalogPath = Path.Combine(Root, "candidati.json");
-        if (File.Exists(catalogPath) && InventoryStore.Read<IpripiCandidateCatalog>(catalogPath).Documents.FirstOrDefault(r => r.Id == id) is { } cached)
+        if (CatalogStorage.Exists(settings,catalogPath) && CatalogStorage.Read<IpripiCandidateCatalog>(settings,catalogPath).Documents.FirstOrDefault(r => r.Id == id) is { } cached)
         {
             if (cached.Category is not ("C" or "A")) throw new ArgumentException("Categoria non prevista per il catalogo MUR.");
             if (code.Length > 0 && !cached.ProjectCode.StartsWith(code, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Commessa diversa dal documento scelto.");
             var inventoryCode = cached.InventoryCode.Length > 0 ? cached.InventoryCode : cached.ProjectCode;
             if (inventoryCode.Length > 0)
             {
-                var store = new InventoryStore(settings.ArchiveFolder);
+                var store = new InventoryStore(settings.InventoryFolder);
                 var unit = new InventoryUnit(cached.FolderId,cached.Category,cached.Year,inventoryCode,"","","","");
-                var manifest = InventoryStore.Read<InventoryManifest>(Path.Combine(store.UnitDirectory(unit),"latest.json"));
+                var manifest = store.Find(unit.Id) ?? throw new IOException("Inventario non disponibile");
                 if (!store.UnitDirectory(unit).Equals(store.UnitDirectory(manifest.Unit),StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Unità inventario MUR non coerente.");
                 foreach (var entry in store.Entries(manifest))
                 {
@@ -163,8 +163,8 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
         var warnings = evidence.Validate(draft);
         await ReadSource(source, new(source.Id, draft.Code, 0, 1, draft.DocumentVersion), token);
         if (Find(source.Id, draft.Code, token).SourceFingerprint != draft.SourceFingerprint) throw new IOException("Inventario cambiato durante il salvataggio.");
-        Directory.CreateDirectory(Root);
-        using var gate = new FileStream(Index + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+
+        using var gate = CatalogStorage.Lock(settings,Index + ".lock");
         var records = ReadIndex(); var previous = records.SingleOrDefault(r => r.Source.Id == source.Id);
         if ((previous?.Revision ?? "") != draft.ExpectedRevision) throw new IOException("Analisi già aggiornata: rileggere il catalogo.");
         var record = new IpripiAnalysisRecord(Guid.NewGuid().ToString("N"), DateTime.UtcNow, user, source,
@@ -173,8 +173,8 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
         var index = new IpripiAnalysisIndex(1, records);
         if (JsonSerializer.SerializeToUtf8Bytes(index).Length > 32 * 1024 * 1024) throw new IOException("Indice IPRiPI troppo grande: nessun dato sostituito.");
         token.ThrowIfCancellationRequested();
-        GeologyStorage.Atomic(Path.Combine(Root, "revisioni", Hash(source.Id), record.Revision + ".json"), record);
-        GeologyStorage.Atomic(Index, index);
+        CatalogStorage.Write(settings,Path.Combine(Root, "revisioni", Hash(source.Id), "current.json"), record);
+        CatalogStorage.Write(settings,Index, index);
         return record;
     }
     public static void Validate(IpripiAnalysisDraft d)

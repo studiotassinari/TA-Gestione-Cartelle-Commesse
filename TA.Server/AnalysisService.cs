@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using TA_Gestione_Cartelle_Commesse.Contracts;
@@ -8,7 +9,7 @@ namespace TA.Server;
 // Censimento giornaliero separato dalle risposte State, che restano leggere.
 public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisService> logger)
 {
-    private readonly InventoryStore store = new(settings.ArchiveFolder);
+    private readonly InventoryStore store = new(settings.InventoryFolder);
     public async Task RunAsync(IEnumerable<CategoryState> states, CancellationToken token, Action<ScanProgress>? reportProgress = null)
     {
         var roots = new[] { settings.JobsRoot, settings.BidsRoot, settings.ArchivedJobsRoot };
@@ -20,40 +21,80 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
         {
             var started = DateTime.UtcNow;
             reportProgress?.Invoke(new(true,"Preparazione inventario",0,null,"Censimento delle unità da analizzare",started));
-            var plan = InventoryPlanner.Plan(states.Select(s => (s.Prefix.ToString(), s.Root, s.Snapshot?.Records ?? [])), settings.JobsRoot, token);
+            var snapshots=states.ToArray();
+            var verified=snapshots.SelectMany(s=>(s.Snapshot?.Records??[]).Select(r=>(Category:s.Prefix.ToString(),Record:r))).GroupBy(x=>x.Category+"|"+x.Record.Path,StringComparer.OrdinalIgnoreCase).ToDictionary(g=>g.Key,g=>g.First().Record,StringComparer.OrdinalIgnoreCase);
+            var plan = InventoryPlanner.Plan(snapshots.Select(s => (s.Prefix.ToString(), s.Root, s.Snapshot?.Records ?? [])), settings.JobsRoot, token);
             var folders = plan.Units.Where(u => !FileInventoryReader.IsArchive(u.Path)).Select(u => Path.GetFullPath(u.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var previous = store.Latest();
-            var reports = new List<InventoryManifest>();
+            var reports = new ConcurrentBag<InventoryManifest>();
+            var progressGate = new object();
+            var locations = new ConcurrentDictionary<string,ScanLocation>();
             int completed=0; bool warnings=plan.Issues.Count>0;
-            foreach(var unit in plan.Units)
+            Parallel.ForEach(plan.Units, new ParallelOptions { CancellationToken=token, MaxDegreeOfParallelism=Math.Clamp(settings.MaxConcurrentScans,1,4) }, unit =>
             {
                 token.ThrowIfCancellationRequested();
-                reportProgress?.Invoke(new(true,"Inventario nomi",completed,plan.Units.Count,unit.Path,started,HasErrors:warnings));
+                void Report(string path, string phase)
+                {
+                    locations[unit.Id]=new(unit.Category,phase,path);
+                    lock(progressGate) reportProgress?.Invoke(new(true,phase,completed,plan.Units.Count,path,started,HasErrors:warnings,Locations:locations.Values.ToArray()));
+                }
+                Report(unit.Path,"Verifica metadati");
                 try
                 {
                     var excluded = new HashSet<string>(folders, StringComparer.OrdinalIgnoreCase); excluded.Remove(Path.GetFullPath(unit.Path));
+                    var oldManifest = store.Find(unit.Id);
+                    var inspection=verified.GetValueOrDefault(unit.Category+"|"+unit.Path)?.Inspection;
+                    var signature=inspection?.Complete==true && !string.IsNullOrEmpty(inspection.ContentSignature) ? inspection.ContentSignature : null;
+                    void SaveSignature() { if(signature!=null)store.SaveDocument("source-signature:"+unit.Id,signature); }
+                    if(oldManifest?.Complete==true && oldManifest.Unit==unit && signature!=null && inspection!.CheckedUtc>=oldManifest.CheckedUtc && store.Document("source-signature:"+unit.Id)==System.Text.Json.JsonSerializer.Serialize(signature))
+                    { reports.Add(store.Touch(oldManifest,token)); return; }
+                    var probe = oldManifest?.Complete==true ? FileInventoryReader.Read(unit.Path, excluded, token, path=>Report(path,"Verifica metadati"), readArchives:false) : null;
+                    if (oldManifest?.Complete == true && probe?.Complete == true && store.PhysicalMatches(oldManifest, probe))
+                    { reports.Add(store.Touch(oldManifest, token)); SaveSignature(); return; }
                     var result = FileInventoryReader.Read(unit.Path, excluded, token,
-                        path => reportProgress?.Invoke(new(true,"Inventario nomi",completed,plan.Units.Count,path,started,HasErrors:warnings,
-                            Locations:[new(unit.Category,"Inventario nomi",path)])));
-                    var manifest=store.Save(unit,result,token); reports.Add(manifest);
-                    warnings |= !manifest.Complete;
+                        path => Report(path,"Analisi approfondita"));
+                    var manifest=store.Save(unit,result,token); reports.Add(manifest); if(result.Complete)SaveSignature();
+                    lock(progressGate) warnings |= !manifest.Complete;
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
                 {
-                    warnings=true; plan.Issues.Add(unit.Path + ": inventario non aggiornato: " + ex.Message);
+                    lock(progressGate) { warnings=true; plan.Issues.Add(unit.Path + ": inventario non aggiornato: " + ex.Message); }
                     var old = previous?.Inventories.FirstOrDefault(m => m.Unit.Id == unit.Id);
                     if (old != null) reports.Add(old with { Complete = false, Added = 0, Removed = 0, Changed = 0, Baseline = false });
                 }
-                reportProgress?.Invoke(new(true,"Inventario nomi",++completed,plan.Units.Count,unit.Path,started,HasErrors:warnings));
-            }
+                finally
+                {
+                    locations.TryRemove(unit.Id,out _);
+                    lock(progressGate) reportProgress?.Invoke(new(true,"Inventario",++completed,plan.Units.Count,unit.Path,started,HasErrors:warnings,Locations:locations.Values.ToArray()));
+                }
+            });
             token.ThrowIfCancellationRequested();
             // Un'unità assente dal piano non dimostra da sola una cancellazione (rete o censimento incompleto).
             foreach (var old in previous?.Inventories ?? [])
                 if (!reports.Any(m => m.Unit.Id == old.Unit.Id))
+                {
+                    bool absent=false;
+                    if(plan.Issues.Count==0)
+                    {
+                        try
+                        {
+                            var source=roots.Where(r=>old.Unit.Path.StartsWith(r.TrimEnd('\\','/')+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase)).OrderByDescending(r=>r.Length).FirstOrDefault();
+                            if(source!=null)
+                            {
+                                _=Directory.GetFileSystemEntries(source);
+                                try{_ = File.GetAttributes(old.Unit.Path);}
+                                catch(FileNotFoundException){absent=true;}
+                                catch(DirectoryNotFoundException){absent=true;}
+                            }
+                        }
+                        catch(Exception ex) when(ex is IOException or UnauthorizedAccessException){ }
+                    }
+                    if(absent){store.RemoveConfirmed(old.Unit.Id);continue;}
                     plan.Issues.Add("Unità non rilevata nel censimento corrente, verificare rimozione o indisponibilità: " + old.Unit.Path);
+                }
             reportProgress?.Invoke(new(true,"Salvataggio inventario",completed,plan.Units.Count,"Salvataggio JSON e differenze",started,HasErrors:warnings || plan.Issues.Count>0));
-            store.SaveRun(new(started, DateTime.UtcNow, reports, plan.Candidates, plan.Issues));
+            store.SaveRun(new(started, DateTime.UtcNow, reports.ToList(), plan.Candidates, plan.Issues));
             logger.LogInformation("Censimento nomi completato: {Count} unità, {Candidates} proposte. Nessuna notifica.", reports.Count, plan.Candidates.Count);
         }, token);
     }

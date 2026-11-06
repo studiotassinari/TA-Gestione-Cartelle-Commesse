@@ -8,9 +8,9 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
 {
     private readonly Dictionary<char, CategoryWorker> workers = new()
     {
-        ['C'] = new('C', settings.JobsRoot, settings.ArchiveFolder, logger, changes),
-        ['G'] = new('G', settings.BidsRoot, settings.ArchiveFolder, logger, changes),
-        ['A'] = new('A', settings.ArchivedJobsRoot, settings.ArchiveFolder, logger, changes, additionalArchiveRoot: settings.JobsRoot)
+        ['C'] = new('C', settings.JobsRoot, settings.ArchiveFolder, logger, changes, databaseFolder: settings.InventoryFolder),
+        ['G'] = new('G', settings.BidsRoot, settings.ArchiveFolder, logger, changes, databaseFolder: settings.InventoryFolder),
+        ['A'] = new('A', settings.ArchivedJobsRoot, settings.ArchiveFolder, logger, changes, additionalArchiveRoot: settings.JobsRoot, databaseFolder: settings.InventoryFolder)
     };
     private readonly object gate = new();
     private ScanProgress progress = new(false, "Avvio", 0, null, "Caricamento del servizio");
@@ -64,17 +64,21 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
             {
                 var mur = catalogServices.GetRequiredService<IpripiIndexer>();
                 var geology = catalogServices.GetRequiredService<GeologyIndexer>();
-                SetProgress(new(true, "Catalogo MUR", 0, null, "Aggiornamento JSON MUR", started));
+                SetProgress(new(true, "Catalogo MUR", 0, null, "Aggiornamento database MUR", started));
                 await Task.Run(() => mur.Refresh(token), token);
                 SetProgress(new(true, "Catalogo geologico", 0, null, "Aggiornamento JSON geologia", started));
                 await Task.Run(() => geology.Refresh(token), token);
             }
-            DailyReports.Save(ReportsDirectory, DailyReports.ItalianTime(new DateTimeOffset(started)), workers.Values, new DateTimeOffset(started));
+            DailyReports.Save(ReportsDirectory, DailyReports.ItalianTime(new DateTimeOffset(started)), workers.Values, new DateTimeOffset(started), currentOnly:true);
+            SetProgress(new(true,"Backup database",0,null,"Verifica e copia sulla rete",started));
+            var backup=await Task.Run(()=>DatabaseBackup.Save(settings,token),token);
+            warnings |= backup.Error.Length>0;
+            var backupMessage=backup.Error.Length>0?" Backup non riuscito: "+backup.Error:" Backup verificato: "+DailyReports.ItalianTime(backup.SuccessUtc!.Value).ToString("dd/MM/yyyy HH:mm");
             var finished = DateTime.UtcNow;
             HourlySchedule.Save(ReportsDirectory, finished);
             lastCompleted = finished;
             SetProgress(new(false, warnings ? "Completata con segnalazioni" : "Completata", 1, 1,
-                warnings ? "Alcune letture sono parziali: consultare il report" : "Risultati disponibili; nessuna notifica delle differenze", started,
+                (warnings ? "Consultare le segnalazioni" : "Risultati disponibili; nessuna notifica delle differenze")+backupMessage, started,
                 lastCompleted, DailyScanSchedule.Next(lastCompleted.Value), warnings));
             logger.LogInformation("Elaborazione giornaliera completata: {Finished}", lastCompleted);
         }
@@ -89,7 +93,28 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         shutdown = stoppingToken;
+        while(!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Run(()=>DatabaseMigration.Import(settings,stoppingToken,p=>SetProgress(new(true,"Migrazione SQLite",0,null,p))),stoppingToken);
+                break;
+            }
+            catch(OperationCanceledException) when(stoppingToken.IsCancellationRequested){return;}
+            catch(Exception ex)
+            {
+                logger.LogError(ex,"Migrazione SQLite non completata: JSON conservati");
+                SetProgress(new(false,"Migrazione da completare",0,null,ex.Message,HasErrors:true));
+                await Task.Delay(TimeSpan.FromMinutes(1),stoppingToken);
+            }
+        }
         await Task.WhenAll(workers.Values.Select(w => w.InitializeAsync()));
+        try
+        {
+            await Task.Run(()=>DatabaseMigration.BackupAndCleanInventory(settings,stoppingToken,p=>SetProgress(new(true,"Pulizia inventari migrati",0,null,p))),stoppingToken);
+        }
+        catch(OperationCanceledException) when(stoppingToken.IsCancellationRequested){return;}
+        catch(Exception ex){logger.LogWarning(ex,"Pulizia sospesa: inventario SQLite disponibile, JSON residui conservati");}
         bool scheduleLoaded = false;
         try
         {
@@ -103,7 +128,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
                         {
                             // Il checkpoint precedente resta su disco, ma ogni avvio deve ripetere la scansione completa.
                             lastCompleted = null; scheduleLoaded = true;
-                            SetProgress(new(false, "In attesa", 0, null, "Scansione completa all'avvio e alle 00:00 italiane", NextRunUtc: DateTime.UtcNow));
+                            SetProgress(new(false, "In attesa", 0, null, "Verifica incrementale all'avvio e alle 00:00 italiane", NextRunUtc: DateTime.UtcNow));
                         }
                         if (DailyScanSchedule.IsDue(DateTime.UtcNow, lastCompleted)) current = RunScan(stoppingToken);
                     }

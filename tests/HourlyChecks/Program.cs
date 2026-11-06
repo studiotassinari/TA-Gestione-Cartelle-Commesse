@@ -47,13 +47,13 @@ try
         await integrated.StartAsync(token);
         while (integrated.Progress.FinishedUtc == null) await Task.Delay(30, token);
         await integrated.StopAsync(token);
-        Check(File.Exists(Path.Combine(cache,"ipripi","candidati.json")),"Host completo: nessuna dipendenza circolare e catalogo MUR aggiornato dopo inventario");
+        Check(CatalogStorage.Exists(settings,Path.Combine(cache,"ipripi","candidati.json")),"Host completo: nessuna dipendenza circolare e catalogo MUR aggiornato dopo inventario");
     }
     var analysis=new AnalysisService(settings,NullLogger<AnalysisService>.Instance);
     var progress=new List<ScanProgress>();
     await analysis.RunAsync([worker.State,new('G',bids,false,"","",null),new('A',archives,false,"","",null)],token,progress.Add);
-    Check(progress.First().Percentage==null && progress.Any(p=>p.Phase=="Inventario nomi" && p.Percentage==100),"Inventario pubblica preparazione e avanzamento reale");
-    Check(progress.Where(p=>p.Phase=="Inventario nomi").Select(p=>p.Completed).SequenceEqual(progress.Where(p=>p.Phase=="Inventario nomi").Select(p=>p.Completed).Order()),"Avanzamento monotono nella fase inventario");
+    Check(progress.First().Percentage==null && progress.Any(p=>p.Phase=="Inventario" && p.Percentage==100),"Inventario pubblica preparazione e avanzamento reale");
+    Check(progress.Where(p=>p.Phase=="Inventario").Select(p=>p.Completed).SequenceEqual(progress.Where(p=>p.Phase=="Inventario").Select(p=>p.Completed).Order()),"Avanzamento monotono nella fase inventario");
     coordinator=new(settings,NullLogger<ScanCoordinator>.Instance,new(false),analysis);
     await coordinator.StartAsync(token);
     while(coordinator.Progress.FinishedUtc==null)await Task.Delay(30,token);
@@ -75,5 +75,6 @@ finally
 {
     release.Set();if(coordinator!=null){await coordinator.StopAsync(CancellationToken.None);coordinator.Dispose();}
     timeout.Cancel();if(worker!=null)await worker.Completion;
+    Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
     if(Path.GetFullPath(root).StartsWith(Path.GetFullPath(Path.GetTempPath()),StringComparison.OrdinalIgnoreCase) && Path.GetFileName(root).StartsWith("TA-Hourly-"))Directory.Delete(root,true);
 }

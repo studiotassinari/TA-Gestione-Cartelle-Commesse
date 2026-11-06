@@ -17,7 +17,7 @@ public static class DailyReports
         var file = Directory.Exists(directory) ? Directory.EnumerateFiles(directory, "*.html").OrderDescending().FirstOrDefault() : null;
         return file == null ? throw new IOException("Nessun report disponibile. Attendere il completamento della prima scansione giornaliera.") : File.ReadAllText(file);
     }
-    public static void Save(string directory, DateTime date, IEnumerable<CategoryWorker> workers, DateTimeOffset started, bool hourly = false)
+    public static void Save(string directory, DateTime date, IEnumerable<CategoryWorker> workers, DateTimeOffset started, bool hourly = false, bool currentOnly = false)
     {
         string H(string? value) => WebUtility.HtmlEncode(value) ?? "";
         var states = workers.Select(w => w.State).ToArray();
@@ -41,7 +41,7 @@ public static class DailyReports
         detail.Append("</section>");
         html = html.Replace("<main>", "<main>" + detail);
         Directory.CreateDirectory(directory);
-        var target = Path.Combine(directory, (hourly ? started.UtcDateTime.ToString("yyyy-MM-dd_HH-mm") : date.ToString("yyyy-MM-dd")) + ".html");
+        var target = Path.Combine(directory, currentOnly ? "latest.html" : (hourly ? started.UtcDateTime.ToString("yyyy-MM-dd_HH-mm") : date.ToString("yyyy-MM-dd")) + ".html");
         var temp = target + ".tmp";
         File.WriteAllText(temp, html, Encoding.UTF8);
         File.Move(temp, target, true);

@@ -5,12 +5,13 @@ namespace TA.Server;
 
 // Elenco e lettura ricorsiva procedono separatamente: una commessa grande non blocca le nuove righe.
 public sealed class CategoryWorker(char prefix, string root, string archive, ILogger logger, ChangeHub changes,
-    Func<string, CancellationToken, FolderInspection>? inspect = null, string? additionalArchiveRoot = null)
+    Func<string, CancellationToken, FolderInspection>? inspect = null, string? additionalArchiveRoot = null, string? databaseFolder = null)
 {
     private readonly object gate = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string,ScanLocation> active = new();
     private CategoryState state = new(prefix, root, true, "Caricamento archivio...", "", null);
     private CancellationTokenSource? cancellation;
-    private bool initialized; private readonly ArchiveWriter persistence = new(archive, prefix, logger);
+    private bool initialized; private readonly ArchiveWriter persistence = new(archive, prefix, logger, databaseFolder);
     private ScanProgress progress = new(false, "In attesa", 0, null, "Non avviata");
     public ScanProgress Progress { get { lock (gate) return progress; } }
     private Task current = Task.CompletedTask;
@@ -21,7 +22,15 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
         try
         {
             persistence.StatusChanged += message => { lock (gate) state = state with { ArchiveStatus = message }; changes.Publish(); };
-            var snapshot = await Task.Run(() => SharedArchiveService.Load(archive, root, prefix));
+            var snapshot = await Task.Run(() => {
+                if (databaseFolder == null) return SharedArchiveService.Load(archive,root,prefix);
+                var db = new InventoryStore(databaseFolder);
+                var key = "snapshot:"+prefix+":"+SharedArchiveService.Normalize(root);
+                if (db.Document(key) is string json) return System.Text.Json.JsonSerializer.Deserialize<ArchiveSnapshot>(json);
+                var previous = SharedArchiveService.Load(archive,root,prefix);
+                if(previous!=null)db.SaveDocument(key,previous);
+                return previous;
+            });
             lock (gate) state = state with { Snapshot = snapshot, ArchiveStatus = snapshot == null ? "Archivio assente" : "Archivio caricato", Message = "Pronto", Busy = false };
         }
         catch (Exception ex)
@@ -44,6 +53,11 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
     private void CurrentDirectory(string phase,string path)
     {
         lock(gate)progress=progress with { Message=path, Locations=[new(prefix.ToString(),phase,path)] };
+    }
+    private void InspectionProgress(string key,string path)
+    {
+        active[key]=new(prefix.ToString(),"Verifica metadati",path);
+        lock(gate)progress=progress with{Message=path,Locations=active.Values.ToArray()};
     }
     private DateTime NextRevision() => state.Snapshot is { } old && old.SavedUtc >= DateTime.UtcNow
         ? old.SavedUtc.AddTicks(1) : DateTime.UtcNow;
@@ -124,7 +138,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             }
             logger.LogInformation("Metadati {Category}: avvio verifica di {Count} cartelle", prefix, pending.Count);
             int completed = 0; var lastSave = DateTime.UtcNow; var lastPush = DateTime.MinValue;
-            foreach (var record in pending)
+            await Parallel.ForEachAsync(pending, new ParallelOptions{CancellationToken=source.Token,MaxDegreeOfParallelism=ScanConcurrency.Limit}, async (record, cancellationToken) =>
             {
                 source.Token.ThrowIfCancellationRequested();
                 lock (gate)
@@ -132,9 +146,12 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
                     state=state with { Message=$"Metadati {completed}/{pending.Count}: {record.Code}" };
                     progress=progress with { Message=record.Path, Locations=[new(prefix.ToString(),"Dimensioni e gerarchie",record.Path)] };
                 }
-                var inspected = RecordInspection.Read(record, prefix, source.Token, (path, token) => inspect!=null ? inspect(path,token) : prefix=='A'
-                    ? ArchivedJobsReader.Inspect(path,token,true,p=>CurrentDirectory("Dimensioni e gerarchie",p))
-                    : FolderInspectionService.Inspect(path,token,p=>CurrentDirectory("Dimensioni e gerarchie",p)), logger);
+                await ScanConcurrency.Slots.WaitAsync(source.Token);
+                FolderRecord inspected;
+                try { inspected = RecordInspection.Read(record, prefix, source.Token, (path, token) => inspect!=null ? inspect(path,token) : prefix=='A'
+                    ? ArchivedJobsReader.Inspect(path,token,true,p=>InspectionProgress(record.Path,p))
+                    : FolderInspectionService.Inspect(path,token,p=>CurrentDirectory("Dimensioni e gerarchie",p)), logger); }
+                finally { active.TryRemove(record.Path,out _);ScanConcurrency.Slots.Release(); }
                 var inspection = inspected.Inspection!;
                 List<string> differences = [];
                 lock (gate)
@@ -153,11 +170,13 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
                         state = state with { Snapshot = snapshot with { Records = records, SavedUtc = NextRevision() } };
                     }
                 }
+                lock(gate) {
                 if (differences.Count > 0 && DateTime.UtcNow - lastPush >= TimeSpan.FromSeconds(2))
                 { changes.Publish(prefix + ": " + FolderChanges.Summary(differences)); lastPush = DateTime.UtcNow; }
                 if (DateTime.UtcNow - lastSave >= TimeSpan.FromSeconds(30))
                 { persistence.Enqueue(State.Snapshot!, source.Token); lastSave = DateTime.UtcNow; }
-            }
+                }
+            });
             ArchiveSnapshot latest;
             lock (gate) latest = state.Snapshot!;
             persistence.Enqueue(latest, source.Token);
