@@ -31,6 +31,17 @@ public static class InventoryMigration
             if(destination.Document(marker)==JsonSerializer.Serialize(old.Generation) && destination.Find(old.Unit.Id)!=null)continue;
             var entries=legacy.Entries(old).ToList();
             if(entries.Count!=old.EntryCount)throw new IOException("Numero di voci incoerente: "+path);
+            // I vecchi archivi possono ripetere una voce identica (per esempio directory ZIP).
+            // Una chiave con metadati discordanti resta un errore: non scegliere dati arbitrariamente.
+            var unique=new Dictionary<string,InventoryEntry>(StringComparer.Ordinal);
+            foreach(var entry in entries)
+            {
+                var key=Key(entry);
+                if(unique.TryGetValue(key,out var prior) && (prior with { Location=null }) != (entry with { Location=null }))
+                    throw new IOException("Voci duplicate discordanti nell'inventario: "+path);
+                unique.TryAdd(key,entry);
+            }
+            entries=unique.Values.ToList();
             var saved=destination.Save(old.Unit,new(entries,old.Issues,old.Complete),token);
             var actual=destination.Entries(saved).ToDictionary(Key);
             if(actual.Count!=entries.Count || entries.Any(e=>!actual.TryGetValue(Key(e),out var a)||a.Bytes!=e.Bytes||a.ModifiedUtc!=e.ModifiedUtc))

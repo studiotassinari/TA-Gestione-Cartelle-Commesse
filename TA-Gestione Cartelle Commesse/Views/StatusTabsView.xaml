@@ -19,7 +19,7 @@
    </DockPanel>
   </TabItem>
   <TabItem Header="Connessione"><local:ConnectionStatusView xmlns:local="clr-namespace:TA_Gestione_Cartelle_Commesse.Views"/></TabItem>
-  <TabItem Header="Archivio JSON">
+  <TabItem Header="Archivio dati">
    <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="12" TextElement.FontWeight="Normal">
     <TextBlock Text="{Binding ArchiveLocation}" Foreground="#536775" Margin="0,0,0,8"/>
     <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>

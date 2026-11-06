@@ -47,6 +47,17 @@ try
  migrated.Backup(Path.Combine(root,"migration-backup.sqlite"));
  Check(InventoryMigration.CleanMigrated(source,migrated,default)>0 && File.Exists(Path.Combine(legacy.UnitDirectory(unit),"non-eliminare.txt")),"pulizia mirata rimuove lo storico verificato e preserva file estranei");
  Check(migrated.IntegrityCheck()=="ok" && migrated.Entries(migrated.Find(unit.Id)!).Count()==3,"database consultabile dopo la pulizia dei JSON");
+ var duplicatesSource=Path.Combine(root,"duplicates");var duplicates=new LegacyInventoryStore(duplicatesSource);
+ duplicates.Save(unit,new([entries[0],entries[0],entries[1]],[],true),default);
+ var normalized=new InventoryStore(Path.Combine(root,"normalized"));
+ InventoryMigration.Import(duplicatesSource,normalized,default);
+ Check(normalized.Find(unit.Id)!.EntryCount==2 && normalized.Document("migration:"+unit.Id)!=null,"duplicati identici migrati e verificati come voci uniche");
+ var conflictingSource=Path.Combine(root,"conflicting");var conflicting=new LegacyInventoryStore(conflictingSource);
+ conflicting.Save(unit,new([entries[0],entries[0] with{Bytes=999}],[],true),default);
+ var rejected=new InventoryStore(Path.Combine(root,"rejected"));
+ try {InventoryMigration.Import(conflictingSource,rejected,default);throw new Exception("Conflitto ignorato");}
+ catch(IOException ex) when(ex.Message.Contains("discordanti")) { }
+ Check(rejected.Document("migration:"+unit.Id)==null && File.Exists(Path.Combine(conflicting.UnitDirectory(unit),"latest.json")),"duplicati discordanti rifiutati senza autorizzare la pulizia");
 }
 finally
 {

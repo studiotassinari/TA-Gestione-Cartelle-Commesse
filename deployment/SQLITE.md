@@ -1,4 +1,4 @@
-# Archivio SQLite e scansioni concorrenti — 2.22.0
+# Archivio SQLite e scansioni concorrenti — 2.22.1
 
 SQLite è incluso nel pacchetto, senza costi di licenza né un servizio SQL da installare. Client e MCP continuano a usare il servizio TA; non accedono direttamente al database.
 

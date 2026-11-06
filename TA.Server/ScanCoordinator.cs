@@ -93,10 +93,14 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         shutdown = stoppingToken;
+        SetProgress(new(true,"Caricamento elenchi",0,null,"Caricamento degli elenchi salvati prima della migrazione"));
+        await Task.WhenAll(workers.Values.Select(w => w.InitializeAsync()));
+        changes.Publish();
         while(!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                SetProgress(new(true,"Migrazione SQLite",0,null,"Verifica degli inventari da importare; elenchi già consultabili"));
                 await Task.Run(()=>DatabaseMigration.Import(settings,stoppingToken,p=>SetProgress(new(true,"Migrazione SQLite",0,null,p))),stoppingToken);
                 break;
             }
@@ -108,7 +112,6 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
                 await Task.Delay(TimeSpan.FromMinutes(1),stoppingToken);
             }
         }
-        await Task.WhenAll(workers.Values.Select(w => w.InitializeAsync()));
         try
         {
             await Task.Run(()=>DatabaseMigration.BackupAndCleanInventory(settings,stoppingToken,p=>SetProgress(new(true,"Pulizia inventari migrati",0,null,p))),stoppingToken);

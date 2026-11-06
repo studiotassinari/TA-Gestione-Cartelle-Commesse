@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TA.Server;
 using TA_Gestione_Cartelle_Commesse.Contracts;
 using TA_Gestione_Cartelle_Commesse.Models;
+using TA_Gestione_Cartelle_Commesse.Services;
 
 static void Check(bool ok,string message){if(!ok)throw new Exception(message);Console.WriteLine("PASS: "+message);}
 var stamp=new DateTime(2026,10,25,0,35,0,DateTimeKind.Utc);
@@ -36,6 +37,17 @@ try
     release.Set();await worker.Completion.WaitAsync(token);
     Check(!worker.Progress.IsRunning && worker.Progress.Percentage==100 && !worker.Progress.HasErrors,"Lettura completata aggiorna il contatore");
     var settings=new ServerSettings{JobsRoot=jobs,BidsRoot=bids,ArchivedJobsRoot=archives,ArchiveFolder=cache};
+    var legacy=new LegacyInventoryStore(cache);
+    var migrationUnit=new InventoryUnit(new string('E',64),"C","2026","C26198","Cliente","Progetto",job,"censita");
+    legacy.Save(migrationUnit,new([new("test.txt","file",Bytes:1),new("test.txt","file",Bytes:2)],[],true),default);
+    using(var blockedCoordinator=new ScanCoordinator(settings,NullLogger<ScanCoordinator>.Instance,new(false),new AnalysisService(settings,NullLogger<AnalysisService>.Instance)))
+    {
+        await blockedCoordinator.StartAsync(token);
+        while(blockedCoordinator.Progress.Phase!="Migrazione da completare")await Task.Delay(30,token);
+        Check(blockedCoordinator.Get("C").State.Snapshot?.Records.Count==1 && !blockedCoordinator.Get("C").State.Busy,"elenco salvato consultabile anche quando la migrazione file è bloccata");
+        await blockedCoordinator.StopAsync(token);
+    }
+    legacy.Save(migrationUnit,new([new("test.txt","file",Bytes:1)],[],true),default);
     var registrations = new ServiceCollection();
     registrations.AddLogging(); registrations.AddSingleton(settings); registrations.AddSingleton(new ChangeHub(false));
     registrations.AddSingleton<AnalysisService>(); registrations.AddSingleton<ScanCoordinator>();

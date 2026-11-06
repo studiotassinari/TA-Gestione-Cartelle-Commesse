@@ -38,7 +38,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             logger.LogWarning(ex, "Caricamento archivio {Category} fallito", prefix);
             lock (gate) state = state with { Busy = false, Message = "Pronto", ArchiveStatus = "Archivio non disponibile: " + ex.Message };
         }
-        finally { lock (gate) initialized = true; }
+        finally { lock (gate) initialized = true; changes.Publish(); }
     }
     // Una sola enumerazione per categoria; resta disponibile anche mentre si leggono i file.
     public Task<bool> RefreshIndexAsync(CancellationToken token)
