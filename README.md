@@ -4,7 +4,7 @@ Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello 
 
 ## Revisione gestionale in preparazione
 
-Nel ramo `feature/gestionale-223`: clienti importabili da esportazioni CSV con anteprima, commesse con autorizzazione ore, attività e Gantt WPF per commessa/collaboratore, consuntivi personali e backup del database gestionale separato. Gestione del server e autorizzazioni riservate ad Antonio e Giuseppe. Nessuna API dei portali richiesta. Questa revisione non è ancora inclusa negli installatori 2.22.1; [funzioni, formati e limiti](deployment/GESTIONALE.md).
+Nel ramo `feature/gestionale-223`: clienti importabili da Excel Fatture in Cloud o CSV con anteprima, commesse con autorizzazione ore, attività e Gantt WPF per commessa/collaboratore, consuntivi personali e backup del database gestionale separato. Gestione del server e autorizzazioni riservate ad Antonio e Giuseppe. Nessuna API dei portali richiesta. Questa revisione non è ancora inclusa negli installatori 2.22.1; [funzioni, formati e limiti](deployment/GESTIONALE.md).
 
 ## Novità 2.22.1: SQLite, scansioni incrementali e backup
 

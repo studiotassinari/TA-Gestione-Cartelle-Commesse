@@ -6,7 +6,7 @@ namespace TA_Gestione_Cartelle_Commesse.Views;
 internal sealed class BusinessForm : Window
 {
     private readonly StackPanel fields = new() { Margin = new Thickness(22) };
-    public BusinessForm(Window owner, string title)
+    public BusinessForm(Window owner, string title, string confirmText = "Conferma", bool showCancel = true)
     {
         Owner = owner; Title = title; Width = 620; Height = 680; MinWidth = 500;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -14,8 +14,8 @@ internal sealed class BusinessForm : Window
         Resources = owner.Resources;
         var dock = new DockPanel(); Content = dock;
         var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(16) };
-        var save = new Button { Content = "Conferma", IsDefault = true }; save.Click += (_, _) => DialogResult = true;
-        footer.Children.Add(save); footer.Children.Add(new Button { Content = "Annulla", IsCancel = true });
+        var save = new Button { Content = confirmText, IsDefault = true }; save.Click += (_, _) => DialogResult = true;
+        footer.Children.Add(save); if (showCancel) footer.Children.Add(new Button { Content = "Annulla", IsCancel = true });
         DockPanel.SetDock(footer, Dock.Bottom); dock.Children.Add(footer);
         dock.Children.Add(new ScrollViewer { Content = fields, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
     }

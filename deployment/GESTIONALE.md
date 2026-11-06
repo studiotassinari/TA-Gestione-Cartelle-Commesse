@@ -13,9 +13,21 @@ Gli altri collaboratori autorizzati al servizio consultano le attività e regist
 
 ## Clienti da portali cloud
 
-Questa versione non richiede credenziali/API di Magoot o Fatture in Cloud. Importa un **file CSV esportato manualmente dal browser**, se il portale mette a disposizione tale esportazione. Non naviga automaticamente nei portali e non dichiara una sincronizzazione continua.
+Questa versione non richiede credenziali/API di Magoot o Fatture in Cloud. Importa **l'Excel XLSX esportato da Fatture in Cloud** oppure un CSV selezionato dal client. Non naviga automaticamente nei portali e non dichiara una sincronizzazione continua.
 
-Il formato effettivo dei due portali deve ancora essere verificato su un'esportazione reale. Il CSV accettato è UTF-8, con separatore `;` oppure `,` e campi tra virgolette. Sono supportate queste intestazioni (ignorando maiuscole, spazi e punteggiatura):
+### Excel Fatture in Cloud
+
+Il formato è stato verificato sull'esportazione del 6 novembre 2026: foglio `Export`, intestazioni nella prima riga. Il client accetta direttamente `.xlsx` nel comando **Importa Fatture in Cloud**, senza conversione manuale o installazione di Excel.
+
+Vengono acquisiti Denominazione, Codice interno, P.IVA/TAX ID, Codice Fiscale, Indirizzo e-mail e l'indirizzo composto da Indirizzo, CAP, Comune, Provincia, Paese e Note indirizzo. Le altre colonne (contatti aggiuntivi, PEC, SDI, IBAN, condizioni commerciali e note generali) non sono ancora acquisite. Il file Excel completo non viene conservato nel database.
+
+Gli identificativi e i CAP testuali mantengono gli zeri iniziali. I valori numerici in tali colonne vengono segnalati per verifica, senza ricostruire zeri arbitrariamente. Le righe senza codice interno né partita IVA né codice fiscale, e quelle con identificativi sorgente duplicati, sono escluse con indicazione delle righe. Gli altri conflitti vengono valutati dalla riconciliazione comune e sono indicati nel riepilogo.
+
+Limiti: 8 MiB compressi, 32 MiB complessivi non compressi, 5.000 clienti. Le formule non sono eseguite e vengono rifiutate; non vengono seguiti collegamenti esterni. L'anteprima usa lo stesso lettore dell'importazione e non salva anagrafiche.
+
+### CSV
+
+Il formato effettivo di Magoot resta da verificare su un'esportazione reale. Il CSV accettato è UTF-8, con separatore `;` oppure `,` e campi tra virgolette. Sono supportate queste intestazioni (ignorando maiuscole, spazi e punteggiatura):
 
 | Campo | Intestazioni riconosciute |
 |---|---|
@@ -48,4 +60,4 @@ Il lettore documenti usa temporaneamente il disco locale configurato come TEMP d
 
 ## Validazione
 
-`tests/BusinessChecks` verifica permessi, anteprima senza scritture, importazioni ripetute e conflitti, revisioni concorrenti, titolarità e limiti delle ore, persistenza e backup. `tests/BusinessUiChecks` carica e renderizza le cinque schede con soli dati sintetici. Restano necessarie la verifica dei CSV reali dei portali e la prova di accettazione sul dominio prima della distribuzione.
+`tests/BusinessChecks` verifica permessi, anteprima senza scritture, importazioni ripetute e conflitti, revisioni concorrenti, titolarità e limiti delle ore, persistenza e backup. Comprende le prove XLSX su stringhe condivise, celle sparse, zeri iniziali, formule, duplicati e identificativi mancanti. L'opzione `--preview-excel <percorso>` verifica un'esportazione reale senza salvare anagrafiche e senza stampare dati personali. `tests/BusinessUiChecks` carica e renderizza le cinque schede con soli dati sintetici. Restano necessarie la verifica dell'esportazione Magoot e la prova di accettazione sul dominio prima della distribuzione.

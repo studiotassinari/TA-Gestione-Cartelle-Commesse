@@ -51,7 +51,7 @@ public static class CustomerImport
                 if(!preview)service.Store.Save("customer",item.Id,old?.Revision??0,item,actor,"Import "+s.Provider);
                 if(old==null)added++;else{linked++;clients.Remove(old);}clients.Add(item);
             }
-            return new CustomerImportResult(rows.Count,added,linked,issues.ToArray());
+            return new CustomerImportResult(rows.Count,added,linked,issues.ToArray(),rows.Count-added-linked);
         });
     }
 }

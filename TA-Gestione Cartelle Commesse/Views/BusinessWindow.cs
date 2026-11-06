@@ -133,21 +133,26 @@ public sealed class BusinessWindow : Window
     private async Task Import(string provider)
     {
         if (!vm.CanEdit) return;
-        var pick = new Microsoft.Win32.OpenFileDialog { Title = "Esportazione clienti " + provider, Filter = "Esportazione CSV|*.csv" };
+        var pick = new Microsoft.Win32.OpenFileDialog { Title = "Esportazione clienti " + provider, Filter = provider == "Fatture" ? "Esportazione Fatture in Cloud|*.xlsx;*.csv|Excel|*.xlsx|CSV|*.csv" : "Esportazione CSV|*.csv" };
         if (pick.ShowDialog(this) != true) return;
-        if (new FileInfo(pick.FileName).Length > 2_000_000) throw new ArgumentException("CSV oltre 2 MB: suddividere il file.");
+        var excel = provider == "Fatture" && Path.GetExtension(pick.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase);
+        if (new FileInfo(pick.FileName).Length > (excel ? 8 * 1024 * 1024 : 2_000_000)) throw new ArgumentException("File troppo grande: limite Excel 8 MiB, CSV 2 MB.");
         // Nessuna copia locale o log: il contenuto selezionato resta in memoria fino all'importazione.
-        var csv = await File.ReadAllTextAsync(pick.FileName, new UTF8Encoding(false, true));
+        var data = excel ? await File.ReadAllBytesAsync(pick.FileName) : null;
+        var csv = excel ? null : await File.ReadAllTextAsync(pick.FileName, new UTF8Encoding(false, true));
         await vm.Run(async () =>
         {
-            var preview = await vm.Send<CustomerImportResult>(new("Preview" + provider, Csv: csv));
+            var preview = await vm.Send<CustomerImportResult>(new("Preview" + provider, Csv: csv, Excel: data));
             var f = new BusinessForm(this, "Anteprima importazione clienti");
-            var detail = f.Text("Riepilogo", $"Letti: {preview.Read}\nNuovi: {preview.Added}\nCollegamenti: {preview.Linked}\n\n" + string.Join("\n", preview.Issues));
+            var detail = f.Text("Riepilogo", $"Letti: {preview.Read}\nNuovi: {preview.Added}\nCollegamenti: {preview.Linked}\nEsclusi, da verificare: {preview.Skipped}\n\n" + string.Join("\n", preview.Issues));
             detail.IsReadOnly = true; detail.AcceptsReturn = true; detail.Height = 390; detail.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
             detail.TextWrapping = TextWrapping.Wrap;
             if (f.ShowDialog() != true) return;
-            var result = await vm.Send<CustomerImportResult>(new("Import" + provider, Csv: csv));
-            MessageBox.Show(this, $"Importazione completata: {result.Added} nuovi, {result.Linked} collegati.\n" + string.Join("\n", result.Issues), "Clienti");
+            var result = await vm.Send<CustomerImportResult>(new("Import" + provider, Csv: csv, Excel: data));
+            var report = new BusinessForm(this, "Esito importazione clienti", "Chiudi", false);
+            var outcome = report.Text("Riepilogo", $"Importazione completata: {result.Added} nuovi, {result.Linked} collegati, {result.Skipped} esclusi da verificare.\n\n" + string.Join("\n", result.Issues));
+            outcome.IsReadOnly = true; outcome.AcceptsReturn = true; outcome.Height = 420; outcome.VerticalScrollBarVisibility = ScrollBarVisibility.Auto; outcome.TextWrapping = TextWrapping.Wrap;
+            report.ShowDialog();
         });
         await vm.Refresh();
     }

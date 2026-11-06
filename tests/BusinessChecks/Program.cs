@@ -9,6 +9,15 @@ void Check(bool condition, string message) { if (!condition) throw new Exception
 void Reject(Action action) { try { action(); } catch (Exception e) when (e is ArgumentException or UnauthorizedAccessException or IOException) { return; } throw new Exception("Operazione non rifiutata"); }
 try
 {
+    FattureExcelChecks.Run();
+    if (args is ["--preview-excel", var excelPath])
+    {
+        var empty = new BusinessStore(Path.Combine(root, "excel-preview"));
+        var previewService = new BusinessService(empty, () => [], s => s);
+        var summary = FattureExcelImport.Import(previewService, File.ReadAllBytes(excelPath), "Verifica locale", true);
+        Check(empty.ChangeNumber == 0 && empty.All<Customer>("customer").Length == 0, "Anteprima Excel ha scritto anagrafiche");
+        Console.WriteLine($"Anteprima Excel reale: letti={summary.Read}; nuovi={summary.Added}; collegati={summary.Linked}; esclusi={summary.Skipped}; segnalazioni={summary.Issues.Length}; scritture anagrafiche=0.");
+    }
     var store = new BusinessStore(root);
     var project = new WorkProject("C2026001", "C26001", "Prova sintetica");
     var service = new BusinessService(store, () => [project], s => s);

@@ -69,8 +69,8 @@ public sealed class BusinessService
                 Store.Save("activity",activity.Id,a.Revision,activity,actor,"Activity");return activity;
             case "ImportMagoot":return CustomerImport.ImportCsv(this,c.Csv??"",actor);
             case "PreviewMagoot":return CustomerImport.ImportCsv(this,c.Csv??"",actor,preview:true);
-            case "ImportFatture":return CustomerImport.ImportCsv(this,c.Csv??"",actor,"FattureInCloud");
-            case "PreviewFatture":return CustomerImport.ImportCsv(this,c.Csv??"",actor,"FattureInCloud",true);
+            case "ImportFatture":return c.Excel is {} book ? FattureExcelImport.Import(this,book,actor,false) : CustomerImport.ImportCsv(this,c.Csv??"",actor,"FattureInCloud");
+            case "PreviewFatture":return c.Excel is {} previewBook ? FattureExcelImport.Import(this,previewBook,actor,true) : CustomerImport.ImportCsv(this,c.Csv??"",actor,"FattureInCloud",true);
             default:throw new ArgumentException("Comando gestionale sconosciuto.");
         }
     }
