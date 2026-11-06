@@ -10,8 +10,7 @@ public static class DomainAdministration
             try
             {
                 using var identity = WindowsIdentity.GetCurrent();
-                var domain = identity.User?.AccountDomainSid;
-                return domain != null && new WindowsPrincipal(identity).IsInRole(new SecurityIdentifier(domain.Value + "-512"));
+                return TA.Transport.ManagementAccess.Allows(identity);
             }
             catch { return false; }
         }

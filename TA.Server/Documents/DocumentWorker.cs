@@ -37,8 +37,13 @@ public static class DocumentWorker
     {var result=key.Replace('\\','/').TrimEnd('/');DocumentValidation.Relative(result);if(result.Length==0)throw new InvalidDataException("Nome interno vuoto.");return result;}
     private static byte[] Bounded(Stream stream)
     {
-        using var output=new MemoryStream();var buffer=new byte[65536];int n;
-        while((n=stream.Read(buffer))>0){if(output.Length+n>MaximumBytes)throw new InvalidDataException("Documento oltre 50 MiB: lettura interrotta.");output.Write(buffer,0,n);}return output.ToArray();
+        // TEMP è configurato dal servizio sul disco del database (E: sulla VM).
+        // Nome casuale e DeleteOnClose: anche la terminazione forzata del parser chiude e rimuove la copia.
+        var temporary=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"TA-document-"+Guid.NewGuid().ToString("N")+".tmp");
+        using var output=new FileStream(temporary,FileMode.CreateNew,FileAccess.ReadWrite,FileShare.None,65536,FileOptions.DeleteOnClose|FileOptions.SequentialScan);
+        var buffer=new byte[65536];int n;
+        while((n=stream.Read(buffer))>0){if(output.Length+n>MaximumBytes)throw new InvalidDataException("Documento oltre 50 MiB: lettura interrotta.");output.Write(buffer,0,n);}
+        output.Position=0;var bytes=new byte[checked((int)output.Length)];output.ReadExactly(bytes);return bytes;
     }
     private static DocumentPage Read(DocumentWork work,DocumentQuery query)
     {

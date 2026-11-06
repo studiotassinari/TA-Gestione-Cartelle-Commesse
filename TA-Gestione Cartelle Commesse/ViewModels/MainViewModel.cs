@@ -38,6 +38,7 @@ public sealed partial class MainViewModel : Observable
     public Command NonconformityReportCommand {get;}
     public MainViewModel()
     {
+        BusinessCommand = new(ShowBusiness, () => connection != null);
         GeologyCommand = new(ShowGeology);
         IpripiCommand = new(ShowIpripi);
         ShowScanCommand=new(()=>StatusTabIndex=0); ShowConnectionCommand=new(()=>StatusTabIndex=1);
@@ -71,9 +72,9 @@ public sealed partial class MainViewModel : Observable
             if (dialog.ShowDialog() != true) return;
             credentials = dialog.Credential;
         }
-        ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
+        businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); NonconformityReportCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); NonconformityReportCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";
@@ -148,7 +149,7 @@ public sealed partial class MainViewModel : Observable
             }
         }
     }
-    public void Stop() { ipripiWindow?.Close(); geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
+    public void Stop() { businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
 
 
     private Views.NonconformityReportWindow? nonconformityWindow;
@@ -163,7 +164,7 @@ public sealed partial class MainViewModel : Observable
     private void ShowServerManagement()
     {
         if (!CanManageServer) return;
-        if (!UseCurrentAccount) { ReportStatus = "La gestione del servizio richiede l'account Windows corrente di un amministratore di dominio."; return; }
+        if (!UseCurrentAccount) { ReportStatus = "La gestione del servizio richiede l'account Windows corrente di Antonio o Giuseppe."; return; }
         if (Uri.CheckHostName(host.Trim()) != UriHostNameType.Dns || !int.TryParse(port, out var number)) { ReportStatus = "Configurare prima il server."; return; }
         var panel = new Views.ServerManagementView(host.Trim(), new ServerConnection(host.Trim(), number));
         var window = new System.Windows.Window { Title = "Gestione server — " + host.Trim(), Width = 1200, Height = 800, Content = panel, Owner = System.Windows.Application.Current.MainWindow };

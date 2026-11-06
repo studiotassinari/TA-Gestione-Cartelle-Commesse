@@ -154,6 +154,7 @@
     <DockPanel Margin="18" Background="#F3F6F6">
         <Menu DockPanel.Dock="Top" Margin="0,0,0,14" Padding="4" Background="White">
             <MenuItem Header="_Visualizza"><MenuItem Header="Log scansione" Command="{Binding ShowScanCommand}"/><MenuItem Header="Connessione" Command="{Binding ShowConnectionCommand}"/><MenuItem Header="Modifiche ricevute" Command="{Binding ChangesCommand}"/></MenuItem>
+            <MenuItem Header="_Gestionale" Command="{Binding BusinessCommand}"/>
             <MenuItem Header="_Nuovo"><MenuItem Header="Commessa da modello..." Command="{Binding CreateJobCommand}"/></MenuItem>
             <MenuItem Header="_Apri">
                 <MenuItem Header="Apri cartella in Esplora file" Command="{Binding ActiveCategory.OpenFolderCommand}"/>
@@ -165,7 +166,7 @@
                 <MenuItem Header="Report sintetico analisi nomi e differenze" Command="{Binding AnalysisReportCommand}"/>
                 <MenuItem Header="Crea report cartelle e non conformità" Command="{Binding ReportCommand}"/>
             </MenuItem>
-            <MenuItem Header="_Server"><MenuItem Header="Gestione servizio (amministratori di dominio)" Command="{Binding ManageServerCommand}"/></MenuItem><MenuItem Header="_Aiuto"><MenuItem Header="Verifica comunicazione" Command="{Binding CheckCommunicationCommand}"/><MenuItem Header="_Informazioni" Command="{Binding AboutCommand}"/><MenuItem Header="Verifica aggiornamenti" Command="{Binding UpdateCommand}"/></MenuItem>
+            <MenuItem Header="_Server"><MenuItem Header="Gestione servizio (Antonio e Giuseppe)" Command="{Binding ManageServerCommand}"/></MenuItem><MenuItem Header="_Aiuto"><MenuItem Header="Verifica comunicazione" Command="{Binding CheckCommunicationCommand}"/><MenuItem Header="_Informazioni" Command="{Binding AboutCommand}"/><MenuItem Header="Verifica aggiornamenti" Command="{Binding UpdateCommand}"/></MenuItem>
         </Menu>
         <Border DockPanel.Dock="Top" Background="White" Margin="0,0,0,16" BorderBrush="#135F6E" BorderThickness="0,0,0,3">
             <Grid>

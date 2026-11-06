@@ -42,6 +42,8 @@ builder.Services.AddSingleton<IpripiIndexer>();
 builder.Services.AddSingleton<TA.Server.Documents.DocumentService>();
 builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
+builder.Services.AddSingleton<TA.Server.Business.BusinessService>();
+builder.Services.AddHostedService<TA.Server.Business.BusinessBackupService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());
 builder.Services.AddHostedService<TcpService>();
 builder.Services.AddHostedService<LocalMcpService>();

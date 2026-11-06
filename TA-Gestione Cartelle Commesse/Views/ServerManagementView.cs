@@ -53,7 +53,7 @@ public sealed class ServerManagementView : UserControl, IDisposable
     }
     private static void RequireAdministrator()
     {
-        if (!DomainAdministration.IsEnabled) throw new UnauthorizedAccessException("Gestione riservata al token Windows di un amministratore di dominio. Se necessario, avviare il client come amministratore.");
+        if (!DomainAdministration.IsEnabled) throw new UnauthorizedAccessException("Gestione riservata agli account Windows di Antonio e Giuseppe.");
     }
     private async Task Refresh()
     {
@@ -66,7 +66,7 @@ public sealed class ServerManagementView : UserControl, IDisposable
             status.Text = $"Server: {host} — servizio: {state}. Account Windows corrente; controllo autorizzazioni eseguito anche da Windows sul server.";
             if (state != ServiceControllerStatus.Running) return;
             var permissions = await connection.SendAsync<ServerPermissions>(new("Permissions"));
-            if (!permissions.DomainAdministrator) throw new UnauthorizedAccessException("Il server non riconosce l'account come amministratore del proprio dominio.");
+            if (!permissions.DomainAdministrator) throw new UnauthorizedAccessException("Il server non autorizza questo account alla gestione.");
             var logs = await connection.SendAsync<ServerLogs>(new("AdminLogs"));
             if (disposed) return;
             service.Output.Text = logs.Service; service.Output.ScrollToEnd();

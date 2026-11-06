@@ -2,6 +2,10 @@
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 
+## Revisione gestionale in preparazione
+
+Nel ramo `feature/gestionale-223`: clienti importabili da esportazioni CSV con anteprima, commesse con autorizzazione ore, attività e Gantt WPF per commessa/collaboratore, consuntivi personali e backup del database gestionale separato. Gestione del server e autorizzazioni riservate ad Antonio e Giuseppe. Nessuna API dei portali richiesta. Questa revisione non è ancora inclusa negli installatori 2.22.1; [funzioni, formati e limiti](deployment/GESTIONALE.md).
+
 ## Novità 2.22.1: SQLite, scansioni incrementali e backup
 
 Il server conserva l'inventario corrente e i cataloghi in SQLite sul disco locale della VM. Non vengono memorizzati i documenti originali: solo metadati, dati delle classi e risultati delle analisi richieste. Non vengono più generate pagine JSON e generazioni per ogni scansione.

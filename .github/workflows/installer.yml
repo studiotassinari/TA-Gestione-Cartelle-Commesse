@@ -101,7 +101,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Test trasporto fallito' }
       - name: Verifica aggiornamento viste, archivio annuale e riscontri
         run: |
-          foreach ($test in @('ClientChecks','LiveIndexChecks','AnnualArchiveChecks','ReliabilityChecks','AcknowledgementChecks','NightlyChecks','HourlyChecks','DirectoryProgressChecks','ClientStatusChecks','ArchiveSourceChecks','UpdaterChecks','InventoryChecks','SqliteChecks','FileSearchChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks','IpripiChecks')) {
+          foreach ($test in @('ClientChecks','BusinessChecks','BusinessUiChecks','LiveIndexChecks','AnnualArchiveChecks','ReliabilityChecks','AcknowledgementChecks','NightlyChecks','HourlyChecks','DirectoryProgressChecks','ClientStatusChecks','ArchiveSourceChecks','UpdaterChecks','InventoryChecks','SqliteChecks','FileSearchChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks','IpripiChecks')) {
             dotnet run --project "tests/$test" -c Release
             if ($LASTEXITCODE -ne 0) { throw "Test fallito: $test" }
           }
