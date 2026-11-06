@@ -1,0 +1,27 @@
+name: Verifica modifiche
+on:
+  pull_request:
+    branches: [master]
+permissions:
+  contents: read
+concurrency:
+  group: verifica-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Compilazione e verifiche con dati sintetici
+        shell: pwsh
+        run: |
+          dotnet build 'TA-Gestione Cartelle Commesse.slnx' -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compilazione fallita' }
+          foreach ($test in @('SqliteChecks','InventoryChecks','FileSearchChecks','HourlyChecks','NightlyChecks','LiveIndexChecks','ReliabilityChecks','DirectoryProgressChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks','IpripiChecks')) {
+            dotnet run --project "tests/$test" -c Release
+            if ($LASTEXITCODE -ne 0) { throw "Verifica fallita: $test" }
+          }

@@ -12,6 +12,7 @@ public static class InventoryMigration
             .Where(p=>(File.GetAttributes(p)&FileAttributes.ReparsePoint)==0):[];
         _=Directory.GetFileSystemEntries(folder); // Accesso negato/rete assente non significa archivio vuoto.
         var root=Path.Combine(folder,"inventario-file");
+        if(Directory.Exists(root) && (File.GetAttributes(root)&FileAttributes.ReparsePoint)!=0)throw new IOException("Archivio inventario collegato: migrazione automatica non consentita");
         return Children(root).Where(p=>Path.GetFileName(p) is "C" or "G" or "A")
             .SelectMany(Children).SelectMany(Children).SelectMany(Children)
             .Where(p=>Regex.IsMatch(Path.GetFileName(p),"^[A-Fa-f0-9]{64}$")).ToList();

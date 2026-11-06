@@ -33,6 +33,7 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
         var path = GeologyStorage.CatalogPath(settings);
         if (!CatalogStorage.Exists(settings,path)) throw new IOException("Catalogo delle relazioni geologiche non disponibile: attendere la generazione dal censimento dei nomi. L'assenza del catalogo non equivale a zero relazioni.");
         var bytes = CatalogStorage.Bytes(settings,path);
+        if(bytes.Length>20*1024*1024)throw new IOException("Catalogo geologico oltre 20 MiB");
         token.ThrowIfCancellationRequested();
         GeologyCatalog catalog;
         try { catalog = JsonSerializer.Deserialize<GeologyCatalog>(bytes, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidDataException("Catalogo vuoto."); }

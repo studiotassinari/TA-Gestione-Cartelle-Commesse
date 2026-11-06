@@ -23,13 +23,27 @@ public static class DatabaseMigration
         if(store.Document("migration:inventory-cleaned")!=null)return;
         if(store.Document("migration:inventory-complete")==null)throw new IOException("Migrazione non completata");
         var backup=Path.Combine(settings.InventoryFolder,"migrazione.sqlite");
-        progress("Backup del database prima della pulizia");store.Backup(backup);DatabaseBackup.Verify(backup);
-        // Copia soltanto il backup coerente creato con SQLite, mai il database attivo o il suo WAL.
         var destination=Path.Combine(settings.ArchiveFolder,"backup-database");Directory.CreateDirectory(destination);
-        var copy=Path.Combine(destination,"migrazione.sqlite");File.Copy(backup,copy,true);
-        using(var a=File.OpenRead(backup))using(var b=File.OpenRead(copy))
-            if(!System.Security.Cryptography.SHA256.HashData(a).SequenceEqual(System.Security.Cryptography.SHA256.HashData(b)))throw new IOException("Backup di migrazione non verificato sulla rete");
-        File.Delete(backup);
+        var copy=Path.Combine(destination,"migrazione.sqlite");
+        var verified=store.Document("migration:backup-sha256");
+        if(verified==null)
+        {
+            progress("Backup del database prima della pulizia");store.Backup(backup);DatabaseBackup.Verify(backup);
+            File.Copy(backup,copy,true);
+            string hash;
+            using(var a=File.OpenRead(backup))using(var b=File.OpenRead(copy))
+            {
+                hash=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(a));
+                if(hash!=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(b)))throw new IOException("Backup di migrazione non verificato sulla rete");
+            }
+            store.SaveDocument("migration:backup-sha256",hash);File.Delete(backup);
+        }
+        else
+        {
+            using var saved=File.OpenRead(copy);
+            if(System.Text.Json.JsonSerializer.Serialize(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(saved)))!=verified)
+                throw new IOException("Il backup iniziale è assente o cambiato: pulizia interrotta");
+        }
         var deleted=InventoryMigration.CleanMigrated(settings.ArchiveFolder,store,token,progress);
         deleted+=LegacyDataCleanup.Clean(settings,store,token);
         store.SaveDocument("migration:inventory-cleaned",new{CompletedUtc=DateTime.UtcNow,Deleted=deleted});
