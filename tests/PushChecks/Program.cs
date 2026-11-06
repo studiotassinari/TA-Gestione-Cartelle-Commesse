@@ -82,6 +82,7 @@ try
 finally
 {
     await watcher.StopAsync(CancellationToken.None); await scans.StopAsync(CancellationToken.None);
+    Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
     // Cartella temporanea con nome casuale creata esclusivamente da questo test.
     if (Path.GetFullPath(root).StartsWith(Path.GetFullPath(Path.GetTempPath()), StringComparison.OrdinalIgnoreCase)
         && Path.GetFileName(root).StartsWith("TA-PushChecks-")) Directory.Delete(root, true);
