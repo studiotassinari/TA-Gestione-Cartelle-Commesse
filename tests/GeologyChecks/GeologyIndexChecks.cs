@@ -28,7 +28,7 @@ public static class GeologyIndexChecks
         Check(catalog.Reports.All(r=>!r.HasPosition),"Numeri di anno o commessa non diventano coordinate");
         var unclassified=GeologyClassifier.Classify(manifest with{Unit=unit with{Classification="proposta-non-confermata"}},new("Relazione_geologica.pdf","file"))!;
         Check(unclassified.ProjectCode==""&&unclassified.SuggestedProjectCode=="C26001","Una proposta di commessa non diventa associazione confermata");
-        Check(File.Exists(Path.Combine(GeologyStorage.Root(settings),"unita","C","2026","C26001",unit.Id+".json")),"Salvataggi geologici suddivisi per categoria, anno e commessa");
+        Check(CatalogStorage.Exists(settings,Path.Combine(GeologyStorage.Root(settings),"unita","C","2026","C26001",unit.Id+".json")),"Salvataggi geologici suddivisi per categoria, anno e commessa");
         var analysis=new AnalysisService(settings,NullLogger<AnalysisService>.Instance);var scans=new ScanCoordinator(settings,NullLogger<ScanCoordinator>.Instance,new(false),analysis);
         var service=new GeologyService(settings,new DocumentService(settings,scans));var page=service.Query(new(),default);var id=page.Reports[0].Id;
         var change=new GeologicalPositionUpdate(id,44.06,12.56,"Rimini","Posizione di collaudo","Indicata dall'utente",page.Version);

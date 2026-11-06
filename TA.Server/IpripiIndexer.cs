@@ -25,13 +25,13 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
     }
     public IpripiCandidateCatalog Refresh(CancellationToken token)
     {
-        var store = new InventoryStore(settings.ArchiveFolder);
+        var store = new InventoryStore(settings.InventoryFolder);
         var target = Path.Combine(service.Root, "candidati.json");
-        Directory.CreateDirectory(service.Root);
-        using var lease = new FileStream(Path.Combine(service.Root, "censimento.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+
+        using var lease = CatalogStorage.Lock(settings,Path.Combine(service.Root, "censimento.lock"));
         var groups = new Dictionary<string, List<IpripiDocument>>();
-        if (File.Exists(target))
-            foreach (var group in InventoryStore.Read<IpripiCandidateCatalog>(target).Documents.GroupBy(r => r.FolderId)) groups[group.Key] = group.ToList();
+        if (CatalogStorage.Exists(settings,target))
+            foreach (var group in CatalogStorage.Read<IpripiCandidateCatalog>(settings,target).Documents.GroupBy(r => r.FolderId)) groups[group.Key] = group.ToList();
         var savedIds = service.SavedIds(); var warnings = new List<string>(); var seen = new HashSet<string>();
         int processed = 0; var watch = Stopwatch.StartNew();
         IpripiCandidateCatalog Publish(bool running)
@@ -40,21 +40,16 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
             notes.Add("PDF e DOCX candidati dai nomi in Commesse e Archivio. Analisi dei contenuti tramite ChatGPT su richiesta; originali in sola lettura.");
             var catalog = new IpripiCandidateCatalog(1, DateTime.UtcNow, running, groups.Values.SelectMany(x => x).DistinctBy(r => r.Id).ToList(), notes);
             if (JsonSerializer.SerializeToUtf8Bytes(catalog).Length > 64 * 1024 * 1024) throw new IOException("Catalogo candidati MUR oltre 64 MiB.");
-            GeologyStorage.Atomic(target, catalog); watch.Restart(); return catalog;
+            CatalogStorage.Write(settings,target, catalog); watch.Restart(); return catalog;
         }
-        foreach (var category in Children(store.Root).Where(p => Path.GetFileName(p) is "C" or "A"))
-        foreach (var year in Children(category).OrderByDescending(Path.GetFileName))
-        foreach (var code in Children(year))
-        foreach (var unit in Children(code))
+        foreach (var manifest in store.Manifests().Where(m => m.Unit.Category is "C" or "A"))
         {
             token.ThrowIfCancellationRequested();
-            var latest = Path.Combine(unit, "latest.json"); if (!File.Exists(latest)) continue;
+            var unit = store.UnitDirectory(manifest.Unit);
             try
             {
-                var manifest = InventoryStore.Read<InventoryManifest>(latest);
-                if (!Path.GetFullPath(store.UnitDirectory(manifest.Unit)).Equals(Path.GetFullPath(unit), StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Manifest MUR in posizione inattesa.");
                 var cache = Path.Combine(service.Root, "unita", Path.GetRelativePath(store.Root, unit) + ".json");
-                var old = File.Exists(cache) ? InventoryStore.Read<IpripiUnitIndex>(cache) : null;
+                var old = CatalogStorage.Exists(settings,cache) ? CatalogStorage.Read<IpripiUnitIndex>(settings,cache) : null;
                 if (old?.Generation != manifest.Generation || old.SchemaVersion < 2)
                 {
                     var rows = new List<IpripiDocument>();
@@ -65,7 +60,7 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
                         var location = entry.Location ?? FileLocator.Locate(manifest.Unit, entry);
                         if (IpripiService.Supported(location.Extension) && (IpripiService.IsCandidate(location.Name) || savedIds.Contains(location.Id))) rows.Add(IpripiService.Describe(manifest, entry));
                     }
-                    old = new(manifest.Generation, rows, 2); GeologyStorage.Atomic(cache, old);
+                    old = new(manifest.Generation, rows, 2); CatalogStorage.Write(settings,cache, old);
                 }
                 groups[manifest.Unit.Id] = old.Documents; seen.Add(manifest.Unit.Id); processed++;
                 if (!manifest.Complete && warnings.Count < 20) warnings.Add("Inventario parziale: " + manifest.Unit.Code);

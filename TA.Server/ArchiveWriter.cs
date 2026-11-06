@@ -2,7 +2,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 // Una sola fotografia pendente, scritta fuori dal thread di enumerazione.
-public sealed class ArchiveWriter(string folder, char prefix, ILogger logger)
+public sealed class ArchiveWriter(string folder, char prefix, ILogger logger, string? databaseFolder = null)
 {
     private readonly object gate = new();
     private (ArchiveSnapshot Snapshot, CancellationToken Token)? pending;
@@ -33,15 +33,17 @@ public sealed class ArchiveWriter(string folder, char prefix, ILogger logger)
             string status;
             try
             {
-                var saved = SharedArchiveService.Save(folder, item.Snapshot, item.Token);
-                status = saved ? "JSON aggiornato: " + DateTime.Now.ToString("dd/MM HH:mm:ss") + ". Metadati secondo la verifica di ciascuna cartella."
-                    : "JSON contiene dati piu recenti; scrittura precedente ignorata.";
+                bool saved;
+                if(databaseFolder==null) saved=SharedArchiveService.Save(folder,item.Snapshot,item.Token);
+                else { item.Token.ThrowIfCancellationRequested();new InventoryStore(databaseFolder).SaveDocument("snapshot:"+prefix+":"+SharedArchiveService.Normalize(item.Snapshot.Root),item.Snapshot);saved=true; }
+                status = saved ? "Database aggiornato: " + DateTime.Now.ToString("dd/MM HH:mm:ss") + ". Metadati secondo la verifica di ciascuna cartella."
+                    : "Database contiene dati piu recenti; scrittura precedente ignorata.";
                 logger.LogInformation("Archivio {Category}: {Status}", prefix, status);
             }
-            catch (OperationCanceledException) { status = "Salvataggio interrotto; JSON precedente conservato."; }
+            catch (OperationCanceledException) { status = "Salvataggio interrotto; Database precedente conservato."; }
             catch (Exception ex)
             {
-                status = "Salvataggio JSON fallito; dati aggiornati disponibili in memoria: " + ex.Message;
+                status = "Salvataggio Database fallito; dati aggiornati disponibili in memoria: " + ex.Message;
                 logger.LogWarning(ex, "Archivio {Category}: scrittura fallita", prefix);
             }
             StatusChanged?.Invoke(status);

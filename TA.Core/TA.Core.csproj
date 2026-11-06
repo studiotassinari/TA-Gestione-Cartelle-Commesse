@@ -8,6 +8,7 @@
     <EmbeddedResource Include="../TA-Gestione Cartelle Commesse/Assets/Brand/Acherus-Bold.otf" LogicalName="Brand.Acherus-Bold.otf" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.13" />
     <PackageReference Include="SharpCompress" Version="0.50.7" />
   </ItemGroup>
 </Project>

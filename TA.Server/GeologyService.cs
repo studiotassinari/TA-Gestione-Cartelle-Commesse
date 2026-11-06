@@ -31,12 +31,9 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
     private (GeologyCatalog Catalog, string Version) ReadCatalog(CancellationToken token)
     {
         var path = GeologyStorage.CatalogPath(settings);
-        if (!File.Exists(path)) throw new IOException("Catalogo delle relazioni geologiche non disponibile: attendere la generazione dal censimento dei nomi. L'assenza del catalogo non equivale a zero relazioni.");
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        if (stream.Length > 20 * 1024 * 1024) throw new IOException("Catalogo geologico oltre il limite di 20 MiB.");
-        using var buffer = new MemoryStream(); var block = new byte[65536]; int count;
-        while ((count = stream.Read(block)) > 0) { token.ThrowIfCancellationRequested(); if (buffer.Length + count > 20 * 1024 * 1024) throw new IOException("Catalogo troppo grande."); buffer.Write(block, 0, count); }
-        var bytes = buffer.ToArray();
+        if (!CatalogStorage.Exists(settings,path)) throw new IOException("Catalogo delle relazioni geologiche non disponibile: attendere la generazione dal censimento dei nomi. L'assenza del catalogo non equivale a zero relazioni.");
+        var bytes = CatalogStorage.Bytes(settings,path);
+        token.ThrowIfCancellationRequested();
         GeologyCatalog catalog;
         try { catalog = JsonSerializer.Deserialize<GeologyCatalog>(bytes, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidDataException("Catalogo vuoto."); }
         catch (JsonException ex) { throw new InvalidDataException("Catalogo geologico non valido: controllare il formato JSON.", ex); }

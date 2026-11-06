@@ -9,6 +9,14 @@ public static class RecordInspection
     public static FolderRecord Read(FolderRecord record, char prefix, CancellationToken token,
         Func<string, CancellationToken, FolderInspection> inspect, ILogger logger)
     {
+        if (prefix=='A' && record.Inspection?.Complete==true)
+        {
+            try {
+                var file=new FileInfo(record.Path);
+                if(file.Length==record.ArchiveBytes && file.LastWriteTimeUtc==record.ArchiveModifiedUtc)
+                    return record with {Inspection=record.Inspection with {CheckedUtc=DateTime.UtcNow}};
+            } catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or ArgumentOutOfRangeException) { }
+        }
         FolderInspection inspection;
         try { inspection = inspect(record.Path, token); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentOutOfRangeException or InvalidDataException)

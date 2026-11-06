@@ -21,6 +21,15 @@ if (string.IsNullOrWhiteSpace(settings.AllowedGroup)
     throw new InvalidOperationException("Configurare gruppo, porta TCP dedicata e percorsi UNC in " + settingsFile);
 using (var serviceIdentity = System.Security.Principal.WindowsIdentity.GetCurrent())
     StartupLog.Write($"Configurazione valida; account servizio={serviceIdentity.Name}; gruppo autorizzato={settings.AllowedGroup}; versione={System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}.");
+if (string.IsNullOrWhiteSpace(settings.DatabaseFolder))
+    settings.DatabaseFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Tassinari", "CommesseServer", "Data");
+settings.MaxConcurrentScans = Math.Clamp(settings.MaxConcurrentScans, 1, 4);
+ScanConcurrency.Configure(settings.MaxConcurrentScans);
+_ = GeologyStorage.Root(settings);
+var temporaryFolder=Path.Combine(settings.InventoryFolder,"Temp");
+Directory.CreateDirectory(temporaryFolder);
+Environment.SetEnvironmentVariable("TEMP",temporaryFolder);
+Environment.SetEnvironmentVariable("TMP",temporaryFolder);
 builder.Services.AddWindowsService(options => options.ServiceName = "TACommesseServer");
 builder.Services.AddSingleton(settings);
 builder.Services.AddSingleton(new ChangeHub(false));

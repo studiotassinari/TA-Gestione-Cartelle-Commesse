@@ -54,6 +54,9 @@ Check(store.UnitDirectory(manifest.Unit).Contains(Path.Combine("C","2026","C2619
 Check(before.All(p=>File.GetLastWriteTimeUtc(p.Key)==p.Value.Item2 && Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(p.Key)))==p.Value.Item1) && Directory.GetFiles(jobs,"*",SearchOption.AllDirectories).Length==before.Count,"sorgenti invariate: hash, date e nessun file estratto");
 Check(!Directory.EnumerateFiles(settings.ArchiveFolder,"*.json",SearchOption.AllDirectories).Any(p=>File.ReadAllText(p).Contains("CONTENUTO SEGRETO")),"nessun contenuto documentale nei JSON");
 Check(manifest.Baseline && manifest.Added==0,"prima lettura non genera false differenze");
+var unchangedProgress=new List<ScanProgress>();
+await service.RunAsync(States(),default,unchangedProgress.Add);
+Check(store.Find(manifest.Unit.Id)!.Generation==manifest.Generation && !unchangedProgress.SelectMany(p=>p.Locations??[]).Any(p=>p.Path.Contains(" > ")),"scansione invariata non riapre ZIP/7z né duplica inventari");
 File.WriteAllText(Path.Combine(job,"Nuovo.txt"),"123");
 await service.RunAsync(States(),default);
 manifest=store.Latest()!.Inventories.Single(m=>m.Unit.Path==job);
@@ -65,14 +68,14 @@ Check(manifest.Removed==1,"rimozione confermata dopo lettura completa");
 var partial=store.Save(manifest.Unit,new([], ["Rete non disponibile"],false),default);
 Check(partial.Removed==0 && partial.EntryCount==manifest.EntryCount && !partial.Complete,"lettura incompleta conserva nomi e non inventa rimozioni");
 var paged=store.Save(manifest.Unit,new(Enumerable.Range(0,2101).Select(n=>new InventoryEntry($"File-{n:D5}.pdf","file")).ToList(),[],true),default);
-Check(paged.PageCount==3 && store.Entries(paged).Count()==2101,"JSON suddivisi in pagine complete");
+Check(paged.PageCount==0 && store.Entries(paged).Count()==2101,"inventario unico SQLite senza pagine JSON");
 store.SaveRun(new(DateTime.UtcNow,DateTime.UtcNow,[paged],[],[]));
 var page=service.Query(new("files",manifest.Unit.Id,"",1000,100));
 Check(page.Total==2101 && page.NextOffset==1100 && ((List<object>)page.Items).Count==100,"paginazione MCP su più file JSON");
-var latest=File.ReadAllText(Path.Combine(store.UnitDirectory(paged.Unit),"latest.json"));
+var latest=store.Find(paged.Unit.Id);
 using var cancelled=new CancellationTokenSource();cancelled.Cancel();
 try { store.Save(paged.Unit,new([new("no.txt","file")],[],true),cancelled.Token); throw new Exception("Annullamento ignorato"); } catch(OperationCanceledException){}
-Check(File.ReadAllText(Path.Combine(store.UnitDirectory(paged.Unit),"latest.json"))==latest,"annullamento preserva puntatore a dati completi");
+Check(store.Find(paged.Unit.Id)!.Generation==latest!.Generation,"annullamento preserva puntatore a dati completi");
 try { store.UnitDirectory(paged.Unit with { Id="../../altro" }); throw new Exception("Traversal ammesso"); } catch(InvalidDataException){}
 Check(service.Report().Contains("Nessuna notifica"),"report sintetico disponibile dal server");
 var quiet=new ChangeHub(false);using var subscription=quiet.Subscribe();await subscription.ReadAsync(default);quiet.Publish("non deve arrivare");

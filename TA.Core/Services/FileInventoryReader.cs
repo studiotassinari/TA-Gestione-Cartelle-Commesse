@@ -6,7 +6,7 @@ namespace TA_Gestione_Cartelle_Commesse.Services;
 // Non estrae archivi e non apre stream dei documenti: solo directory e intestazioni ZIP/7z.
 public static class FileInventoryReader
 {
-    public static InventoryResult Read(string root, ISet<string> excludedRoots, CancellationToken token, Action<string>? currentDirectory = null)
+    public static InventoryResult Read(string root, ISet<string> excludedRoots, CancellationToken token, Action<string>? currentDirectory = null, bool readArchives = true)
     {
         var entries = new List<InventoryEntry>(); var issues = new List<string>();
         const int maximum = 1_000_000;
@@ -52,7 +52,7 @@ public static class FileInventoryReader
             var file = new FileInfo(path); DateTime? modified = null;
             try { modified = file.LastWriteTimeUtc; } catch (ArgumentOutOfRangeException) { issues.Add(relative + ": data non valida"); }
             Add(new(relative, IsArchive(path) ? "archive" : "file", null, file.Length, modified));
-            if (IsArchive(path)) Archive(path, relative);
+            if (readArchives && IsArchive(path)) Archive(path, relative);
         }
         try
         {

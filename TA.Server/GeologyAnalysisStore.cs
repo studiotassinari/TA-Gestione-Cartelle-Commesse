@@ -12,9 +12,9 @@ public sealed class GeologyAnalysisStore(ServerSettings settings)
     private string Index => Path.Combine(Root, "indice.json");
     public List<GeologicalAnalysisRecord> Read()
     {
-        if (!File.Exists(Index)) return [];
-        if (new FileInfo(Index).Length > 32 * 1024 * 1024) throw new IOException("Indice analisi oltre 32 MiB.");
-        var index = InventoryStore.Read<GeologicalAnalysisIndex>(Index);
+        if (!CatalogStorage.Exists(settings,Index)) return [];
+        if (CatalogStorage.Bytes(settings,Index).Length > 32 * 1024 * 1024) throw new IOException("Indice analisi oltre 32 MiB.");
+        var index = CatalogStorage.Read<GeologicalAnalysisIndex>(settings,Index);
         if (index.SchemaVersion != 1 || index.Records == null || index.Records.Count > 50000 ||
             index.Records.Any(r => r == null || r.Analysis == null) ||
             index.Records.Select(r => r.Analysis.ReportId).Distinct(StringComparer.Ordinal).Count() != index.Records.Count)
@@ -23,8 +23,8 @@ public sealed class GeologyAnalysisStore(ServerSettings settings)
     }
     public GeologicalAnalysisRecord Save(GeologicalReport report, GeologicalAnalysisDraft draft, string user, CancellationToken token)
     {
-        Directory.CreateDirectory(Root);
-        using var gate = new FileStream(Index + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+
+        using var gate = CatalogStorage.Lock(settings,Index + ".lock");
         var records = Read(); var previous = records.SingleOrDefault(r => r.Analysis.ReportId == report.Id);
         if ((previous?.Revision ?? "") != draft.ExpectedRevision) throw new IOException("Analisi aggiornata da un altro utente: rileggere il catalogo prima di salvare.");
         // Il client sceglie solo un fascicolo noto oppure ne richiede uno nuovo, mai un percorso su disco.
@@ -40,13 +40,13 @@ public sealed class GeologyAnalysisStore(ServerSettings settings)
         var id = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(report.Id)));
         var directory = Path.Combine(Root, Segment(report.Year, "senza-anno"), Segment(report.ProjectCode, "senza-commessa"), id);
         token.ThrowIfCancellationRequested();
-        GeologyStorage.Atomic(Path.Combine(directory, "revisioni", revision + ".json"), row);
+        CatalogStorage.Write(settings,Path.Combine(directory, "revisioni", "current.json"), row);
         // Il file della revisione è scritto prima dell'indice: un'interruzione non espone una revisione incompleta.
         var members = records.Where(r => r.Analysis.DossierId == dossier).ToList();
-        GeologyStorage.Atomic(Path.Combine(GeologyStorage.Root(settings), "fascicoli", dossier, "revisioni", revision + ".json"),
+        CatalogStorage.Write(settings,Path.Combine(GeologyStorage.Root(settings), "fascicoli", dossier, "revisioni", "current.json"),
             new { SchemaVersion = 1, Id = dossier, Title = draft.DossierTitle, SavedUtc = row.SavedUtc, SavedBy = user,
                 Documents = members.Select(r => new { r.Analysis.ReportId, r.Revision, r.Analysis.DocumentVersion, r.Analysis.SourceFingerprint, r.Analysis.DossierReason }).ToList() });
-        GeologyStorage.Atomic(Index, index);
+        CatalogStorage.Write(settings,Index, index);
         return row;
     }
 }

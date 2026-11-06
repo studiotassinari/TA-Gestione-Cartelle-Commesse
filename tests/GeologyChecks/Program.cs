@@ -78,7 +78,7 @@ internal static class Program
             shown.Close();main.GeologyCommand.Execute(null);Check(app.Windows.OfType<GeologyWindow>().Count()==1,"Riapertura dopo chiusura senza riferimenti alla vecchia finestra");
             main.Stop();Check(!app.Windows.OfType<GeologyWindow>().Any(),"Chiusura client libera la finestra geologica");app.Shutdown();
         }
-        finally{if(Path.GetFullPath(root).StartsWith(Path.GetFullPath(Path.GetTempPath()),StringComparison.OrdinalIgnoreCase)&&Path.GetFileName(root).StartsWith("TA-Geology-"))Directory.Delete(root,true);}
+        finally{Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();if(Path.GetFullPath(root).StartsWith(Path.GetFullPath(Path.GetTempPath()),StringComparison.OrdinalIgnoreCase)&&Path.GetFileName(root).StartsWith("TA-Geology-"))Directory.Delete(root,true);}
     }
     static void Render(FrameworkElement root,string name,int width,int height)
     {
