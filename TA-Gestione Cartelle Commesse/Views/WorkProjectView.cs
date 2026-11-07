@@ -16,6 +16,7 @@ public sealed class WorkProjectView : UserControl
         clients.SetBinding(ItemsControl.ItemsSourceProperty,new Binding("Details.Customers"));
         clients.SetBinding(ComboBox.SelectedValueProperty,new Binding("Project.CustomerId"){Mode=BindingMode.TwoWay});
         panel.Children.Add(clients);
+        panel.Children.Add(ProjectFields.Button("Gestisci / scegli cliente…","ManageCustomerCommand"));
         ProjectFields.Text(panel,"Argomento *","Project.Subject");
         ProjectFields.Text(panel,"Luogo (facoltativo)","Project.Location");
         ProjectFields.Choice(panel,"Stato (descrittivo)","Project.Status",new Dictionary<string,string>{{"","Non specificato"},{"Open","Aperta"},{"Closed","Chiusa"},{"Invoiced","Fatturata"}});

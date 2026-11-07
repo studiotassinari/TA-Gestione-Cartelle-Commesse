@@ -81,10 +81,10 @@ public sealed class BusinessWindow : Window
     }
     private async Task EditCustomer(Customer? old)
     {
-        if (!vm.CanEdit) return; var f = new BusinessForm(this, old == null ? "Nuovo cliente" : "Modifica cliente");
-        var name = f.Text("Ragione sociale / nome", old?.Name ?? ""); var vat = f.Text("Partita IVA", old?.Vat ?? ""); var tax = f.Text("Codice fiscale", old?.TaxCode ?? "");
-        var address = f.Text("Indirizzo", old?.Address ?? ""); var email = f.Text("Email", old?.Email ?? "");
-        if (f.ShowDialog() == true) await vm.Save(new("SaveCustomer", Customer: new(old?.Id ?? "", name.Text, vat.Text, tax.Text, address.Text, email.Text, old?.Revision ?? 0)));
+        if (!vm.CanEdit) return;
+        var editor=new CustomerManagementViewModel(vm,old?.Id??"");
+        new CustomerWindow(editor,startNew:old==null){Owner=this}.ShowDialog();
+        await vm.Refresh();
     }
     private async Task EditProject()
     {

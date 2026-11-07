@@ -23,8 +23,9 @@ public sealed partial class BusinessService
         var saved=Store.All<WorkProject>("project").ToDictionary(p=>p.Id);
         foreach(var p in available())
             if(!saved.TryGetValue(p.Id,out var old))saved.Add(p.Id,p);
-            else saved[p.Id]=old with{Year=old.Year==0?p.Year:old.Year,Number=old.Number==0?p.Number:old.Number,SourceCustomerName=string.IsNullOrEmpty(old.SourceCustomerName)?p.SourceCustomerName:old.SourceCustomerName};
-        return saved.Values.Select(ProjectMetadata.Normalize).OrderByDescending(p=>p.Code,StringComparer.Ordinal).ToArray();
+            else saved[p.Id]=old with{Year=old.Year==0?p.Year:old.Year,Number=old.Number==0?p.Number:old.Number,SourceCustomerName=string.IsNullOrEmpty(old.SourceCustomerName)?p.SourceCustomerName:old.SourceCustomerName,LastActivityUtc=p.LastActivityUtc};
+        var activity=Store.ProjectActivity();
+        return saved.Values.Select(ProjectMetadata.Normalize).Select(p=>activity.TryGetValue(p.Id,out var at)&&(!p.LastActivityUtc.HasValue||at>p.LastActivityUtc)?p with{LastActivityUtc=at}:p).OrderByDescending(p=>p.Code,StringComparer.Ordinal).ToArray();
     }
     public object Execute(BusinessCommand command,string actor,bool manager)
     {
@@ -35,6 +36,7 @@ public sealed partial class BusinessService
     }
     private object Handle(BusinessCommand c,string actor,bool manager)
     {
+        if(c.Action=="ProjectCatalog")return new ProjectCatalog(Projects(),Store.All<Customer>("customer"),manager);
         EnsurePhases();
         if(c.Action=="ProjectDetail")
         {

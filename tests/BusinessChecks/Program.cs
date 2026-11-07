@@ -11,6 +11,7 @@ try
 {
     FattureExcelChecks.Run();
     ProjectStructureChecks.Run(Path.Combine(root,"project-structure"));
+    ProjectActivityChecks.Run(Path.Combine(root,"project-activity"));
     if (args is ["--preview-excel", var excelPath])
     {
         var empty = new BusinessStore(Path.Combine(root, "excel-preview"));

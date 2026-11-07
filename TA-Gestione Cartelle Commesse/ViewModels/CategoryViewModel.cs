@@ -8,7 +8,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 namespace TA_Gestione_Cartelle_Commesse.ViewModels;
 
 // Il client riceve fotografie dal server: non legge il JSON condiviso né scansiona la rete.
-public sealed class CategoryViewModel : Observable
+public sealed partial class CategoryViewModel : Observable
 {
     private readonly char prefix;
     private ServerConnection? connection;
@@ -37,7 +37,7 @@ public sealed class CategoryViewModel : Observable
         get => selected;
         set
         {
-            selected = value; Notify(); OpenFolderCommand.Refresh(); Hierarchy.Clear();
+            selected = value; Notify(); Notify(nameof(SelectedProject)); OpenFolderCommand.Refresh(); Hierarchy.Clear();
             if (value != null && connection != null) Hierarchy.Add(new(value.Path, value.Id, prefix, connection) { IsExpanded = true });
         }
     }
@@ -54,7 +54,7 @@ public sealed class CategoryViewModel : Observable
     public void Connect(ServerConnection server)
     {
         ChangesLog.Clear(); ConnectionFailed = false; connection = server; snapshotTime = null; connected = false; busy = false;
-        all = []; ApplyFilter(); Warnings.Clear(); UpdateCommands();
+        catalog = null; customers.Replace([]); all = []; ApplyFilter(); Warnings.Clear(); UpdateCommands();
     }
     // Una sola richiesta di stato per categoria; mantiene la selezione se la fotografia non cambia.
     public async Task PollAsync()
@@ -67,6 +67,15 @@ public sealed class CategoryViewModel : Observable
             var state = await current.SendAsync<CategoryState>(new("State", prefix.ToString()));
             if (!ReferenceEquals(current, connection)) return;
             ApplyState(state);
+            if (IsProjectCategory)
+            {
+                try
+                {
+                    var data = await current.SendAsync<ProjectCatalog>(new("Business", Business: new("ProjectCatalog")));
+                    if (ReferenceEquals(current, connection)) ApplyProjectCatalog(data);
+                }
+                catch (Exception ex) { if (ReferenceEquals(current, connection)) Status = "Elenco cartelle disponibile; dati gestionali non aggiornati: " + ex.Message; }
+            }
         }
         catch (ServerRejectedException ex) when (prefix == 'A' && ex.Message.Contains("Categoria non valida"))
         { ConnectionFailed = false; connected = false; LastConnectionError = null; Status = "Archivio richiede server 2.7.0 o successivo."; }
@@ -105,6 +114,7 @@ public sealed class CategoryViewModel : Observable
     private void UpdateCommands() { Notify(nameof(IsIdle)); RefreshCommand.Refresh(); CancelCommand.Refresh(); }
     private void ApplyFilter()
     {
+        if (IsProjectCategory) { ApplyProjectFilter(); return; }
         var selectedId = Selected?.Id;
         Selected = null; Records.Clear();
         foreach (var row in all.Where(r => (r.Code + " " + r.Client + " " + r.Subject).Contains(filter, StringComparison.OrdinalIgnoreCase))) Records.Add(row);

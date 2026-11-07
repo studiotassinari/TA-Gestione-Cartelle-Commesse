@@ -32,6 +32,15 @@ public sealed class ProjectDetailWindow : Window
         activities.Children.Add(ProjectFields.Button("Nuova attività","NewActivityCommand"));
         var activityEditor=new WorkActivityView();activityEditor.SetBinding(IsEnabledProperty,new Binding("CanEdit"));activities.Children.Add(activityEditor);Add(columns,activities,2);
         Loaded+=async(_,_)=>await vm.Refresh();
+        vm.CustomerManagementRequested += ManageCustomer;
+        Closed += (_,_)=>vm.CustomerManagementRequested-=ManageCustomer;
+        async void ManageCustomer()
+        {
+            var editor=new CustomerManagementViewModel(vm.Business,vm.Project?.CustomerId??"");
+            var dialog=new CustomerWindow(editor,true){Owner=this};
+            var accepted=dialog.ShowDialog()==true;
+            await vm.ReloadCustomers(accepted?editor.Result:null);
+        }
     }
     private static void Add(Grid grid,UIElement content,int column)
     {

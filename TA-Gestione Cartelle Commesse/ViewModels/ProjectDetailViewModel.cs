@@ -7,9 +7,14 @@ public sealed class ProjectDetailViewModel : Observable
 {
     private readonly BusinessViewModel business;
     private readonly string id;
+    private readonly CustomerDirectory customers = new();
+    public BusinessViewModel Business => business;
+    public event Action? CustomerManagementRequested;
+    public Command ManageCustomerCommand {get;}
     public ProjectDetailViewModel(BusinessViewModel business,string id)
     {
         this.business=business;this.id=id;
+        ManageCustomerCommand=new(()=>CustomerManagementRequested?.Invoke(),()=>CanEdit);
         RefreshCommand=new(async()=>await Refresh(),()=>!Busy);
         SaveProjectCommand=new(async()=>await Execute(()=>new("SaveProjectDetails",Project:Project!.ToModel())),()=>CanEdit&&Project!=null);
         SavePhaseCommand=new(async()=>await Execute(()=>new("SavePhase",Phase:Phase!.ToModel())),()=>CanEdit&&Phase!=null);
@@ -49,7 +54,7 @@ public sealed class ProjectDetailViewModel : Observable
     public async Task Refresh()=>await Execute(null);
     private void Commands()
     {
-        foreach(var command in new[]{RefreshCommand,SaveProjectCommand,SavePhaseCommand,SaveActivityCommand,NewPhaseCommand,NewActivityCommand})command.Refresh();
+        foreach(var command in new[]{RefreshCommand,SaveProjectCommand,SavePhaseCommand,SaveActivityCommand,NewPhaseCommand,NewActivityCommand,ManageCustomerCommand})command.Refresh();
     }
     private async Task Execute(Func<BusinessCommand>? makeCommand)
     {
@@ -64,13 +69,28 @@ public sealed class ProjectDetailViewModel : Observable
                 else await business.Send<System.Text.Json.JsonElement>(command);
             }
             Details=await business.Send<ProjectDetails>(new("ProjectDetail",Id:id));
-            Project=new(Details.Project);Customer=Details.Customer==null?null:new(Details.Customer);
+            Project?.Dispose(); customers.Replace(Details.Customers);
+            Project=new(Details.Project,customers); Customer=Project.Customer;
+            Project.PropertyChanged+=(_,e)=>{if(e.PropertyName==nameof(Project.Customer)){Customer=Project.Customer;Notify(nameof(Customer));}};
             Notify(nameof(Details));Notify(nameof(Project));Notify(nameof(Customer));
             SelectedPhase=Details.Phases.FirstOrDefault(p=>p.Id==phaseId)??Details.Phases.FirstOrDefault();
             Status=$"{Details.Phases.Length} fasi · {Details.Activities.Length} attività complessive. Le modifiche riguardano solo il gestionale.";
         }
         catch(Exception ex){Status=ex.Message;}
         finally{Busy=false;Notify(nameof(Status));Notify(nameof(CanEdit));Commands();}
+    }
+    public async Task ReloadCustomers(Customer? selected)
+    {
+        try
+        {
+            var catalog=await business.Send<ProjectCatalog>(new("ProjectCatalog"));
+            customers.Replace(catalog.Customers);
+            if(Details!=null) Details=Details with{Customers=catalog.Customers};
+            if(Project!=null) Project.CustomerId=selected?.Id??Project.CustomerId;
+            Notify(nameof(Details)); Status="Anagrafica aggiornata. Salva la commessa per confermare l'associazione.";
+        }
+        catch(Exception ex){Status=ex.Message;}
+        Notify(nameof(Status));
     }
 }
 

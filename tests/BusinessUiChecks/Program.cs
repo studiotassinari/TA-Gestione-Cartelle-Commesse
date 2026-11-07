@@ -11,7 +11,12 @@ using TA_Gestione_Cartelle_Commesse.Views;
 
 internal static class Program
 {
-    [STAThread] static void Main()
+    [STAThread] static int Main()
+    {
+        try { Run(); return 0; }
+        catch(Exception ex){Console.Error.WriteLine(ex);return 1;}
+    }
+    static void Run()
     {
         var app = new Application(); var main = new MainWindow(); app.MainWindow = main;
         var day = DateOnly.FromDateTime(DateTime.Today);

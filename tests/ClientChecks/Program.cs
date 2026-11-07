@@ -8,16 +8,22 @@ using TA.ServiceManager;
 using TA_Gestione_Cartelle_Commesse.Contracts;
 using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.ViewModels;
-internal static class Program
+internal static partial class Program
 {
     static void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL: " + name); Console.WriteLine("PASS: " + name); }
-    [STAThread] static void Main()
+    [STAThread] static int Main()
+    {
+        try { Run(); return 0; }
+        catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }
+    }
+    static void Run()
     {
         Check(ClientPaths.ForExplorer(@"\\ingtassinari.it\data\lavori\2026\C26198 - A - B") == @"Z:\lavori\2026\C26198 - A - B", "Apertura converte la condivisione aziendale in Z");
         Check(ClientPaths.ForExplorer(@"\\INGTASSINARI\DATA\archivio\esempio.zip") == @"Z:\archivio\esempio.zip", "Conversione supporta nome breve e maiuscole");
         Check(ClientPaths.ForExplorer(@"\\ingtassinari.it\database\file") == @"\\ingtassinari.it\database\file", "Condivisioni diverse restano inalterate");
         Check(ClientPaths.ForExplorer(@"Z:\lavori") == @"Z:\lavori", "Percorsi gia mappati invariati");
         var app = new Application();
+        CheckProjectList(app);
         foreach (var prefix in new[] { 'C', 'G', 'A' })
         {
             var vm = new CategoryViewModel(prefix == 'C' ? "Commesse" : prefix == 'G' ? "Gare" : "Archivio", prefix);
@@ -37,7 +43,7 @@ internal static class Program
             vm.ApplyState(state with { Snapshot = snapshot with { Records = [first, next], SavedUtc = now.AddTicks(2) } });
             Check(notified == 1, prefix + ": fotografia invariata non ripete l'avviso");
             vm.ApplyState(state with { Snapshot = snapshot with { Records = [first, next with { Inspection = new FolderInspection { TotalBytes = 4096, Complete = true } }], SavedUtc = now.AddTicks(3) } });
-            Check(notified == 2 && vm.Records.Last().SizeText.Contains("KiB"), prefix + ": dimensione aggiornata nella griglia con il secondo push");
+            Check(notified == 2 && vm.Records.Single(r=>r.Code==next.Code).SizeText.Contains("KiB"), prefix + ": dimensione aggiornata nella griglia con il secondo push");
         }
         var service = new ServiceLogView(); service.Output.Text = "17:10:00 Servizio avviato\n17:10:01 Elenco C verificato: 320 cartelle\n17:10:02 Metadati in corso; elenco disponibile";
         var communications = new CommunicationLogView();

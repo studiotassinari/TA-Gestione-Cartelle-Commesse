@@ -1,0 +1,45 @@
+<UserControl x:Class="TA_Gestione_Cartelle_Commesse.Views.WorkProjectListView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:views="clr-namespace:TA_Gestione_Cartelle_Commesse.Views">
+ <DockPanel>
+  <TextBlock DockPanel.Dock="Top" Text="{Binding ListCaption}" Foreground="#53717B" Margin="2,0,0,6" FontSize="12"/>
+  <Border DockPanel.Dock="Top" Background="#192845" Padding="11,0" Margin="0,0,17,0">
+   <Grid Height="30">
+    <Grid.Resources><Style TargetType="TextBlock">
+     <Setter Property="Foreground" Value="White"/><Setter Property="FontSize" Value="11"/>
+     <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="VerticalAlignment" Value="Center"/>
+    </Style></Grid.Resources>
+    <Grid.ColumnDefinitions>
+     <ColumnDefinition Width="88"/><ColumnDefinition Width="48"/><ColumnDefinition Width="48"/>
+     <ColumnDefinition Width="2*"/><ColumnDefinition Width="3*"/>
+     <ColumnDefinition Width="110"/><ColumnDefinition Width="140"/><ColumnDefinition Width="100"/><ColumnDefinition Width="30"/>
+    </Grid.ColumnDefinitions>
+    <TextBlock Text="Codice"/><TextBlock Grid.Column="1" Text="Anno"/><TextBlock Grid.Column="2" Text="N."/>
+    <TextBlock Grid.Column="3" Text="Cliente"/><TextBlock Grid.Column="4" Text="Argomento"/>
+    <TextBlock Grid.Column="5" Text="Dimensione"/><TextBlock Grid.Column="6" Text="Ultima attività"/>
+    <TextBlock Grid.Column="7" Text="Stato"/>
+   </Grid>
+  </Border>
+  <ListBox ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
+   BorderThickness="0" Padding="0" Background="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+   ScrollViewer.VerticalScrollBarVisibility="Visible"
+   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
+   <ListBox.ItemContainerStyle>
+    <Style TargetType="ListBoxItem">
+     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+     <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0"/>
+     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+      <Border x:Name="Surface" Background="White" BorderBrush="#E1E9EB" BorderThickness="1,0,1,1">
+       <ContentPresenter/>
+      </Border>
+      <ControlTemplate.Triggers>
+       <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="#F0F7F7"/></Trigger>
+       <Trigger Property="IsSelected" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="#135F6E"/><Setter TargetName="Surface" Property="Background" Value="#E0F0F0"/></Trigger>
+      </ControlTemplate.Triggers>
+     </ControlTemplate></Setter.Value></Setter>
+    </Style>
+   </ListBox.ItemContainerStyle>
+   <ListBox.ItemTemplate><DataTemplate><views:WorkProjectListItem/></DataTemplate></ListBox.ItemTemplate>
+  </ListBox>
+ </DockPanel>
+</UserControl>

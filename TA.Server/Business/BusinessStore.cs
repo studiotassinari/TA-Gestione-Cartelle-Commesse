@@ -33,6 +33,23 @@ public sealed class BusinessStore
         cmd.Parameters.AddWithValue("$k",kind);cmd.Parameters.AddWithValue("$id",id);return cmd.ExecuteScalar() is string json?JsonSerializer.Deserialize<T>(json):null;}
     }
     public long ChangeNumber {get{lock(gate){using var db=Open();using var cmd=db.CreateCommand();cmd.CommandText="SELECT COALESCE(MAX(id),0) FROM audit";return Convert.ToInt64(cmd.ExecuteScalar());}}}
+    public Dictionary<string,DateTime> ProjectActivity()
+    {
+        lock(gate)
+        {
+            using var db=Open();using var cmd=db.CreateCommand();
+            cmd.CommandText="""
+                SELECT COALESCE(json_extract(after_json,'$.ProjectId'),json_extract(before_json,'$.ProjectId'),
+                    CASE WHEN action IN ('ProjectDetails','ProjectAuthorization') THEN record_id END) AS project_id,MAX(at)
+                FROM audit WHERE action IN ('ProjectDetails','ProjectAuthorization','Phase','Activity','TimeEntry','Delete')
+                    AND actor <> 'Migrazione fasi'
+                GROUP BY project_id HAVING project_id IS NOT NULL
+                """;
+            using var reader=cmd.ExecuteReader();var result=new Dictionary<string,DateTime>();
+            while(reader.Read())result[reader.GetString(0)]=DateTime.Parse(reader.GetString(1),System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.RoundtripKind);
+            return result;
+        }
+    }
     public void Save<T>(string kind,string id,int expected,T value,string actor,string action)
     {
         lock(gate)

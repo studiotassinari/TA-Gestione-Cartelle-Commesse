@@ -7,7 +7,7 @@ public static class ProjectMetadata
 {
     public static WorkProject FromFolder(FolderRecord row)
     {
-        var project=Normalize(new(row.Id,row.Code,row.Client+" — "+row.Subject,Subject:row.Subject,SourceCustomerName:row.Client));
+        var project=Normalize(new(row.Id,row.Code,row.Client+" — "+row.Subject,Subject:row.Subject,SourceCustomerName:row.Client,LastActivityUtc:row.Inspection?.LastFileWriteUtc??row.ArchiveModifiedUtc));
         // Il nome della cartella anno prevale sull'inferenza dal codice a due cifre.
         foreach(var segment in row.Path.Split('\\','/'))
             if(Regex.IsMatch(segment,@"^(19|20)\d{2}$")&&int.TryParse(segment,out var year)&&year%100==project.Year%100)

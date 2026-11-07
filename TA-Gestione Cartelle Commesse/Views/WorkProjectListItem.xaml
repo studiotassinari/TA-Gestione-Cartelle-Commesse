@@ -1,0 +1,39 @@
+<UserControl x:Class="TA_Gestione_Cartelle_Commesse.Views.WorkProjectListItem"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ MouseDoubleClick="OpenFolder" PreviewMouseRightButtonDown="SelectRow">
+ <UserControl.ContextMenu>
+  <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+   <MenuItem Header="Apri cartella" Command="{Binding OpenFolderCommand}"/>
+   <MenuItem Header="Dettaglio commessa" Command="{Binding EditCommand}"/>
+   <MenuItem Header="Scheda cliente" Command="{Binding OpenCustomerCommand}"/>
+  </ContextMenu>
+ </UserControl.ContextMenu>
+ <Grid Height="34" Margin="10,0" ToolTip="{Binding Folder.Path}">
+  <Grid.Resources>
+   <Style TargetType="TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    <Setter Property="Margin" Value="0,0,12,0"/>
+    <Setter Property="Foreground" Value="#192845"/>
+    <Setter Property="FontSize" Value="12"/>
+   </Style>
+  </Grid.Resources>
+  <Grid.ColumnDefinitions>
+   <ColumnDefinition Width="88"/><ColumnDefinition Width="48"/><ColumnDefinition Width="48"/>
+   <ColumnDefinition Width="2*"/><ColumnDefinition Width="3*"/>
+   <ColumnDefinition Width="110"/><ColumnDefinition Width="140"/><ColumnDefinition Width="100"/><ColumnDefinition Width="30"/>
+  </Grid.ColumnDefinitions>
+  <TextBlock Text="{Binding Code}" Foreground="#135F6E" FontWeight="SemiBold"/>
+  <TextBlock Grid.Column="1" Text="{Binding Year}"/>
+  <TextBlock Grid.Column="2" Text="{Binding Number}"/>
+  <TextBlock Grid.Column="3" Text="{Binding Client}" ToolTip="{Binding Client}" FontWeight="SemiBold"/>
+  <TextBlock Grid.Column="4" Text="{Binding Subject}" ToolTip="{Binding Subject}"/>
+  <TextBlock Grid.Column="5" Text="{Binding SizeText}" ToolTip="{Binding SizeText}"/>
+  <TextBlock Grid.Column="6" Text="{Binding LastActivityText}" ToolTip="{Binding LastActivityText}" Foreground="#53717B"/>
+  <TextBlock Grid.Column="7" Text="{Binding StateLabel}" ToolTip="{Binding StateLabel}" Foreground="#53717B"/>
+  <Button Grid.Column="8" Command="{Binding EditCommand}" ToolTip="Apri dettaglio commessa"
+   Padding="5,3" Margin="0" VerticalAlignment="Center" AutomationProperties.Name="Apri dettaglio commessa">
+   <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70F;" Foreground="White" Margin="0" FontSize="12"/>
+  </Button>
+ </Grid>
+</UserControl>

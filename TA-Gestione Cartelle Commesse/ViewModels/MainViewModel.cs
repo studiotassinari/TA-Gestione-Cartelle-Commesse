@@ -39,6 +39,9 @@ public sealed partial class MainViewModel : Observable
     public MainViewModel()
     {
         BusinessCommand = new(ShowBusiness, () => connection != null);
+        CustomersCommand = new(() => ShowCustomers(""), () => connection != null);
+        Commesse.ProjectRequested += ShowProject;
+        Commesse.CustomerRequested += p => ShowCustomers(p.CustomerId);
         GeologyCommand = new(ShowGeology);
         IpripiCommand = new(ShowIpripi);
         ShowScanCommand=new(()=>StatusTabIndex=0); ShowConnectionCommand=new(()=>StatusTabIndex=1);
@@ -72,9 +75,10 @@ public sealed partial class MainViewModel : Observable
             if (dialog.ShowDialog() != true) return;
             credentials = dialog.Credential;
         }
-        businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
+        CloseProjectWindows(); businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
         Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); NonconformityReportCommand.Refresh();
+        CustomersCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";
@@ -149,7 +153,7 @@ public sealed partial class MainViewModel : Observable
             }
         }
     }
-    public void Stop() { businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
+    public void Stop() { CloseProjectWindows(); businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
 
 
     private Views.NonconformityReportWindow? nonconformityWindow;
