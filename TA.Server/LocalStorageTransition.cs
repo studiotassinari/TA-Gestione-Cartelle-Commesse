@@ -1,5 +1,4 @@
 using Microsoft.Data.Sqlite;
-using System.Security.Cryptography;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 
@@ -28,10 +27,9 @@ public static class LocalStorageTransition
             {source.Open();target.Open();source.BackupDatabase(target);}
             DatabaseBackup.Verify(temp);File.Move(temp,originalBackup);
         }
-        DatabaseBackup.Verify(originalBackup);
+        else DatabaseBackup.Verify(originalBackup);
         token.ThrowIfCancellationRequested();
-        var networkRecovery=Path.Combine(settings.BackupDirectory,"prima-ricostruzione");Directory.CreateDirectory(networkRecovery);
-        CopyVerified(originalBackup,Path.Combine(networkRecovery,"inventario-precedente.sqlite"));
+        progress("Recupero locale delle sole analisi; inventari e cache di rete esclusi");
         int files=0;
         // Verifica l'accesso alla sorgente: un errore di rete non equivale a un catalogo vuoto.
         var existingAreas=Directory.GetDirectories(settings.LegacyCatalogFolder);
@@ -44,7 +42,8 @@ public static class LocalStorageTransition
             {
                 token.ThrowIfCancellationRequested();
                 if((File.GetAttributes(directory)&FileAttributes.ReparsePoint)!=0)throw new IOException("Collegamento nel catalogo precedente: verificare prima del recupero.");
-                foreach(var child in Directory.EnumerateDirectories(directory))pending.Push(child);
+                foreach(var child in Directory.EnumerateDirectories(directory))
+                    if(!Path.GetFileName(child).Equals("unita",StringComparison.OrdinalIgnoreCase))pending.Push(child);
                 foreach(var file in Directory.EnumerateFiles(directory,"*.json"))
                 {
                     token.ThrowIfCancellationRequested();
@@ -66,18 +65,7 @@ public static class LocalStorageTransition
         if(store.IntegrityCheck()!="ok")throw new IOException("Verifica cataloghi recuperati fallita.");
         var catalogs=Path.Combine(recovery,"cataloghi-recuperati.sqlite");
         store.Backup(catalogs);DatabaseBackup.Verify(catalogs);
-        CopyVerified(catalogs,Path.Combine(networkRecovery,"cataloghi-recuperati.sqlite"));
         store.SaveDocument(Marker,new{CompletedUtc=DateTime.UtcNow,RecoveredDocuments=files});
-        progress("Cataloghi preservati e backup verificati; avvio nuova scansione");
-    }
-    private static void CopyVerified(string source,string destination)
-    {
-        string Hash(string path){using var stream=File.OpenRead(path);return Convert.ToHexString(SHA256.HashData(stream));}
-        var sourceHash=Hash(source);
-        if(File.Exists(destination)&&Hash(destination)==sourceHash)return;
-        var temporary=destination+".tmp";
-        File.Copy(source,temporary,true);
-        if(Hash(temporary)!=sourceHash)throw new IOException("Backup di sicurezza non verificato.");
-        File.Move(temporary,destination,true);
+        progress("Cataloghi preservati localmente; avvio scansione. Backup di rete indipendente.");
     }
 }

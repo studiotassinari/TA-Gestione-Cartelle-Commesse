@@ -10,6 +10,7 @@ try
     File.WriteAllText(Path.Combine(legacy,"geologia","posizioni.json"),"{\"value\":1}");
     Directory.CreateDirectory(Path.Combine(legacy,"ipripi"));File.WriteAllText(Path.Combine(legacy,"ipripi","indice.json"),"{\"value\":2}");
     Directory.CreateDirectory(Path.Combine(legacy,"inventario-file"));File.WriteAllText(Path.Combine(legacy,"inventario-file","broken.json"),"invalid");
+    Directory.CreateDirectory(Path.Combine(legacy,"geologia","unita"));File.WriteAllText(Path.Combine(legacy,"geologia","unita","broken.json"),"invalid");
     var oldStore=new InventoryStore(old);oldStore.SaveDocument("GEOLOGIA/POSIZIONI.JSON",new{value=3});oldStore.SaveDocument("snapshot:C:old",new{value=999});
     var settings=new ServerSettings{LocalStorageOnly=true,DatabaseFolder=Path.Combine(root,"new"),ArchiveFolder=Path.Combine(root,"runtime"),BackupFolder=Path.Combine(root,"backup"),LegacyCatalogFolder=legacy,LegacyDatabaseFolder=old};
     var path=Path.Combine(settings.ArchiveFolder,"geologia","posizioni.json");
@@ -17,14 +18,16 @@ try
     LocalStorageTransition.Prepare(settings,CancellationToken.None,_=>{});
     var store=new InventoryStore(settings.InventoryFolder);
     Check(store.Manifests().Count==0 && store.Document("snapshot:C:old")==null,"Inventario precedente escluso");
+    Check(store.Document("GEOLOGIA/UNITA/BROKEN.JSON")==null,"Cache per unità escluse dal recupero");
     Check(store.Document("GEOLOGIA/POSIZIONI.JSON")=="{\"value\":3}","Versione SQL più recente preservata");
     Check(store.Document("IPRIPI/INDICE.JSON")=="{\"value\":2}","Analisi presenti solo nei JSON preservate");
     Check(File.ReadAllText(Path.Combine(legacy,"geologia","posizioni.json"))=="{\"value\":1}","Sorgenti precedenti inalterate");
-    Check(File.Exists(Path.Combine(settings.BackupFolder,"prima-ricostruzione","inventario-precedente.sqlite")),"Backup precedente disponibile sulla destinazione separata");
-    Check(File.Exists(Path.Combine(settings.BackupFolder,"prima-ricostruzione","cataloghi-recuperati.sqlite")),"Backup dei cataloghi recuperati disponibile");
+    Check(File.Exists(Path.Combine(settings.InventoryFolder,"Recovery","prima-ricostruzione.sqlite")),"Backup precedente disponibile sul disco locale");
+    Check(File.Exists(Path.Combine(settings.InventoryFolder,"Recovery","cataloghi-recuperati.sqlite")),"Backup dei cataloghi recuperati disponibile");
     settings.LegacyCatalogFolder=Path.Combine(root,"non-disponibile");settings.LegacyDatabaseFolder=Path.Combine(root,"non-disponibile-db");
     LocalStorageTransition.Prepare(settings,CancellationToken.None,_=>throw new Exception("Recupero ripetuto"));
     Check(System.Text.Encoding.UTF8.GetString(CatalogStorage.Bytes(settings,path))=="{\"value\":3}","Riavvio e consultazione indipendenti dalla vecchia rete");
+    Check(!Directory.Exists(settings.BackupFolder),"Preparazione indipendente dalla destinazione di rete");
     var backup=DatabaseBackup.Save(settings,CancellationToken.None);
     Check(backup.Error==""&&backup.SuccessUtc!=null,"Backup eseguito senza scansione completata");
     Check(DatabaseBackup.Save(settings,CancellationToken.None).Path==backup.Path,"Una sola copia giornaliera");
