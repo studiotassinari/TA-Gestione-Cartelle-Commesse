@@ -13,7 +13,11 @@ using TA_Gestione_Cartelle_Commesse.Views;
 internal static class Program
 {
     static void Check(bool ok,string text){if(!ok)throw new Exception(text);Console.WriteLine("PASS: "+text);}
-    [STAThread] static void Main()
+    [STAThread] static int Main()
+    {
+        try { Run(); return 0; } catch(Exception ex){Console.Error.WriteLine(ex);return 1;}
+    }
+    static void Run()
     {
         System.Windows.Media.RenderOptions.ProcessRenderMode=System.Windows.Interop.RenderMode.SoftwareOnly; var app=new Application();var window=new MainWindow();
         var vm=(MainViewModel)window.DataContext;
@@ -27,6 +31,8 @@ internal static class Program
         vm.ApplyProgress(active with {Locations=[new("C","Dimensioni e gerarchie",@"\\server\lavori\2026\C26198 - Cliente - Progetto\Impianti"),new("A","Dimensioni e gerarchie",@"\\server\archivio\C25123.zip > Disegni/Strutture")]});
         Check(vm.ScanLog.Take(2).Any(r=>r.Category=="Archivio" && r.Path.Contains(" > ")),"Percorso fisico e interno archivio distinti, categorie simultanee");
         vm.Commesse.Records.Add(new("C26198","26","198","Cliente dimostrativo","Progetto impianti",@"Z:\lavori\2026\C26198","Valido"));
+        var folder=vm.Commesse.Records[0];
+        vm.Commesse.Projects.Add(new(new(folder.Id,folder.Code,folder.Subject,Subject:folder.Subject,SourceCustomerName:folder.Client,Year:2026,Number:198),folder:folder));
         var root=Detach(window);
         Render(root,"client-bottom-scan.png",1264,826);
         Check(!Walk(root).OfType<ProgressBar>().Any(),"Nessuna barra animata nella finestra principale");
@@ -35,10 +41,12 @@ internal static class Program
         Check(tabs.Items.Count==4 && tabs.ActualHeight>100,"Schede informative inferiori presenti e utilizzabili");
         vm.ShowConnectionCommand.Execute(null);Render(root,"client-bottom-connection.png",1264,826);
         Check(tabs.SelectedIndex==1 && Walk(root).OfType<ConnectionStatusView>().Any(),"Comando connessione seleziona la scheda inferiore");
-        vm.ShowScanCommand.Execute(null);Render(root,"client-bottom-small.png",864,676);
+        vm.ShowScanCommand.Execute(null);Render(root,"client-bottom-small.png",(int)window.MinWidth-36,(int)window.MinHeight-74);
         Check(tabs.ActualHeight>=140,"Schede utilizzabili anche alla dimensione minima");
-        var folderGrid=Walk(root).OfType<DataGrid>().Single(g=>ReferenceEquals(g.ItemsSource,vm.Commesse.Records));
-        Check(folderGrid.ActualHeight>=90,"Elenco delle commesse leggibile anche alla dimensione minima");
+        var projectList=Walk(root).OfType<ListBox>().Single(g=>ReferenceEquals(g.ItemsSource,vm.Commesse.Projects));
+        Console.WriteLine($"Dimensione elenco: {projectList.ActualWidth} x {projectList.ActualHeight}");
+        Check(projectList.ActualHeight>=90&&projectList.ActualWidth>=1000,"Elenco compatto mantiene altezza e colonne leggibili alla dimensione minima");
+        Check(Walk(projectList).OfType<TextBlock>().Any(t=>t.Text=="Progetto impianti"&&t.ActualWidth>100),"Argomento della commessa visibile nel nuovo componente");
         var invalid=new FolderRecord("C26198","26","198","Cliente","Progetto",@"Z:\lavori\2026\C26198 - <script>","Non conforme");
         var checkedRow=invalid with {Code="C26199",Path=@"Z:\lavori\2026\C26199",Status="Valido",Inspection=new(){Complete=false,Issues=["Accesso negato"],QuoteStatus="Non trovato nei nomi"}};
         var report=new NonconformityReportViewModel();
