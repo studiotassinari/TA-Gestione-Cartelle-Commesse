@@ -19,7 +19,7 @@ foreach($component in @('Client','Server')) {
    if($file.Extension -eq '.pdb'){continue}
    $files.Add('Manager/'+$file.FullName.Substring($base.Length+1).Replace('\','/'),$file.FullName)
   }
-  foreach($file in @('Service-Manage.ps1','Configure-Server.ps1')){$files.Add($file,(Join-Path (Resolve-Path 'deployment').Path $file))}
+  foreach($file in @('Service-Manage.ps1','Configure-Server.ps1','Enable-LocalStorage.ps1','ARCHIVIAZIONE-LOCALE.md','GESTIONALE.md')){$files.Add($file,(Join-Path (Resolve-Path 'deployment').Path $file))}
  }
  $files['Updater/TA.Updater.exe']=(Resolve-Path 'artifacts/updater/TA.Updater.exe').Path
  $files['Update-Application.ps1']=(Resolve-Path 'deployment/Update-Application.ps1').Path

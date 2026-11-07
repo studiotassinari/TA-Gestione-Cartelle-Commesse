@@ -70,7 +70,10 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
                     await WireProtocol.WriteAsync(authenticated, Reply.Fail("Gruppo autorizzato non risolvibile sul server. Contattare l'amministratore."), ct);
                     return;
                 }
-                if (!new WindowsPrincipal(identity).IsInRole(groupSid) && !domainAdmin)
+                bool collaborator = false;
+                try { collaborator = new WindowsPrincipal(identity).IsInRole((SecurityIdentifier)new NTAccount("INGTASSINARI", settings.CollaboratorsGroup).Translate(typeof(SecurityIdentifier))); }
+                catch (IdentityNotMappedException) { /* Il gruppo storico rimane valido per i client precedenti. */ }
+                if (!new WindowsPrincipal(identity).IsInRole(groupSid) && !domainAdmin && !collaborator)
                 {
                     // Il canale e gia autenticato e cifrato: risponde senza eseguire il comando.
                     received = await WireProtocol.ReadAsync<Request>(authenticated, ct);

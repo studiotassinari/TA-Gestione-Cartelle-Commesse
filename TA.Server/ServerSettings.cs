@@ -7,6 +7,11 @@ public sealed class ServerSettings
     public string BidsRoot { get; set; } = ""; public string ArchivedJobsRoot { get; set; } = @"\\ingtassinari.it\data\archivio";
     public string ArchiveFolder { get; set; } = "";
     public string DatabaseFolder { get; set; } = "";
+    public bool LocalStorageOnly { get; set; }
+    public string BackupFolder { get; set; } = "";
+    public string LegacyCatalogFolder { get; set; } = "";
+    public string LegacyDatabaseFolder { get; set; } = "";
+    public string BackupDirectory => string.IsNullOrWhiteSpace(BackupFolder) ? Path.Combine(ArchiveFolder,"backup-database") : Path.GetFullPath(BackupFolder);
     public string InventoryFolder
     {
         get
@@ -32,6 +37,7 @@ public sealed class ServerSettings
     // Un gruppo esplicito evita di esporre tutti i metadati a qualunque account del dominio.
     public string JobTemplate { get; set; } = @"\\ingtassinari.it\data\lavori\2026\C26198 - CLIENTE - LUOGO - COSA";
     public string AllowedGroup { get; set; } = "";
+    public string CollaboratorsGroup { get; set; } = "GG_TA_Commesse_Users";
     // Compatibilità con configurazioni precedenti: la frequenza effettiva è oraria.
     public int RefreshMinutes { get; set; } = 60;
     // Porta TCP dedicata: i valori comunemente usati per HTTP sono esclusi.

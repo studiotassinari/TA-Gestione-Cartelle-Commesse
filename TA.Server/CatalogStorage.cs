@@ -15,15 +15,21 @@ public static class CatalogStorage
             throw new IOException("Il catalogo esterno deve essere importato nell'archivio del servizio prima della migrazione SQL.");
         return Path.GetRelativePath(root,full).Replace('\\','/').ToUpperInvariant();
     }
-    private static InventoryStore Store(ServerSettings s)=>new(s.InventoryFolder);
+    private static InventoryStore Store(ServerSettings s)
+    {
+        var store=new InventoryStore(s.InventoryFolder);
+        if(s.LocalStorageOnly && store.Document(LocalStorageTransition.Marker)==null)throw new IOException("Recupero dei cataloghi precedenti in corso: riprovare dopo la preparazione dell'archivio locale.");
+        return store;
+    }
     private static bool External(ServerSettings s,string path)=>!string.IsNullOrWhiteSpace(s.GeologyCatalogPath) && Path.GetFullPath(path).Equals(Path.GetFullPath(s.GeologyCatalogPath),StringComparison.OrdinalIgnoreCase);
-    public static bool Exists(ServerSettings s,string path)=>External(s,path)?File.Exists(path):Store(s).Document(Key(s,path))!=null || File.Exists(path);
+    public static bool Exists(ServerSettings s,string path)=>External(s,path)?File.Exists(path):Store(s).Document(Key(s,path))!=null || !s.LocalStorageOnly && File.Exists(path);
     public static byte[] Bytes(ServerSettings s,string path)
     {
         if(External(s,path))return File.ReadAllBytes(path);
         var store=Store(s);var key=Key(s,path);var json=store.Document(key);
         if(json==null)
         {
+            if(s.LocalStorageOnly)throw new FileNotFoundException("Catalogo non ancora disponibile nel database locale.");
             using var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Delete);
             if(stream.Length>64*1024*1024)throw new IOException("Catalogo oltre il limite di migrazione.");
             using var reader=new StreamReader(stream);json=reader.ReadToEnd();store.SaveDocumentJson(key,json);

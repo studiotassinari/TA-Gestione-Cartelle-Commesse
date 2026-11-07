@@ -21,7 +21,7 @@ public sealed class BusinessBackupService(BusinessService business,ServerSetting
         if(revision==lastRevision&&day==lastDay)return;
         var folder=Path.Combine(configuration.InventoryFolder,"Temp","BackupGestionale");Directory.CreateDirectory(folder);
         var local=Path.Combine(folder,Guid.NewGuid().ToString("N")+".sqlite");
-        var targetFolder=Path.Combine(configuration.ArchiveFolder,"backup-gestionale");Directory.CreateDirectory(targetFolder);
+        var targetFolder=configuration.LocalStorageOnly ? Path.Combine(configuration.BackupDirectory,"gestionale") : Path.Combine(configuration.ArchiveFolder,"backup-gestionale");Directory.CreateDirectory(targetFolder);
         var target=Path.Combine(targetFolder,"gestionale-"+day.ToString("yyyyMMdd")+".sqlite");var temp=target+"."+Guid.NewGuid().ToString("N")+".tmp";
         try
         {

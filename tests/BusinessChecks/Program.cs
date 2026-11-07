@@ -58,6 +58,15 @@ try
     Check(privateView.Times.Length == 0 && !privateView.CanManage, "Ore altrui esposte");
     var visible = Run<BusinessSnapshot>(new("Snapshot", new(today, today)), user, false);
     Check(visible.Times.Length == 1, "Ore proprie mancanti");
+    string[] members = [user, other];
+    var restricted = new BusinessService(store, () => [project], s => s, () => members);
+    var roster = (BusinessSnapshot)restricted.Execute(new("Snapshot", new(today,today)),manager,true);
+    Check(roster.Collaborators.SequenceEqual(members), "Collaboratori non derivati dal gruppo");
+    Reject(() => restricted.Execute(new("SaveActivity", Activity: activity with {Assignee=manager}),manager,true));
+    members = [other];
+    Reject(() => restricted.Execute(new("Snapshot", new(today,today)),user,false));
+    Reject(() => restricted.Execute(new("SaveTime", Time: entry),user,false));
+    Check(store.All<WorkActivity>("activity").Single().Assignee==user, "La rimozione dal gruppo ha alterato lo storico");
     var backup = Path.Combine(root, "backup.sqlite"); store.Backup(backup);
     using (var db = new SqliteConnection($"Data Source={backup};Pooling=False"))
     { db.Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "SELECT COUNT(*) FROM records WHERE kind='time'"; Check(Convert.ToInt32(cmd.ExecuteScalar()) == 1, "Backup incompleto"); }

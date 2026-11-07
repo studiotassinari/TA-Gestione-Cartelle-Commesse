@@ -20,7 +20,7 @@ public static class DatabaseBackup
         var now=DateTime.UtcNow;
         if(!force && previous?.SuccessUtc is DateTime last && DailyReports.ItalianTime(last).Date==DailyReports.ItalianTime(now).Date)return previous;
         var local=Path.Combine(settings.InventoryFolder,"backup-in-progress.sqlite");
-        var folder=Path.GetFullPath(Path.Combine(settings.ArchiveFolder,"backup-database"));
+        var folder=Path.GetFullPath(settings.BackupDirectory);
         var target=Path.Combine(folder,"TA-Commesse-"+now.ToString("yyyyMMddTHHmmssfffffff")+".sqlite");
         var temporary=target+".tmp";
         try

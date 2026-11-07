@@ -17,7 +17,8 @@ builder.Configuration.AddJsonFile(settingsFile, optional: true, reloadOnChange: 
 var settings = builder.Configuration.GetSection("Server").Get<ServerSettings>() ?? new();
 if (string.IsNullOrWhiteSpace(settings.AllowedGroup)
     || settings.Port is < 1024 or > 65535 or 8080 or 8443
-    || new[] { settings.JobsRoot, settings.BidsRoot, settings.ArchivedJobsRoot, settings.ArchiveFolder }.Any(p => !p.StartsWith(@"\\")))
+    || new[] { settings.JobsRoot, settings.BidsRoot, settings.ArchivedJobsRoot }.Any(p => !p.StartsWith(@"\\"))
+    || string.IsNullOrWhiteSpace(settings.ArchiveFolder))
     throw new InvalidOperationException("Configurare gruppo, porta TCP dedicata e percorsi UNC in " + settingsFile);
 using (var serviceIdentity = System.Security.Principal.WindowsIdentity.GetCurrent())
     StartupLog.Write($"Configurazione valida; account servizio={serviceIdentity.Name}; gruppo autorizzato={settings.AllowedGroup}; versione={System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}.");
@@ -26,6 +27,13 @@ if (string.IsNullOrWhiteSpace(settings.DatabaseFolder))
 settings.MaxConcurrentScans = Math.Clamp(settings.MaxConcurrentScans, 1, 4);
 ScanConcurrency.Configure(settings.MaxConcurrentScans);
 _ = GeologyStorage.Root(settings);
+if(settings.LocalStorageOnly)
+{
+    var runtime=Path.GetFullPath(settings.ArchiveFolder);
+    if(new Uri(runtime).IsUnc || new DriveInfo(Path.GetPathRoot(runtime)!).DriveType==DriveType.Network || !settings.BackupFolder.StartsWith(@"\\") || !string.IsNullOrEmpty(settings.GeologyCatalogPath))
+        throw new InvalidOperationException("Modalità locale: archivio operativo su disco locale, backup UNC e nessun catalogo esterno.");
+    Directory.CreateDirectory(runtime);
+}
 var temporaryFolder=Path.Combine(settings.InventoryFolder,"Temp");
 Directory.CreateDirectory(temporaryFolder);
 Environment.SetEnvironmentVariable("TEMP",temporaryFolder);
@@ -44,6 +52,7 @@ builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddSingleton<TA.Server.Business.BusinessService>();
 builder.Services.AddHostedService<TA.Server.Business.BusinessBackupService>();
+builder.Services.AddHostedService<DailyDatabaseBackupService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());
 builder.Services.AddHostedService<TcpService>();
 builder.Services.AddHostedService<LocalMcpService>();

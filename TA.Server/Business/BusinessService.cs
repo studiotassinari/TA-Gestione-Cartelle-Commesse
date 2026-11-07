@@ -7,9 +7,10 @@ public sealed class BusinessService
     public BusinessStore Store {get;}
     private readonly Func<WorkProject[]> available;
     private readonly Func<string,string> resolve;
+    private readonly Func<string[]>? collaborators;
     public BusinessService(ServerSettings settings,ScanCoordinator scans):this(new(settings.InventoryFolder),()=>
-        (scans.Get("C").State.Snapshot?.Records??[]).Where(r=>r.Code.Length>0).Select(r=>new WorkProject(r.Id,r.Code,r.Client+" — "+r.Subject)).ToArray(),CanonicalUser){}
-    public BusinessService(BusinessStore store,Func<WorkProject[]> projects,Func<string,string> resolver){Store=store;available=projects;resolve=resolver;}
+        (scans.Get("C").State.Snapshot?.Records??[]).Where(r=>r.Code.Length>0).Select(r=>new WorkProject(r.Id,r.Code,r.Client+" — "+r.Subject)).ToArray(),CanonicalUser,new CollaboratorDirectory(settings.CollaboratorsGroup).Members){}
+    public BusinessService(BusinessStore store,Func<WorkProject[]> projects,Func<string,string> resolver,Func<string[]>? members=null){Store=store;available=projects;resolve=resolver;collaborators=members;}
     private static string CanonicalUser(string input)
     {
         var sid=(SecurityIdentifier)new NTAccount(input).Translate(typeof(SecurityIdentifier));
@@ -26,6 +27,8 @@ public sealed class BusinessService
     public object Execute(BusinessCommand command,string actor,bool manager)
     {
         if(string.IsNullOrWhiteSpace(actor))throw new UnauthorizedAccessException("Identità Windows mancante.");
+        if(!manager && collaborators!=null && !collaborators().Contains(actor,StringComparer.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("Gestione attività riservata agli utenti del gruppo collaboratori aziendale.");
         return Store.Locked(()=>Handle(command,actor,manager));
     }
     private object Handle(BusinessCommand c,string actor,bool manager)
@@ -38,7 +41,7 @@ public sealed class BusinessService
             var times=Store.All<WorkTime>("time");
             return new BusinessSnapshot(actor,manager,Store.All<Customer>("customer"),Projects(),activities.Where(a=>a.Start<=q.To&&a.End>=q.From).ToArray(),
                 times.Where(t=>t.Day>=q.From&&t.Day<=q.To&&(manager||t.User.Equals(actor,StringComparison.OrdinalIgnoreCase))).ToArray(),
-                activities.Select(a=>a.Assignee).Concat(times.Select(t=>t.User)).Append(actor).Where(s=>s.Length>0).Distinct(StringComparer.OrdinalIgnoreCase).Order().ToArray(),Store.BackupStatus);
+                collaborators?.Invoke() ?? activities.Select(a=>a.Assignee).Concat(times.Select(t=>t.User)).Append(actor).Where(s=>s.Length>0).Distinct(StringComparer.OrdinalIgnoreCase).Order().ToArray(),Store.BackupStatus);
         }
         if(c.Action=="SaveTime")return SaveTime(c.Time??throw new ArgumentException("Ore mancanti."),actor,manager);
         if(c.Action=="DeleteTime")
@@ -66,6 +69,8 @@ public sealed class BusinessService
                 Required(a.Title,"Attività",200);Required(a.Phase,"Fase",100);Required(a.Assignee,"Collaboratore",200);
                 if(a.End<a.Start || a.End.DayNumber-a.Start.DayNumber>3660 || a.PlannedMinutes is <0 or >10000000 || a.Progress is <0 or >100 || a.State is not("Planned" or "Active" or "Done" or "Suspended"))throw new ArgumentException("Date, ore previste o stato non validi.");
                 var activity=a with{Id=Id(a.Id),Assignee=resolve(a.Assignee.Trim()),Revision=a.Revision+1};
+                if(collaborators!=null && !collaborators().Contains(activity.Assignee,StringComparer.OrdinalIgnoreCase))
+                    throw new ArgumentException("Il collaboratore non appartiene al gruppo aziendale oppure il suo account è disabilitato.");
                 Store.Save("activity",activity.Id,a.Revision,activity,actor,"Activity");return activity;
             case "ImportMagoot":return CustomerImport.ImportCsv(this,c.Csv??"",actor);
             case "PreviewMagoot":return CustomerImport.ImportCsv(this,c.Csv??"",actor,preview:true);

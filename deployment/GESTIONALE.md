@@ -61,3 +61,7 @@ Il lettore documenti usa temporaneamente il disco locale configurato come TEMP d
 ## Validazione
 
 `tests/BusinessChecks` verifica permessi, anteprima senza scritture, importazioni ripetute e conflitti, revisioni concorrenti, titolarità e limiti delle ore, persistenza e backup. Comprende le prove XLSX su stringhe condivise, celle sparse, zeri iniziali, formule, duplicati e identificativi mancanti. L'opzione `--preview-excel <percorso>` verifica un'esportazione reale senza salvare anagrafiche e senza stampare dati personali. `tests/BusinessUiChecks` carica e renderizza le cinque schede con soli dati sintetici. Restano necessarie la verifica dell'esportazione Magoot e la prova di accettazione sul dominio prima della distribuzione.
+
+## Collaboratori aziendali
+
+Il server legge gli account abilitati di GG_TA_Commesse_Users da Active Directory, inclusi i sottogruppi. L'elenco è conservato soltanto in memoria per un minuto; una verifica AD fallita non abilita utenti aggiuntivi. L'editor attività propone una scelta dall'elenco. Il server verifica appartenenza e identità anche per le ore. La rimozione dal gruppo impedisce nuove assegnazioni e accessi gestionali del collaboratore, senza eliminare lo storico. Antonio e Giuseppe mantengono la gestione, verificata tramite SID. Configurazione: CollaboratorsGroup. In modalità locale i backup gestionali sono in BackupFolder\gestionale.

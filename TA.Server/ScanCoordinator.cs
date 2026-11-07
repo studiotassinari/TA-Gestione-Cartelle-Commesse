@@ -71,7 +71,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
             }
             DailyReports.Save(ReportsDirectory, DailyReports.ItalianTime(new DateTimeOffset(started)), workers.Values, new DateTimeOffset(started), currentOnly:true);
             SetProgress(new(true,"Backup database",0,null,"Verifica e copia sulla rete",started));
-            var backup=await Task.Run(()=>DatabaseBackup.Save(settings,token),token);
+            var backup=settings.LocalStorageOnly ? DatabaseBackup.Status(settings) ?? new DatabaseBackupStatus(DateTime.UtcNow,null,"","Primo backup in preparazione") : await Task.Run(()=>DatabaseBackup.Save(settings,token),token);
             warnings |= backup.Error.Length>0;
             var backupMessage=backup.Error.Length>0?" Backup non riuscito: "+backup.Error:" Backup verificato: "+DailyReports.ItalianTime(backup.SuccessUtc!.Value).ToString("dd/MM/yyyy HH:mm");
             var finished = DateTime.UtcNow;
@@ -93,10 +93,20 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         shutdown = stoppingToken;
+        if(settings.LocalStorageOnly)
+        {
+            while(!stoppingToken.IsCancellationRequested)
+            {
+                try { await Task.Run(()=>LocalStorageTransition.Prepare(settings,stoppingToken,p=>SetProgress(new(true,"Preparazione archivio locale",0,null,p))),stoppingToken); break; }
+                catch(OperationCanceledException) when(stoppingToken.IsCancellationRequested){return;}
+                catch(Exception ex){logger.LogError(ex,"Preparazione locale non completata; originali conservati");SetProgress(new(false,"Preparazione locale interrotta",0,null,ex.Message,HasErrors:true));await Task.Delay(TimeSpan.FromMinutes(1),stoppingToken);}
+            }
+        }
+
         SetProgress(new(true,"Caricamento elenchi",0,null,"Caricamento degli elenchi salvati prima della migrazione"));
         await Task.WhenAll(workers.Values.Select(w => w.InitializeAsync()));
         changes.Publish();
-        while(!stoppingToken.IsCancellationRequested)
+        while(!settings.LocalStorageOnly && !stoppingToken.IsCancellationRequested)
         {
             try
             {
@@ -114,7 +124,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
         }
         try
         {
-            await Task.Run(()=>DatabaseMigration.BackupAndCleanInventory(settings,stoppingToken,p=>SetProgress(new(true,"Pulizia inventari migrati",0,null,p))),stoppingToken);
+            if(!settings.LocalStorageOnly) await Task.Run(()=>DatabaseMigration.BackupAndCleanInventory(settings,stoppingToken,p=>SetProgress(new(true,"Pulizia inventari migrati",0,null,p))),stoppingToken);
         }
         catch(OperationCanceledException) when(stoppingToken.IsCancellationRequested){return;}
         catch(Exception ex){logger.LogWarning(ex,"Pulizia sospesa: inventario SQLite disponibile, JSON residui conservati");}

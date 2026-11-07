@@ -100,14 +100,14 @@ public sealed class BusinessWindow : Window
     {
         if (!vm.CanEdit || vm.Snapshot is not { } s) return; var f = new BusinessForm(this, a == null ? "Nuova attività" : "Modifica attività");
         var project = f.Choice("Commessa", s.Projects, s.Projects.FirstOrDefault(p => p.Id == a?.ProjectId), "Code");
-        var phase = f.Text("Fase", a?.Phase ?? ""); var title = f.Text("Attività", a?.Title ?? ""); var person = f.Text("Collaboratore (account Windows aziendale)", a?.Assignee ?? s.User);
+        var phase = f.Text("Fase", a?.Phase ?? ""); var title = f.Text("Attività", a?.Title ?? ""); var person = f.Choice("Collaboratore · gruppo aziendale", s.Collaborators, s.Collaborators.FirstOrDefault(x => x.Equals(a?.Assignee ?? s.User, StringComparison.OrdinalIgnoreCase)), "");
         var start = f.Date("Inizio", a?.Start.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today); var end = f.Date("Fine", a?.End.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today);
         var hours = f.Text("Ore previste", ((a?.PlannedMinutes ?? 0) / 60m).ToString()); var progress = f.Text("Avanzamento %", (a?.Progress ?? 0).ToString());
         var states = new[] { new KeyValuePair<string, string>("Planned", "Pianificata"), new("Active", "In corso"), new("Done", "Completata"), new("Suspended", "Sospesa") };
         var state = f.Choice("Stato", states, states.First(x => x.Key == (a?.State ?? "Planned")), "Value");
         if (f.ShowDialog() != true) return;
         if (project.SelectedItem is not WorkProject p || start.SelectedDate == null || end.SelectedDate == null) throw new ArgumentException("Selezionare commessa e date.");
-        await vm.Save(new("SaveActivity", Activity: new(a?.Id ?? "", p.Id, phase.Text, title.Text, person.Text, DateOnly.FromDateTime(start.SelectedDate.Value), DateOnly.FromDateTime(end.SelectedDate.Value), Minutes(hours.Text), ((KeyValuePair<string, string>)state.SelectedItem).Key, int.Parse(progress.Text), a?.Revision ?? 0)));
+        await vm.Save(new("SaveActivity", Activity: new(a?.Id ?? "", p.Id, phase.Text, title.Text, person.SelectedItem as string ?? "", DateOnly.FromDateTime(start.SelectedDate.Value), DateOnly.FromDateTime(end.SelectedDate.Value), Minutes(hours.Text), ((KeyValuePair<string, string>)state.SelectedItem).Key, int.Parse(progress.Text), a?.Revision ?? 0)));
     }
     private async Task EditTime(WorkTime? t)
     {

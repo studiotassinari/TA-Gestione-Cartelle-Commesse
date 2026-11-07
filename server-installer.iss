@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "2.22.1"
+  #define AppVersion "2.23.0"
 #endif
 #ifndef PublishDir
   #define PublishDir "artifacts\server"
@@ -39,6 +39,9 @@ Source: "artifacts\updater\TA.Updater.exe"; DestDir: "{app}\Updater"; Flags: ign
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "deployment\Service-Manage.ps1"; DestDir: "{app}"
 Source: "deployment\Configure-Server.ps1"; DestDir: "{app}"
+Source: "deployment\Enable-LocalStorage.ps1"; DestDir: "{app}"
+Source: "deployment\ARCHIVIAZIONE-LOCALE.md"; DestDir: "{app}"
+Source: "deployment\GESTIONALE.md"; DestDir: "{app}"
 Source: "deployment\SERVER-CLIENT.md"; DestDir: "{app}"
 Source: "artifacts\manager\*"; DestDir: "{app}\Manager"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "deployment\Update-Application.ps1"; DestDir: "{app}"

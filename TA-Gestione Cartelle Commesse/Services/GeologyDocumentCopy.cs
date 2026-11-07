@@ -33,7 +33,8 @@ public static class GeologyDocumentCopy
             while (!process.HasExited)
             {
                 limit.Token.ThrowIfCancellationRequested(); process.Refresh();
-                if (process.PrivateMemorySize64 > 512L * 1024 * 1024) throw new IOException("Documento troppo complesso: limite di memoria raggiunto.");
+                try { if (process.PrivateMemorySize64 > 512L * 1024 * 1024) throw new IOException("Documento troppo complesso: limite di memoria raggiunto."); }
+                catch (InvalidOperationException) when (process.HasExited) { break; }
                 if (output.IsFaulted) await output; if (errors.IsFaulted) await errors;
                 await Task.Delay(100, limit.Token);
             }
