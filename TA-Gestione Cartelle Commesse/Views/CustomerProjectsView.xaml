@@ -1,0 +1,24 @@
+<UserControl x:Class="TA_Gestione_Cartelle_Commesse.Views.CustomerProjectsView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <DockPanel>
+  <StackPanel DockPanel.Dock="Top">
+   <TextBlock Text="Commesse associate" FontSize="20" Foreground="#135F6E" Margin="0,0,0,10"/>
+   <TextBlock Text="{Binding AssociatedSummary}" TextWrapping="Wrap" Foreground="#53717B" Margin="0,0,0,10"/>
+  </StackPanel>
+  <Button DockPanel.Dock="Bottom" Content="Apri dettaglio commessa" Command="{Binding OpenAssociatedProjectCommand}" Margin="0,10,0,0"/>
+  <ListBox ItemsSource="{Binding AssociatedProjects}" SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
+   MouseDoubleClick="OpenProject" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+   <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem">
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="8,6"/>
+   </Style></ListBox.ItemContainerStyle>
+   <ListBox.ItemTemplate><DataTemplate>
+    <StackPanel>
+     <DockPanel><TextBlock Text="{Binding Year}" DockPanel.Dock="Right" Foreground="#53717B"/>
+      <TextBlock Text="{Binding Code}" FontWeight="SemiBold" Foreground="#135F6E"/></DockPanel>
+     <TextBlock Text="{Binding Subject}" TextWrapping="Wrap" ToolTip="{Binding Subject}" Margin="0,3,0,0"/>
+    </StackPanel>
+   </DataTemplate></ListBox.ItemTemplate>
+  </ListBox>
+ </DockPanel>
+</UserControl>

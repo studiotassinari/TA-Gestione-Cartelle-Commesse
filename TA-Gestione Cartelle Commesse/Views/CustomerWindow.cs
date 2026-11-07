@@ -7,23 +7,33 @@ public sealed class CustomerWindow : Window
 {
     public CustomerWindow(CustomerManagementViewModel vm,bool select=false,bool startNew=false)
     {
-        DataContext=vm;Title="Clienti — Tassinari Associati";Width=1000;Height=650;MinWidth=800;MinHeight=550;
+        DataContext=vm;Title="Clienti — Tassinari Associati";Width=1450;Height=800;MinWidth=1100;MinHeight=600;
         var main=Application.Current.MainWindow;Resources=main.Resources;Background=main.Background;Foreground=main.Foreground;FontFamily=main.FontFamily;Icon=main.Icon;
         var root=new DockPanel{Margin=new Thickness(24),Background=Background};Content=root;
         var header=new TextBlock{Text="Anagrafica clienti",FontSize=26,Margin=new Thickness(0,0,0,18)};DockPanel.SetDock(header,Dock.Top);root.Children.Add(header);
         var status=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,12,0,0)};status.SetBinding(TextBlock.TextProperty,new Binding("Status"));DockPanel.SetDock(status,Dock.Bottom);root.Children.Add(status);
         var actions=new StackPanel{Orientation=Orientation.Horizontal};
         actions.Children.Add(ProjectFields.Button("Nuovo cliente","NewCommand"));actions.Children.Add(ProjectFields.Button("Salva cliente","SaveCommand"));
+        actions.Children.Add(ProjectFields.Button("Aggiorna elenco","RefreshCommand"));
         if(select){var use=new Button{Content="Usa questo cliente",Margin=new Thickness(8)};use.SetBinding(IsEnabledProperty,new Binding("CanSelect"));use.Click+=(_,_)=>{if(vm.Result!=null)DialogResult=true;};actions.Children.Add(use);}
         DockPanel.SetDock(actions,Dock.Bottom);root.Children.Add(actions);
-        var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2,GridUnitType.Star)});grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(3,GridUnitType.Star)});root.Children.Add(grid);
-        var left=new DockPanel{Margin=new Thickness(0,0,24,0)};grid.Children.Add(left);
-        var search=new TextBox{Margin=new Thickness(0,0,0,10),ToolTip="Cerca nome, partita IVA, codice fiscale, indirizzo o email"};
-        search.SetBinding(TextBox.TextProperty,new Binding("Filter"){UpdateSourceTrigger=UpdateSourceTrigger.PropertyChanged});DockPanel.SetDock(search,Dock.Top);left.Children.Add(search);
-        var list=new ListBox{DisplayMemberPath="Name"};list.SetBinding(ItemsControl.ItemsSourceProperty,new Binding("Rows"));list.SetBinding(ListBox.SelectedItemProperty,new Binding("Selected"){Mode=BindingMode.TwoWay});left.Children.Add(list);
+        var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2,GridUnitType.Star)});grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2.3,GridUnitType.Star)});grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2.5,GridUnitType.Star)});root.Children.Add(grid);
+        var selector=new CustomerSelectionView{Margin=new Thickness(0,0,24,0)};
+        selector.SetBinding(DataContextProperty,new Binding("CustomerSelection"));grid.Children.Add(selector);
         var editor=new StackPanel();editor.SetBinding(IsEnabledProperty,new Binding("CanEdit"));
         ProjectFields.Text(editor,"Ragione sociale / nome","Editor.Name");ProjectFields.Text(editor,"Partita IVA","Editor.Vat");ProjectFields.Text(editor,"Codice fiscale","Editor.TaxCode");ProjectFields.Text(editor,"Indirizzo","Editor.Address");ProjectFields.Text(editor,"Email","Editor.Email");
         var scroll=new ScrollViewer{Content=editor,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};Grid.SetColumn(scroll,1);grid.Children.Add(scroll);
+        var associated=new CustomerProjectsView{Margin=new Thickness(24,0,0,0)};
+        Grid.SetColumn(associated,2);grid.Children.Add(associated);
+        var details=new Dictionary<string,ProjectDetailWindow>();
+        void OpenProject(TA_Gestione_Cartelle_Commesse.Contracts.WorkProject project)
+        {
+            if(details.TryGetValue(project.Id,out var existing)){existing.Activate();return;}
+            var window=new ProjectDetailWindow(new(vm.Business,project.Id)){Owner=this};
+            details[project.Id]=window;window.Closed+=(_,_)=>details.Remove(project.Id);window.Show();
+        }
+        vm.ProjectRequested+=OpenProject;
+        Closed+=(_,_)=>{vm.ProjectRequested-=OpenProject;vm.Dispose();};
         Loaded+=async(_,_)=>{await vm.Refresh();if(startNew&&vm.NewCommand.CanExecute(null))vm.NewCommand.Execute(null);};
     }
 }

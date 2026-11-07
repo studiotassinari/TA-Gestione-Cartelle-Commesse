@@ -76,8 +76,8 @@ internal static partial class Program
         var customers=new CustomerManagementViewModel(business,customer.Id);customers.Refresh().GetAwaiter().GetResult();
         var customerWindow=new CustomerWindow(customers);
         var customerBody=(FrameworkElement)customerWindow.Content;
-        customerBody.Measure(new Size(960,610));customerBody.Arrange(new Rect(0,0,960,610));customerBody.UpdateLayout();
-        var customerImage=new RenderTargetBitmap(960,610,96,96,PixelFormats.Pbgra32);customerImage.Render(customerBody);
+        customerBody.Measure(new Size(1400,700));customerBody.Arrange(new Rect(0,0,1400,700));customerBody.UpdateLayout();
+        var customerImage=new RenderTargetBitmap(1400,700,96,96,PixelFormats.Pbgra32);customerImage.Render(customerBody);
         using(var output=File.Create("artifacts/checks/anagrafica-clienti.png"))
         {var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(customerImage));encoder.Save(output);}
         Check(customers.CanSelect,"Cliente salvato selezionabile");customers.Editor!.Name="Bozza";

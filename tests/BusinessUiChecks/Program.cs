@@ -57,6 +57,8 @@ internal static class Program
         using(var output=File.Create("artifacts/checks/pianificazione-commessa.png"))
         {var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(planning));png.Save(output);}
         PhaseCreationChecks.Run();
+        CustomerSelectorChecks.Run();
+        CustomerProjectsChecks.Run();
         foreach(var category in new[]{"G","A"})
         {
             detail=detail with{Project=detail.Project with{Category=category,Code=category=="G"?"G26001":"C26001"}};

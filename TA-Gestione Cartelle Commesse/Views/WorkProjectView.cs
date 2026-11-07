@@ -18,9 +18,8 @@ public sealed class WorkProjectView : UserControl
         panel.Children.Add(identity);
         ProjectFields.Text(panel,"Committente rilevato nella cartella","Project.SourceCustomerName",true);
         panel.Children.Add(new TextBlock{Text="Cliente associato *",Margin=new Thickness(0,6,0,3)});
-        var clients=new ComboBox{DisplayMemberPath="Name",SelectedValuePath="Id"};
-        clients.SetBinding(ItemsControl.ItemsSourceProperty,new Binding("Details.Customers"));
-        clients.SetBinding(ComboBox.SelectedValueProperty,new Binding("Project.CustomerId"){Mode=BindingMode.TwoWay});
+        var clients=new CustomerSelectionView{Height=210};
+        clients.SetBinding(DataContextProperty,new Binding("CustomerSelection"));
         panel.Children.Add(clients);
         panel.Children.Add(ProjectFields.Button("Gestisci / scegli cliente…","ManageCustomerCommand"));
         ProjectFields.Text(panel,"Argomento *","Project.Subject");

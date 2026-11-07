@@ -9,11 +9,13 @@ public sealed class ProjectDetailViewModel : Observable
     private readonly string id;
     private readonly CustomerDirectory customers = new();
     public BusinessViewModel Business => business;
+    public CustomerSelectionViewModel CustomerSelection {get;}=new();
     public event Action? CustomerManagementRequested;
     public Command ManageCustomerCommand {get;}
     public ProjectDetailViewModel(BusinessViewModel business,string id)
     {
         this.business=business;this.id=id;
+        CustomerSelection.SelectionChanged+=customer=>{if(Project!=null)Project.CustomerId=customer.Id;};
         ManageCustomerCommand=new(()=>CustomerManagementRequested?.Invoke(),()=>CanEdit);
         RefreshCommand=new(async()=>await Refresh(),()=>!Busy);
         SaveProjectCommand=new(async()=>await Execute(()=>new("SaveProjectDetails",Project:Project!.ToModel())),()=>CanEdit&&Project!=null);
@@ -78,7 +80,11 @@ public sealed class ProjectDetailViewModel : Observable
             Details=await business.Send<ProjectDetails>(new("ProjectDetail",Id:id));
             Project?.Dispose(); customers.Replace(Details.Customers);
             Project=new(Details.Project,customers); Customer=Project.Customer;
-            Project.PropertyChanged+=(_,e)=>{if(e.PropertyName==nameof(Project.Customer)){Customer=Project.Customer;Notify(nameof(Customer));}};
+            Project.PropertyChanged+=(_,e)=>{
+                if(e.PropertyName==nameof(Project.Customer)){Customer=Project.Customer;Notify(nameof(Customer));}
+                if(e.PropertyName==nameof(Project.CustomerId))CustomerSelection.SelectId(Project.CustomerId);
+            };
+            CustomerSelection.SetCustomers(Details.Customers,Project.CustomerId);
             Notify(nameof(Details));Notify(nameof(Project));Notify(nameof(Customer));
             Notify(nameof(DetailTitle));Notify(nameof(OverviewTitle));Notify(nameof(SaveLabel));
             SelectedPhase=Details.Phases.FirstOrDefault(p=>p.Id==phaseId)??Details.Phases.FirstOrDefault();
@@ -89,13 +95,17 @@ public sealed class ProjectDetailViewModel : Observable
     }
     public async Task ReloadCustomers(Customer? selected)
     {
+        var selectedId=selected?.Id??Project?.CustomerId??"";
         try
         {
             var catalog=await business.Send<ProjectCatalog>(new("ProjectCatalog"));
             customers.Replace(catalog.Customers);
             if(Details!=null) Details=Details with{Customers=catalog.Customers};
-            if(Project!=null) Project.CustomerId=selected?.Id??Project.CustomerId;
-            Notify(nameof(Details)); Status="Anagrafica aggiornata. Salva la commessa per confermare l'associazione.";
+            Notify(nameof(Details));
+            if(selected!=null)CustomerSelection.Filter="";
+            CustomerSelection.SetCustomers(catalog.Customers,selectedId);
+            if(Project!=null) Project.CustomerId=selectedId;
+            Status="Anagrafica aggiornata. Salva per confermare l'associazione.";
         }
         catch(Exception ex){Status=ex.Message;}
         Notify(nameof(Status));

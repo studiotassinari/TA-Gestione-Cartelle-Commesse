@@ -1,15 +1,14 @@
-# TA-Gestione Cartelle Commesse — 2.27.0
+# TA-Gestione Cartelle Commesse — 2.28.0
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 
-## Novità 2.27.0: controlli comuni a Commesse, Gare e Archivio
+## Novità 2.28.0: clienti e commesse associate
 
-Le tre categorie utilizzano lo stesso elenco compatto: ultime 50 voci e ricerca dinamica su tutta la categoria. Dettaglio con cliente e dati principali nella prima scheda; fasi e attività nella scheda Pianificazione. Codici uguali in categorie diverse mantengono identificativi e collegamenti distinti.
+Selettore clienti riutilizzabile con ricerca dinamica per nome, partita IVA, codice fiscale, indirizzo o email. La scelta dalla finestra clienti aggiorna immediatamente il dettaglio, mantenendo le altre modifiche non ancora salvate. Il filtro non cancella l'associazione selezionata.
 
-Il salvataggio confermato dal server aggiorna subito la riga e i filtri, senza chiudere il dettaglio. Bozze e salvataggi rifiutati non modificano l'elenco. Corretto il mancato aggiornamento dei pulsanti Salva dopo Nuova fase e Nuova attività.
+Nell'anagrafica clienti, pannello laterale con tutte le commesse associate tramite identificativo, ordinate per anno e numero decrescenti, senza limite di 50. Doppio clic per aprire il dettaglio; l'elenco si aggiorna quando viene salvata una diversa associazione. Gare, archivio e clienti omonimi non vengono inclusi impropriamente.
 
-Aggiornare prima il server e poi il client. Le modifiche riguardano il database gestionale; cartelle, ZIP e 7z originali restano invariati. Il tunnel MCP rimane ad avvio manuale.
-
+Installatori e pacchetti diretti Client, Server e MCP aggiornati. Nessuna modifica alle cartelle originali, ad Active Directory o al database. Il tunnel MCP esistente resta compatibile e ad avvio manuale.
 ## Elenco compatto delle commesse (2.26.1)
 
 All'avvio, elenco personalizzato WPF a una riga per commessa, con codice, anno, numero, cliente, argomento, dimensione, ultima attività e stato. Mostra le ultime 50 commesse per attività nota su file o gestionale; la ricerca include tutte le commesse censite. Le scansioni e le migrazioni automatiche non costituiscono attività dell'utente. Finestra inizialmente massimizzata, colonne cliente e argomento adattabili agli schermi ampi.
@@ -54,7 +53,7 @@ Il controllo delle dimensioni richiede comunque l'enumerazione dei metadati sull
 
 ## Catalogo MUR e mappa
 
-Catalogo MUR A.1/D.1 con progettisti, ruoli, tipologie, indirizzo, comune e coordinate. Ricerca esclusivamente in Commesse e Archivio, anche nei PDF di ZIP/7z; Gare escluse. Mappa OpenStreetMap con selezione collegata all'elenco. Le analisi e i riferimenti alle fonti sono conservati nel database del server; gli originali restano in sola lettura. I dati mancanti richiedono analisi su richiesta tramite ChatGPT. Aggiornare client, server e MCP alla 2.27.0; il tunnel va avviato manualmente sulla VM con la chiave runtime.
+Catalogo MUR A.1/D.1 con progettisti, ruoli, tipologie, indirizzo, comune e coordinate. Ricerca esclusivamente in Commesse e Archivio, anche nei PDF di ZIP/7z; Gare escluse. Mappa OpenStreetMap con selezione collegata all'elenco. Le analisi e i riferimenti alle fonti sono conservati nel database del server; gli originali restano in sola lettura. I dati mancanti richiedono analisi su richiesta tramite ChatGPT. Aggiornare client, server e MCP alla 2.28.0; il tunnel va avviato manualmente sulla VM con la chiave runtime.
 
 ## Politica delle scritture client
 
@@ -66,11 +65,11 @@ La nuova finestra **Analisi > IPRiPI — analisi MUR A.1/D.1** consulta PDF e ri
 
 ## Scarica la versione di produzione
 
-- [Aggiornatore diretto 2.27.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.27.0/TA-Commesse-Aggiornatore-2.27.0.exe) — prima Server sulla VM, poi Client sui PC.
-- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.27.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.27.0.exe)
-- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.27.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.27.0.exe)
-- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.27.0/TA-Commesse-MCP-2.27.0.zip)
-- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.27.0)
+- [Aggiornatore diretto 2.28.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.28.0/TA-Commesse-Aggiornatore-2.28.0.exe) — prima Server sulla VM, poi Client sui PC.
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.28.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.28.0.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.28.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.28.0.exe)
+- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.28.0/TA-Commesse-MCP-2.28.0.zip)
+- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.28.0)
 
 Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. L’aggiornatore del server attende anche la chiusura effettiva del processo prima di sostituire i file. I pacchetti non sono firmati digitalmente.
 
