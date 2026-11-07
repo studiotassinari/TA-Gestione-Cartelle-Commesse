@@ -19,7 +19,7 @@ public sealed partial class MainViewModel
         if (connection == null) return;
         if (customerWindow != null)
         { if(customerWindow.DataContext is CustomerManagementViewModel vm) vm.SelectCustomer(id); customerWindow.Activate(); return; }
-        var business = new BusinessViewModel(connection);
+        var business = CreateBusiness();
         customerWindow = new(new CustomerManagementViewModel(business, id)) { Owner = System.Windows.Application.Current.MainWindow };
         customerWindow.Closed += async (_, _) => { customerWindow = null; business.Dispose(); if (!closingProjectWindows) await Commesse.PollAsync(); };
         customerWindow.Show();
@@ -28,10 +28,11 @@ public sealed partial class MainViewModel
     {
         if (connection == null) return;
         if (projectWindows.TryGetValue(row.Id, out var open)) { open.Activate(); return; }
-        var business = new BusinessViewModel(connection);
+        var business = CreateBusiness();
         var window = new ProjectDetailWindow(new(business, row.Id)) { Owner = System.Windows.Application.Current.MainWindow };
+        var category=row.Model.Category=="G"?Gare:row.Model.Category=="A"?Archivio:Commesse;
         projectWindows.Add(row.Id, window);
-        window.Closed += async (_, _) => { projectWindows.Remove(row.Id); business.Dispose(); if (!closingProjectWindows) await Commesse.PollAsync(); };
+        window.Closed += async (_, _) => { projectWindows.Remove(row.Id); business.Dispose(); if (!closingProjectWindows) await category.PollAsync(); };
         window.Show();
     }
 }

@@ -42,6 +42,9 @@ public sealed partial class MainViewModel : Observable
         CustomersCommand = new(() => ShowCustomers(""), () => connection != null);
         Commesse.ProjectRequested += ShowProject;
         Commesse.CustomerRequested += p => ShowCustomers(p.CustomerId);
+        Gare.ProjectRequested += ShowProject; Archivio.ProjectRequested += ShowProject;
+        Gare.CustomerRequested += p => ShowCustomers(p.CustomerId);
+        Archivio.CustomerRequested += p => ShowCustomers(p.CustomerId);
         GeologyCommand = new(ShowGeology);
         IpripiCommand = new(ShowIpripi);
         ShowScanCommand=new(()=>StatusTabIndex=0); ShowConnectionCommand=new(()=>StatusTabIndex=1);

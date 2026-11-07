@@ -7,9 +7,15 @@ public sealed class WorkProjectView : UserControl
     public WorkProjectView()
     {
         var panel=new StackPanel();Content=panel;
-        ProjectFields.Text(panel,"Codice","Project.Code",true);
-        ProjectFields.Text(panel,"Anno","Project.Year",true);
-        ProjectFields.Text(panel,"Numero","Project.Number",true);
+        var identity=new Grid();
+        foreach(var _ in new[]{0,1,2})identity.ColumnDefinitions.Add(new ColumnDefinition());
+        var fields=new[]{("Codice","Project.Code"),("Anno","Project.Year"),("Numero","Project.Number")};
+        for(var i=0;i<fields.Length;i++)
+        {
+            var field=new StackPanel{Margin=new Thickness(0,0,i==2?0:10,0)};
+            ProjectFields.Text(field,fields[i].Item1,fields[i].Item2,true);Grid.SetColumn(field,i);identity.Children.Add(field);
+        }
+        panel.Children.Add(identity);
         ProjectFields.Text(panel,"Committente rilevato nella cartella","Project.SourceCustomerName",true);
         panel.Children.Add(new TextBlock{Text="Cliente associato *",Margin=new Thickness(0,6,0,3)});
         var clients=new ComboBox{DisplayMemberPath="Name",SelectedValuePath="Id"};
@@ -20,7 +26,8 @@ public sealed class WorkProjectView : UserControl
         ProjectFields.Text(panel,"Argomento *","Project.Subject");
         ProjectFields.Text(panel,"Luogo (facoltativo)","Project.Location");
         ProjectFields.Choice(panel,"Stato (descrittivo)","Project.Status",new Dictionary<string,string>{{"","Non specificato"},{"Open","Aperta"},{"Closed","Chiusa"},{"Invoiced","Fatturata"}});
-        panel.Children.Add(ProjectFields.Button("Salva commessa","SaveProjectCommand"));
+        var save=ProjectFields.Button("Salva dati","SaveProjectCommand");
+        save.SetBinding(ContentControl.ContentProperty,new Binding("SaveLabel"));panel.Children.Add(save);
     }
 }
 

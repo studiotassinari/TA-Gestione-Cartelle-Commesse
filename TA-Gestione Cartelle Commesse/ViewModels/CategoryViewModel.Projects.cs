@@ -6,7 +6,7 @@ public sealed partial class CategoryViewModel
 {
     private ProjectCatalog? catalog;
     private readonly CustomerDirectory customers = new();
-    public bool IsProjectCategory => prefix == 'C';
+    public bool IsProjectCategory => prefix is 'C' or 'G' or 'A';
     public ObservableCollection<WorkProjectViewModel> Projects { get; } = [];
     public string ListCaption { get; private set; } = "";
     public WorkProjectViewModel? SelectedProject
@@ -17,7 +17,35 @@ public sealed partial class CategoryViewModel
     public event Action<WorkProjectViewModel>? ProjectRequested, CustomerRequested;
     public void ApplyProjectCatalog(ProjectCatalog value)
     {
+        value=value with{Projects=value.Projects.Where(p=>p.Category==prefix.ToString()).ToArray()};
+        // Una risposta partita prima del salvataggio non deve ripristinare una revisione precedente.
+        if(catalog is {} previous)
+        {
+            var projects=previous.Projects.ToDictionary(p=>p.Id);
+            var clients=previous.Customers.ToDictionary(c=>c.Id);
+            value=value with {
+                Projects=value.Projects.Select(p=>projects.TryGetValue(p.Id,out var old)&&old.Revision>p.Revision?old:p).ToArray(),
+                Customers=value.Customers.Select(c=>clients.TryGetValue(c.Id,out var old)&&old.Revision>c.Revision?old:c).ToArray()
+            };
+        }
         catalog = value; customers.Replace(value.Customers); ApplyFilter();
+    }
+    public void ApplyProjectChange(WorkProject project,Customer[]? clients)
+    {
+        if(project.Category!=prefix.ToString())return;
+        var current=catalog??new ProjectCatalog([],[],false);
+        var merged=current.Customers.ToDictionary(c=>c.Id);
+        foreach(var customer in clients??[])
+            if(!merged.TryGetValue(customer.Id,out var old)||customer.Revision>=old.Revision)merged[customer.Id]=customer;
+        ApplyProjectCatalog(current with {
+            Projects=current.Projects.Where(p=>p.Id!=project.Id).Append(project).ToArray(),
+            Customers=merged.Values.ToArray()
+        });
+    }
+    public void ApplyCustomerChange(Customer customer)
+    {
+        var current=catalog??new ProjectCatalog([],[],false);
+        ApplyProjectCatalog(current with{Customers=current.Customers.Where(c=>c.Id!=customer.Id).Append(customer).ToArray()});
     }
     private void ApplyProjectFilter()
     {
@@ -31,7 +59,7 @@ public sealed partial class CategoryViewModel
                 if (year > 0 && year < 100) year += 2000;
                 model = new(folder.Id, folder.Code, folder.Subject, Year: year, Number: number,
                     Subject: folder.Subject, SourceCustomerName: folder.Client,
-                    LastActivityUtc: folder.Inspection?.LastFileWriteUtc ?? folder.ArchiveModifiedUtc);
+                    LastActivityUtc: folder.Inspection?.LastFileWriteUtc ?? folder.ArchiveModifiedUtc,Category:prefix.ToString());
             }
             return (folder, model);
         }).Where(p => (p.model.Code + " " + p.model.Subject + " " + p.model.SourceCustomerName + " " +
@@ -50,7 +78,8 @@ public sealed partial class CategoryViewModel
             Projects.Add(row); Records.Add(folder);
         }
         Selected = Records.FirstOrDefault(r => r.Id == selectedId);
-        ListCaption = $"{Projects.Count} di {candidates.Count} commesse · ultima attività nota, più recenti prima";
+        var label=prefix=='C'?"commesse":prefix=='G'?"gare":"voci in archivio";
+        ListCaption = $"{Projects.Count} di {candidates.Count} {label} · ultima attività nota, più recenti prima";
         Notify(nameof(ListCaption)); Notify(nameof(SelectedProject));
     }
 }

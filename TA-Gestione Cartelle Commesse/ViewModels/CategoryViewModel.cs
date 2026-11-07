@@ -71,7 +71,7 @@ public sealed partial class CategoryViewModel : Observable
             {
                 try
                 {
-                    var data = await current.SendAsync<ProjectCatalog>(new("Business", Business: new("ProjectCatalog")));
+                    var data = await current.SendAsync<ProjectCatalog>(new("Business", Business: new("ProjectCatalog",Category:prefix.ToString())));
                     if (ReferenceEquals(current, connection)) ApplyProjectCatalog(data);
                 }
                 catch (Exception ex) { if (ReferenceEquals(current, connection)) Status = "Elenco cartelle disponibile; dati gestionali non aggiornati: " + ex.Message; }

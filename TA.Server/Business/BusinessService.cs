@@ -9,7 +9,8 @@ public sealed partial class BusinessService
     private readonly Func<string,string> resolve;
     private readonly Func<string[]>? collaborators;
     public BusinessService(ServerSettings settings,ScanCoordinator scans):this(new(settings.InventoryFolder),()=>
-        (scans.Get("C").State.Snapshot?.Records??[]).Where(r=>r.Code.Length>0).Select(ProjectMetadata.FromFolder).ToArray(),CanonicalUser,new CollaboratorDirectory(settings.CollaboratorsGroup).Members){}
+        new[]{"C","G","A"}.SelectMany(category=>(scans.Get(category).State.Snapshot?.Records??[])
+            .Select(row=>ProjectMetadata.FromFolder(row,category))).DistinctBy(p=>p.Id).ToArray(),CanonicalUser,new CollaboratorDirectory(settings.CollaboratorsGroup).Members){}
     public BusinessService(BusinessStore store,Func<WorkProject[]> projects,Func<string,string> resolver,Func<string[]>? members=null){Store=store;available=projects;resolve=resolver;collaborators=members;}
     private static string CanonicalUser(string input)
     {
@@ -23,7 +24,7 @@ public sealed partial class BusinessService
         var saved=Store.All<WorkProject>("project").ToDictionary(p=>p.Id);
         foreach(var p in available())
             if(!saved.TryGetValue(p.Id,out var old))saved.Add(p.Id,p);
-            else saved[p.Id]=old with{Year=old.Year==0?p.Year:old.Year,Number=old.Number==0?p.Number:old.Number,SourceCustomerName=string.IsNullOrEmpty(old.SourceCustomerName)?p.SourceCustomerName:old.SourceCustomerName,LastActivityUtc=p.LastActivityUtc};
+            else saved[p.Id]=old with{Category=p.Category,Year=old.Year==0?p.Year:old.Year,Number=old.Number==0?p.Number:old.Number,SourceCustomerName=string.IsNullOrEmpty(old.SourceCustomerName)?p.SourceCustomerName:old.SourceCustomerName,LastActivityUtc=p.LastActivityUtc};
         var activity=Store.ProjectActivity();
         return saved.Values.Select(ProjectMetadata.Normalize).Select(p=>activity.TryGetValue(p.Id,out var at)&&(!p.LastActivityUtc.HasValue||at>p.LastActivityUtc)?p with{LastActivityUtc=at}:p).OrderByDescending(p=>p.Code,StringComparer.Ordinal).ToArray();
     }
@@ -36,7 +37,12 @@ public sealed partial class BusinessService
     }
     private object Handle(BusinessCommand c,string actor,bool manager)
     {
-        if(c.Action=="ProjectCatalog")return new ProjectCatalog(Projects(),Store.All<Customer>("customer"),manager);
+        if(c.Action=="ProjectCatalog")
+        {
+            var category=c.Category??"C";
+            if(category is not ("C" or "G" or "A"))throw new ArgumentException("Categoria non valida.");
+            return new ProjectCatalog(Projects().Where(p=>p.Category==category).ToArray(),Store.All<Customer>("customer"),manager);
+        }
         EnsurePhases();
         if(c.Action=="ProjectDetail")
         {

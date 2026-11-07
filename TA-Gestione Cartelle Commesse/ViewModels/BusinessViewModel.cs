@@ -19,10 +19,23 @@ public sealed class BusinessViewModel : Observable, IDisposable
     public DateTime From { get; set; } = DateTime.Today.AddDays(-(int)(DateTime.Today.DayOfWeek + 6) % 7);
     public DateTime To { get; set; } = DateTime.Today.AddDays(30);
     public event Action? Updated;
+    public event Action<WorkProject, Customer[]?>? ProjectChanged;
+    public event Action<Customer>? CustomerChanged;
+    public event Action<ProjectCatalog>? CatalogChanged;
     public async Task<T> Send<T>(BusinessCommand command)
     {
         var result = await send(command, lifetime.Token);
-        return System.Text.Json.JsonSerializer.Deserialize<T>(result) ?? throw new InvalidOperationException("Risposta gestionale vuota.");
+        var value = System.Text.Json.JsonSerializer.Deserialize<T>(result) ?? throw new InvalidOperationException("Risposta gestionale vuota.");
+        // Pubblica solo risposte confermate dal server, mai le bozze del modulo.
+        if (command.Action is "SaveProjectDetails" or "SaveProject")
+            ProjectChanged?.Invoke(System.Text.Json.JsonSerializer.Deserialize<WorkProject>(result)!, null);
+        else if (command.Action == "SaveCustomer")
+            CustomerChanged?.Invoke(System.Text.Json.JsonSerializer.Deserialize<Customer>(result)!);
+        else if (command.Action == "ProjectDetail" && value is ProjectDetails detail)
+            ProjectChanged?.Invoke(detail.Project, detail.Customers);
+        else if (command.Action == "Snapshot" && value is BusinessSnapshot snapshot)
+            CatalogChanged?.Invoke(new(snapshot.Projects, snapshot.Customers, snapshot.CanManage));
+        return value;
     }
     public async Task Refresh()
     {
@@ -49,5 +62,5 @@ public sealed class BusinessViewModel : Observable, IDisposable
         if (saved) await Refresh();
     }
     private bool disposed;
-    public void Dispose() { if (disposed) return; disposed = true; lifetime.Cancel(); lifetime.Dispose(); }
+    public void Dispose() { if (disposed) return; disposed = true; lifetime.Cancel(); lifetime.Dispose(); ProjectChanged=null;CustomerChanged=null;CatalogChanged=null; }
 }

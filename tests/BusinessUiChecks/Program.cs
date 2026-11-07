@@ -50,6 +50,21 @@ internal static class Program
         var rendered=new RenderTargetBitmap(1210,760,96,96,PixelFormats.Pbgra32);rendered.Render(detailBody);
         using(var output=File.Create("artifacts/checks/dettaglio-commessa.png"))
         {var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(rendered));png.Save(output);}
+        var detailTabs=Descendants<TabControl>(detailBody).Single();
+        if(detailTabs.Items.Count!=2||detailTabs.SelectedIndex!=0)throw new Exception("Dati commessa e pianificazione non separati");
+        detailTabs.SelectedIndex=1;detailBody.Measure(new Size(1210,760));detailBody.Arrange(new Rect(0,0,1210,760));detailBody.UpdateLayout();
+        var planning=new RenderTargetBitmap(1210,760,96,96,PixelFormats.Pbgra32);planning.Render(detailBody);
+        using(var output=File.Create("artifacts/checks/pianificazione-commessa.png"))
+        {var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(planning));png.Save(output);}
+        PhaseCreationChecks.Run();
+        foreach(var category in new[]{"G","A"})
+        {
+            detail=detail with{Project=detail.Project with{Category=category,Code=category=="G"?"G26001":"C26001"}};
+            detailVm.Refresh().GetAwaiter().GetResult();detailBody.UpdateLayout();
+            if(detailVm.OverviewTitle!=(category=="G"?"Gara e cliente":"Archivio e cliente")
+                ||detailWindow.Title!=detailVm.DetailTitle||detailVm.Customer?.Id!="cliente")
+                throw new Exception("Dettaglio gara/archivio non aggiornato correttamente");
+        }
         detail=detail with{CanManage=false};detailVm.Refresh().GetAwaiter().GetResult();
         if(detailVm.SaveProjectCommand.CanExecute(null)||detailVm.NewPhaseCommand.CanExecute(null)||detailVm.CanEdit)throw new Exception("Modifiche abilitate a utente non amministratore");
         Console.WriteLine("BusinessUiChecks: caricamento senza rete e cinque schede WPF renderizzate."); app.Shutdown();

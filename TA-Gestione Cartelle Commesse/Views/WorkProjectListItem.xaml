@@ -3,8 +3,8 @@
  MouseDoubleClick="OpenFolder" PreviewMouseRightButtonDown="SelectRow">
  <UserControl.ContextMenu>
   <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-   <MenuItem Header="Apri cartella" Command="{Binding OpenFolderCommand}"/>
-   <MenuItem Header="Dettaglio commessa" Command="{Binding EditCommand}"/>
+   <MenuItem Header="Mostra in Esplora file" Command="{Binding OpenFolderCommand}"/>
+   <MenuItem Header="Apri dettaglio" Command="{Binding EditCommand}"/>
    <MenuItem Header="Scheda cliente" Command="{Binding OpenCustomerCommand}"/>
   </ContextMenu>
  </UserControl.ContextMenu>
@@ -31,8 +31,8 @@
   <TextBlock Grid.Column="5" Text="{Binding SizeText}" ToolTip="{Binding SizeText}"/>
   <TextBlock Grid.Column="6" Text="{Binding LastActivityText}" ToolTip="{Binding LastActivityText}" Foreground="#53717B"/>
   <TextBlock Grid.Column="7" Text="{Binding StateLabel}" ToolTip="{Binding StateLabel}" Foreground="#53717B"/>
-  <Button Grid.Column="8" Command="{Binding EditCommand}" ToolTip="Apri dettaglio commessa"
-   Padding="5,3" Margin="0" VerticalAlignment="Center" AutomationProperties.Name="Apri dettaglio commessa">
+  <Button Grid.Column="8" Command="{Binding EditCommand}" ToolTip="Apri dettaglio"
+   Padding="5,3" Margin="0" VerticalAlignment="Center" AutomationProperties.Name="Apri dettaglio">
    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70F;" Foreground="White" Margin="0" FontSize="12"/>
   </Button>
  </Grid>

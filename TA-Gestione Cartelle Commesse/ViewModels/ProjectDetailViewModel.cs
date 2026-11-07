@@ -19,10 +19,11 @@ public sealed class ProjectDetailViewModel : Observable
         SaveProjectCommand=new(async()=>await Execute(()=>new("SaveProjectDetails",Project:Project!.ToModel())),()=>CanEdit&&Project!=null);
         SavePhaseCommand=new(async()=>await Execute(()=>new("SavePhase",Phase:Phase!.ToModel())),()=>CanEdit&&Phase!=null);
         SaveActivityCommand=new(async()=>await Execute(()=>new("SaveActivity",Activity:Activity!.ToModel())),()=>CanEdit&&Activity!=null);
-        NewPhaseCommand=new(()=>{SelectedPhase=null;Phase=new(new("",id,""));Notify(nameof(Phase));},()=>CanEdit);
+        NewPhaseCommand=new(()=>{SelectedPhase=null;Phase=new(new("",id,""));Notify(nameof(Phase));Commands();},()=>CanEdit);
         NewActivityCommand=new(()=>{
+            SelectedActivity=null;
             var day=DateOnly.FromDateTime(DateTime.Today);
-            Activity=new(new("",id,SelectedPhase!.Name,"","",day,day,0,PhaseId:SelectedPhase.Id));Notify(nameof(Activity));
+            Activity=new(new("",id,SelectedPhase!.Name,"","",day,day,0,PhaseId:SelectedPhase.Id));Notify(nameof(Activity));Commands();
         },()=>CanEdit&&SelectedPhase!=null);
     }
     public Command RefreshCommand {get;}
@@ -36,8 +37,13 @@ public sealed class ProjectDetailViewModel : Observable
     public WorkPhaseViewModel? Phase {get;private set;}
     public WorkActivityViewModel? Activity {get;private set;}
     public ProjectDetails? Details {get;private set;}
+    public string DetailTitle=>(Details?.Project.Category switch{"G"=>"Dettaglio gara","A"=>"Dettaglio archivio",_=>"Dettaglio commessa"})+" — TA";
+    public string OverviewTitle=>Details?.Project.Category switch{"G"=>"Gara e cliente","A"=>"Archivio e cliente",_=>"Commessa e cliente"};
+    public string SaveLabel=>Details?.Project.Category switch{"G"=>"Salva gara","A"=>"Salva dati archivio",_=>"Salva commessa"};
     public bool Busy {get;private set;}
     public bool CanEdit=>!Busy&&Details?.CanManage==true;
+    public bool CanEditPhase=>CanEdit&&Phase!=null;
+    public bool CanEditActivity=>CanEdit&&Activity!=null;
     public string Status {get;private set;}="Caricamento…";
     private WorkPhase? selectedPhase;
     public WorkPhase? SelectedPhase
@@ -54,6 +60,7 @@ public sealed class ProjectDetailViewModel : Observable
     public async Task Refresh()=>await Execute(null);
     private void Commands()
     {
+        Notify(nameof(CanEditPhase));Notify(nameof(CanEditActivity));
         foreach(var command in new[]{RefreshCommand,SaveProjectCommand,SavePhaseCommand,SaveActivityCommand,NewPhaseCommand,NewActivityCommand,ManageCustomerCommand})command.Refresh();
     }
     private async Task Execute(Func<BusinessCommand>? makeCommand)
@@ -73,6 +80,7 @@ public sealed class ProjectDetailViewModel : Observable
             Project=new(Details.Project,customers); Customer=Project.Customer;
             Project.PropertyChanged+=(_,e)=>{if(e.PropertyName==nameof(Project.Customer)){Customer=Project.Customer;Notify(nameof(Customer));}};
             Notify(nameof(Details));Notify(nameof(Project));Notify(nameof(Customer));
+            Notify(nameof(DetailTitle));Notify(nameof(OverviewTitle));Notify(nameof(SaveLabel));
             SelectedPhase=Details.Phases.FirstOrDefault(p=>p.Id==phaseId)??Details.Phases.FirstOrDefault();
             Status=$"{Details.Phases.Length} fasi · {Details.Activities.Length} attività complessive. Le modifiche riguardano solo il gestionale.";
         }

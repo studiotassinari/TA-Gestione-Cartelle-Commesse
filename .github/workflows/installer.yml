@@ -67,7 +67,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.26.1"
+          $version = "2.27.0"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -269,11 +269,11 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
-          Versione 2.26.1: elenco commesse compatto a una riga, con colonne allineate e finestra massimizzata per schermi ampi. Ultime 50 commesse ordinate per attività nota su file o gestionale, ricerca nell'intero catalogo. Le scansioni e le migrazioni non alterano l'ordine.
-          Modelli e ViewModel distinti per commessa: cliente associato per ID, argomento specifico, committente da cartella se non ancora associato. Doppio clic per Esplora file, menu contestuale e dettaglio commessa.
-          Anagrafica clienti dedicata, accessibile dal menu e dal dettaglio senza perdere modifiche non salvate. Permessi di scrittura verificati dal server per Antonio e Giuseppe. Nessuna modifica ad Active Directory o ai documenti originali.
-          Conserva analisi geologiche/MUR su richiesta, inventario SQLite locale e backup giornaliero. Nessun log di connessione client. Aggiornare prima Server e poi Client; tunnel MCP sempre avviato manualmente.
-          Installatori iniziali, aggiornatore diretto, pacchetti Client/Server/MCP e SHA256 inclusi. Pacchetti non firmati digitalmente.
+          Versione 2.27.0: stesso elenco compatto per Commesse, Gare e Archivio, ultime 50 voci e ricerca dinamica su tutta la categoria. Collegamenti distinti anche per codici uguali.
+          Dettaglio riorganizzato: dati e cliente nella prima scheda, fasi e attività nella scheda Pianificazione. Corretto il salvataggio delle nuove fasi e attività.
+          Dopo il salvataggio confermato dal server, cliente e dati della riga si aggiornano immediatamente, senza chiudere la finestra. Filtri aggiornati e protezione dalle risposte con revisioni precedenti.
+          Permessi verificati dal server, nessuna modifica ad Active Directory o agli originali. Inventario SQLite locale, backup giornaliero e analisi geologiche/MUR su richiesta conservati.
+          Aggiornare prima Server e poi Client. Installatori iniziali, updater diretto, pacchetti Client/Server/MCP e SHA256 inclusi. Tunnel MCP sempre avviato manualmente. Pacchetti non firmati digitalmente.
           '@
           # Salva le note UTF-8 in un file per preservare accenti e interruzioni di riga.
           $notes | Set-Content release-notes.txt -Encoding utf8

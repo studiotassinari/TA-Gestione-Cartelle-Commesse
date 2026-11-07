@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Servizio Windows TCP/Kerberos senza HTTP o IIS. -->
-  <PropertyGroup><OutputType>Exe</OutputType><Version>2.26.1</Version><TargetFramework>net10.0-windows</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+  <PropertyGroup><OutputType>Exe</OutputType><Version>2.27.0</Version><TargetFramework>net10.0-windows</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.DirectoryServices.AccountManagement" Version="10.0.13" />
     <EmbeddedResource Include="IpripiRules.json" LogicalName="TA.Server.IpripiRules.json" />
