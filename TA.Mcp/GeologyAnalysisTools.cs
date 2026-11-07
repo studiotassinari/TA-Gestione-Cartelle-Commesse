@@ -10,8 +10,8 @@ namespace TA.Mcp;
 public sealed class GeologyAnalysisTools(IGeologyAnalysisSource source)
 {
     [McpServerTool(Name = "prossime_relazioni_da_analizzare", ReadOnly = true, Destructive = false, OpenWorld = false)]
-    [Description("Solo quando l'utente chiede la catalogazione geologica tramite ChatGPT: restituisce fino a 10 documenti nuovi/modificati, ordinati per modifica recente, senza leggere contenuti. Avvia inizia_consultazione con contenuti=true e analisiGeologiche=true. Leggi ciascun documento scelto con leggi_relazione_geologica e salva con salva_analisi_geologica. Usa elenca_fascicoli_geologici per riusare un fascicolo omogeneo. Nessun rinnovo automatico, nessuna analisi in background. Sedi di autori/clienti non identificano automaticamente il sito indagato.")]
-    public async Task<string> Pending(string code = "", string query = "", int limit = 5, string consultazione = "", CancellationToken cancellationToken = default)
+    [Description("Solo quando l'utente chiede la catalogazione geologica tramite ChatGPT: restituisce un solo documento nuovo/modificato, ordinato per anno e numero commessa decrescenti. Gli elenchi elaborati sono documenti di supporto, non relazioni confermate: leggerli per individuare riferimenti a relazioni anche rinominate. I riferimenti con codice/nome riscontrato nel censimento vengono aggiunti come candidati. Salvare il documento corrente prima del successivo; limite server condiviso con MUR di un nuovo file ogni 60 secondi, senza leggere contenuti. Avvia inizia_consultazione con contenuti=true e analisiGeologiche=true. Leggi ciascun documento scelto con leggi_relazione_geologica e salva con salva_analisi_geologica. Usa elenca_fascicoli_geologici per riusare un fascicolo omogeneo. Nessun rinnovo automatico, nessuna analisi in background. Sedi di autori/clienti non identificano automaticamente il sito indagato.")]
+    public async Task<string> Pending(string code = "", string query = "", int limit = 1, string consultazione = "", CancellationToken cancellationToken = default)
     {
         using var call = McpInvocation.Begin("prossime_relazioni_da_analizzare", consultazione);
         return JsonSerializer.Serialize(await source.PendingGeology(new(code, query, limit), cancellationToken));
@@ -27,7 +27,7 @@ public sealed class GeologyAnalysisTools(IGeologyAnalysisSource source)
 
     [McpServerTool(Name = "elenca_fascicoli_geologici", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Cerca fascicoli geologici già salvati nei JSON: titolo, sito, documenti associati, commesse, versioni da aggiornare e posizioni discordanti. Nessuna lettura documentale. Passare version nelle pagine successive. Per riusare un fascicolo verificare l'omogeneità del progetto e del sito tramite le fonti, non solo nome del cliente/comune.")]
-    public async Task<string> Dossiers(string query = "", int offset = 0, int limit = 50, string? version = null, string consultazione = "", CancellationToken cancellationToken = default)
+    public async Task<string> Dossiers(string query = "", int offset = 0, int limit = 10, string? version = null, string consultazione = "", CancellationToken cancellationToken = default)
     {
         using var call = McpInvocation.Begin("elenca_fascicoli_geologici", consultazione);
         return JsonSerializer.Serialize(await source.GeologicalDossiers(new(query, offset, limit, version), cancellationToken));

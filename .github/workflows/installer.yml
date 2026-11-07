@@ -67,7 +67,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.24.0"
+          $version = "2.25.0"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -269,7 +269,9 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
-          Versione 2.24.0: gerarchia Commessa → Fase → Attività, con un solo livello di fasi. Nuovo dettaglio della commessa con cliente associato, anno, numero, argomento, luogo e stato descrittivo. Fasi e attività consultabili indipendentemente dal periodo Gantt. Recupero automatico delle precedenti fasi testuali, mantenendo attività e ore registrate. Modelli, ViewModel e viste dedicati.
+          Versione 2.25.0: analisi geologiche e MUR A1/D1 dalle commesse più recenti alle più vecchie. Una lettura concorrente e limite condiviso di un nuovo documento ogni 60 secondi per il plugin, conservato nel database anche dopo il riavvio. Pagine successive dello stesso file senza attesa ripetuta. Analisi ChatGPT solo durante la consultazione richiesta, senza API automatiche.
+          Gli elenchi elaborati letti su richiesta individuano candidati geologico/geotecnici con nomi o codici file esatti presenti nella stessa commessa; nessuna apertura automatica dei documenti richiamati. Limiti espliciti per riferimenti ambigui e documenti senza testo.
+          Include il dettaglio MVVM Commessa → Fase → Attività della 2.24.0, cliente associato, luogo e stato descrittivo, recupero delle precedenti fasi testuali e conservazione delle ore.
           Collegamenti e permessi verificati sul server: gestione riservata ad Antonio e Giuseppe; collaboratori del gruppo GG_TA_Commesse_Users in consultazione. Lo stato della commessa non cambia le autorizzazioni ore. Nessuna modifica ad Active Directory o alle cartelle originali.
           Modalità archiviazione locale: ricostruzione dell'inventario senza importare i vecchi inventari difettosi, recupero separato delle analisi geologiche/MUR e coordinate con backup locale verificato; nessuna attesa delle copie di rete prima della scansione. Le cache per unita vengono ricostruite localmente. Attivazione esplicita documentata in deployment/ARCHIVIAZIONE-LOCALE.md; nessuna eliminazione automatica dei dati precedenti.
           Backup SQLite giornaliero sulla rete indipendente dalle scansioni, sette copie conservate. Dati operativi locali; originali sempre in sola lettura. Nessun nuovo log di connessione sul client e nessuna attività pianificata Windows.

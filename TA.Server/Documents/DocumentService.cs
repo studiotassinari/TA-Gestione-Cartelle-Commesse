@@ -6,7 +6,10 @@ using TA_Gestione_Cartelle_Commesse.Contracts;
 namespace TA.Server.Documents;
 public sealed class DocumentService(ServerSettings settings,ScanCoordinator scans)
 {
-    private readonly SemaphoreSlim slots=new(2);
+    public AnalysisReadSchedule AnalysisSchedule {get;}=new(load:()=>
+        new TA_Gestione_Cartelle_Commesse.Services.InventoryStore(settings.InventoryFolder).Document("ANALISI/RITMO") is {} json?JsonSerializer.Deserialize<AnalysisReadState>(json):null,
+        save:state=>new TA_Gestione_Cartelle_Commesse.Services.InventoryStore(settings.InventoryFolder).SaveDocument("ANALISI/RITMO",state));
+    private readonly SemaphoreSlim slots=new(1);
     public async Task<DocumentWorkReply> ExecuteAsync(string category,DocumentQuery? read,DocumentListQuery? list,CancellationToken token)
     {
         if(read!=null)DocumentValidation.Validate(read);else if(list!=null)DocumentValidation.Validate(list);else throw new ArgumentException("Richiesta mancante.");
@@ -20,7 +23,7 @@ public sealed class DocumentService(ServerSettings settings,ScanCoordinator scan
     }
     internal async Task<DocumentWorkReply> ExecuteWorkAsync(DocumentWork work,CancellationToken token)
     {
-        if(!await slots.WaitAsync(0,token))throw new IOException("Due letture documentali già in corso. Riprovare su richiesta, senza accodare scansioni.");
+        if(!await slots.WaitAsync(0,token))throw new IOException("Una lettura documentale è già in corso. Riprovare su richiesta, senza accodare scansioni.");
         try{return await RunWorkerAsync(work,token);}finally{slots.Release();}
     }
     public static async Task<DocumentWorkReply> RunWorkerAsync(DocumentWork work,CancellationToken token)

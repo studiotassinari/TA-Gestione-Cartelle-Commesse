@@ -48,19 +48,22 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
                 (r.Latitude.HasValue != r.Longitude.HasValue) || (r.Latitude.HasValue && !r.HasPosition))
                 throw new InvalidDataException("Relazione con identità, campi o coordinate non validi nel catalogo.");
         }
-        var analyzed = MergeAnalyses(catalog, bytes);
+        catalog=GeologyListReferences.Merge(settings,catalog);
+        var analyzed = MergeAnalyses(catalog, JsonSerializer.SerializeToUtf8Bytes(catalog));
         return MergePositions(analyzed.Catalog, analyzed.Bytes);
     }
-    public async Task<DocumentPage> ReadAsync(GeologicalReadQuery q, CancellationToken token)
+    public async Task<DocumentPage> ReadAsync(GeologicalReadQuery q, CancellationToken token, bool scheduled=false)
     {
         ValidateRead(q);
         var report = ReadCatalog(token).Catalog.Reports.SingleOrDefault(r => r.Id == q.ReportId) ?? throw new KeyNotFoundException("Relazione non presente nel catalogo.");
         if (!report.CanRead) throw new IOException("Il catalogo non contiene ancora il collegamento al documento originale.");
+        using var schedule=scheduled?documents.AnalysisSchedule.Enter(report.Id):null;
         DocumentPage page;
         if (string.IsNullOrWhiteSpace(report.PhysicalPath))
             page = (await documents.ExecuteAsync(report.Category, new(report.FolderId, report.RelativePath, report.ArchiveEntry, q.Offset, q.Length, q.Version), null, token)).Document!;
         else page = (await documents.ExecuteWorkAsync(ResolveDocument(settings, report, q), token)).Document!;
         evidence.Remember(report.Id, page);
+        GeologyListReferences.Discover(settings,report,page,token);
         return page;
     }
     public static DocumentWork ResolveDocument(ServerSettings settings, GeologicalReport report, GeologicalReadQuery q)

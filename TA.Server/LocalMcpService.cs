@@ -87,13 +87,13 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
         {
             case "IpripiRules": return Reply.Ok(IpripiRegulation.Get());
             case "Ipripi": return Reply.Ok((ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).Query(request.Ipripi ?? new(), token));
-            case "ReadIpripi": return Reply.Ok(await (ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).ReadAsync(request.IpripiRead ?? throw new ArgumentException("Documento mancante."), token));
+            case "ReadIpripi": return Reply.Ok(await (ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).ReadAsync(request.IpripiRead ?? throw new ArgumentException("Documento mancante."), token, scheduled: !string.IsNullOrWhiteSpace(request.McpTool)));
             case "SaveIpripi": return Reply.Ok(await (ipripi ?? throw new IOException("Servizio IPRiPI non disponibile.")).SaveAsync(request.IpripiAnalysis ?? throw new ArgumentException("Analisi mancante."), user, token));
             case "PendingGeologicalAnalyses": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Pending(request.GeologicalPending ?? new(), token));
             case "GeologicalDossiers": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile.")).Dossiers(request.GeologicalDossiers ?? new(), token));
             case "SaveGeologicalAnalysis": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile.")).SaveAnalysisAsync(request.GeologicalAnalysis ?? throw new ArgumentException("Analisi mancante."), user, token));
             case "Geology": return Reply.Ok((geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).Query(request.Geology ?? new(), token));
-            case "ReadGeologicalDocument": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).ReadAsync(request.GeologicalRead ?? throw new ArgumentException("Relazione mancante."), token));
+            case "ReadGeologicalDocument": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).ReadAsync(request.GeologicalRead ?? throw new ArgumentException("Relazione mancante."), token, scheduled: !string.IsNullOrWhiteSpace(request.McpTool)));
             case "ReadDocument": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,request.Document,null,token)).Document);
             case "ListDocuments": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,null,request.Documents,token)).Listing);
             case "Info": return Reply.Ok(typeof(LocalMcpService).Assembly.GetName().Version?.ToString(3) ?? "Sconosciuta");

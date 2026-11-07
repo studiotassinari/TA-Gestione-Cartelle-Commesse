@@ -37,6 +37,7 @@ public sealed class GeologyIndexer(ServerSettings settings, ILogger<GeologyIndex
             foreach (var group in old.Reports.GroupBy(r => r.InventoryUnitId)) groups[group.Key] = group.ToList();
         }
         var issues = new List<string>(); int processed = 0; bool partial = false;
+        var references=GeologyListReferences.Read(settings).GroupBy(r=>r.Report.InventoryUnitId).ToDictionary(g=>g.Key,g=>g.ToList());
         var seen = new HashSet<string>(StringComparer.Ordinal); var watch = Stopwatch.StartNew();
         GeologyCatalog Publish(bool running)
         {
@@ -63,11 +64,11 @@ public sealed class GeologyIndexer(ServerSettings settings, ILogger<GeologyIndex
                 var relative = Path.GetRelativePath(store.Root, unit);
                 var cache = Path.Combine(root, "unita", relative + ".json");
                 var saved = CatalogStorage.Exists(settings,cache) ? CatalogStorage.Read<GeologicalUnitIndex>(settings,cache) : null;
-                if (saved?.Generation != manifest.Generation || saved.SchemaVersion < 2)
+                if (saved?.Generation != manifest.Generation || saved.SchemaVersion < 3)
                 {
                     var reports = new List<GeologicalReport>();
                     // Le unità senza variazioni riutilizzano le schede; si rianalizzano i nomi solo dove l'inventario è cambiato.
-                    if (saved?.SchemaVersion >= 2 && saved.Reports.All(r => r.SourceMetadataComplete) && manifest.Complete && !manifest.Baseline && manifest.Added == 0 && manifest.Removed == 0 && manifest.Changed == 0)
+                    if (saved?.SchemaVersion >= 3 && !references.ContainsKey(manifest.Unit.Id) && saved.Reports.All(r => r.SourceMetadataComplete) && manifest.Complete && !manifest.Baseline && manifest.Added == 0 && manifest.Removed == 0 && manifest.Changed == 0)
                         reports.AddRange(saved.Reports.Select(r => r with { SourceCheckedUtc = manifest.CheckedUtc, SourceComplete = true }));
                     else
                     {
@@ -80,8 +81,21 @@ public sealed class GeologyIndexer(ServerSettings settings, ILogger<GeologyIndex
                         if (GeologyClassifier.Classify(manifest, entry, container.Stamp, container.ModifiedUtc) is { } report) reports.Add(report);
                         if (reports.Count > 50000) throw new IOException("Troppi candidati nella singola unità.");
                     }
+                    if(references.TryGetValue(manifest.Unit.Id,out var hints))
+                    {
+                        var byId=reports.ToDictionary(r=>r.Id);
+                        var valid=hints.Where(h=>byId.TryGetValue(h.ListId,out var list)&&list.SourceFingerprint==h.ListFingerprint).GroupBy(h=>h.Report.Id).ToDictionary(g=>g.Key,g=>g.First());
+                        foreach(var entry in store.Entries(manifest))
+                        {
+                            token.ThrowIfCancellationRequested();
+                            var location=entry.Location??FileLocator.Locate(manifest.Unit,entry);
+                            if(byId.ContainsKey(location.Id)||!valid.TryGetValue(location.Id,out var hint))continue;
+                            var container=entry.Container!=null&&containers.TryGetValue(entry.Container,out var value)?value:(Stamp:"",ModifiedUtc:(DateTime?)null);
+                            if(GeologyClassifier.Classify(manifest,entry,container.Stamp,container.ModifiedUtc,hint.Report.DetectionEvidence) is {} candidate)reports.Add(candidate);
+                        }
                     }
-                    saved = new(manifest.Generation, reports, 2); CatalogStorage.Write(settings,cache, saved);
+                    }
+                    saved = new(manifest.Generation, reports, 3); CatalogStorage.Write(settings,cache, saved);
                 }
                 groups[manifest.Unit.Id] = saved.Reports;
                 if (++processed % 100 == 0) logger.LogInformation("Catalogo geologico: {Count} unità JSON, ultima {Path}", processed, manifest.Unit.Path);

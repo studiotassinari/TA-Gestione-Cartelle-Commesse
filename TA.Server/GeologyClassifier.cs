@@ -12,7 +12,9 @@ public static class GeologyClassifier
     private static readonly Regex Geology = new(@"\b(?:geologic\w*|geologi[ae]|geological)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Geotechnics = new(@"\b(?:geotecnic\w*|geotechnic\w*)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Coordinates = new(@"\blat(?:itudine)?\s*[=:]?\s*(?<lat>[+-]?\d{1,2}[.,]\d{3,9})\s*[;_ ]+\s*lon(?:gitudine)?\s*[=:]?\s*(?<lon>[+-]?\d{1,3}[.,]\d{3,9})(?!\d)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    public static GeologicalReport? Classify(InventoryManifest manifest, InventoryEntry entry, string containerStamp = "", DateTime? containerModifiedUtc = null)
+    public static bool IsDrawingList(string name)=>Regex.IsMatch(name.Replace('_',' ').Replace('-',' '),@"\b(?:elenco|indice|lista)\s+(?:degli\s+)?(?:elaborati|documenti)\b",RegexOptions.IgnoreCase|RegexOptions.CultureInvariant);
+    public static bool MentionsGeology(string text)=>Geology.IsMatch(text)||Geotechnics.IsMatch(text);
+    public static GeologicalReport? Classify(InventoryManifest manifest, InventoryEntry entry, string containerStamp = "", DateTime? containerModifiedUtc = null, string referenceEvidence="")
     {
         if (entry.Kind == "directory") return null;
         var location = entry.Location ?? FileLocator.Locate(manifest.Unit, entry);
@@ -20,8 +22,9 @@ public static class GeologyClassifier
         static string Words(string value) => value.Replace('_', ' ').Replace('-', ' ');
         var name = Words(Path.GetFileNameWithoutExtension(location.Name));
         bool geology = Geology.IsMatch(name), geotechnics = Geotechnics.IsMatch(name);
+        bool list=IsDrawingList(name);
         bool direct = geology || geotechnics;
-        if (!direct)
+        if (!direct && !list && referenceEvidence.Length==0)
         {
             // Un documento in una cartella tematica è un candidato, non una relazione confermata.
             var context = Words(location.ParentRelativePath + " " + Path.GetFileNameWithoutExtension(entry.Container ?? "") + " " + Path.GetFileName(manifest.Unit.Path));
@@ -46,8 +49,8 @@ public static class GeologyClassifier
             FolderId = manifest.Unit.Id, RelativePath = entry.RelativePath, InventoryUnitId = manifest.Unit.Id,
             Year = manifest.Unit.Year, ProjectCode = classified ? manifest.Unit.Code : "", Client = manifest.Unit.Client,
             SuggestedProjectCode = classified ? "" : manifest.Unit.Code,
-            Kind = geology && geotechnics ? "Geologica e geotecnica" : geology ? "Geologica" : "Geotecnica",
-            DetectionEvidence = direct ? "Termine geologico/geotecnico nel nome del file" : "Documento in una cartella tematica: tipologia da verificare",
+            Kind = list?"Elenco elaborati":referenceEvidence.Length>0?"Da verificare":geology && geotechnics ? "Geologica e geotecnica" : geology ? "Geologica" : "Geotecnica",
+            DetectionEvidence = referenceEvidence.Length>0?referenceEvidence:list?"Elenco elaborati: leggere su richiesta per individuare riferimenti geologici":direct ? "Termine geologico/geotecnico nel nome del file" : "Documento in una cartella tematica: tipologia da verificare",
             DetectionStatus = "Da verificare", SourceCheckedUtc = manifest.CheckedUtc, SourceComplete = manifest.Complete,
             Latitude = lat, Longitude = lon, PositionSource = lat.HasValue ? "Etichette lat/lon nel nome censito: da verificare" : "",
             PositionAccuracy = lat.HasValue ? "Coordinate nel nome, non verificate" : "",

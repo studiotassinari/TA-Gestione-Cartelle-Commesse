@@ -62,6 +62,7 @@ internal static class Program
             GeocodingChecks.Run(root).GetAwaiter().GetResult();
             GeologyOpenChecks.Run(root).GetAwaiter().GetResult();
             GeologyIndexChecks.Run(root);
+            AnalysisPacingChecks.Run(root);
             AppContext.SetSwitch("TA.Tests.DisableMapNetwork",true);
             var app=new Application {ShutdownMode=ShutdownMode.OnExplicitShutdown};
             var model=new GeologyViewModel();model.Apply(catalog);model.Search="rimini industriale";
