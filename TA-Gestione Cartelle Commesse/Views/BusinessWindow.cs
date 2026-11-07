@@ -11,7 +11,7 @@ public sealed class BusinessWindow : Window
 {
     private readonly BusinessViewModel vm;
     private readonly DataGrid customers = Table(("Cliente", "Name"), ("Partita IVA", "Vat"), ("Codice fiscale", "TaxCode"), ("Indirizzo", "Address"), ("Email", "Email"));
-    private readonly DataGrid projects = Table(("Codice", "Code"), ("Commessa", "Title"), ("Inserimento ore", "Mode"), ("Riferimento", "Evidence"), ("Deroga", "Reason"));
+    private readonly DataGrid projects = Table(("Codice", "Code"), ("Anno", "Item.Year"), ("Numero", "Item.Number"), ("Cliente associato", "Customer"), ("Argomento", "Item.Subject"), ("Inserimento ore", "Mode"), ("Riferimento", "Evidence"), ("Deroga", "Reason"));
     private readonly DataGrid activities = Table(("Commessa", "Code"), ("Fase", "Phase"), ("Attività", "Title"), ("Collaboratore", "Assignee"), ("Inizio", "Start"), ("Fine", "End"), ("Ore previste", "Hours"), ("Avanzamento %", "Progress"));
     private readonly DataGrid times = Table(("Data", "Day"), ("Commessa", "Code"), ("Attività", "Activity"), ("Ore", "Hours"), ("Lavoro svolto", "Description"), ("Collaboratore", "User"));
     private readonly TextBox search = new();
@@ -38,7 +38,8 @@ public sealed class BusinessWindow : Window
         DockPanel.SetDock(header, Dock.Top); dock.Children.Add(header);
         var tabs = new TabControl(); dock.Children.Add(tabs);
         tabs.Items.Add(Tab("Clienti", customers, Button("Nuovo cliente", () => EditCustomer(null), true), Button("Modifica", () => EditCustomer(customers.SelectedItem as Customer), true), Button("Importa Magoot…", () => Import("Magoot"), true), Button("Importa Fatture in Cloud…", () => Import("Fatture"), true)));
-        tabs.Items.Add(Tab("Commesse e autorizzazioni", projects, Button("Cliente e autorizzazione ore…", EditProject, true)));
+        tabs.Items.Add(Tab("Commesse e autorizzazioni", projects, Button("Apri commessa…", OpenProject), Button("Cliente e autorizzazione ore…", EditProject, true)));
+        projects.MouseDoubleClick += async (_, _) => await OpenProject();
         tabs.Items.Add(Tab("Attività", activities, Button("Nuova attività", () => EditActivity(null), true), Button("Modifica attività", () => EditActivity((activities.SelectedItem as ActivityRow)?.Item), true)));
         group.SelectionChanged += (_, _) => Render();
         gantt.HorizontalAlignment = HorizontalAlignment.Left; gantt.VerticalAlignment = VerticalAlignment.Top;
@@ -65,14 +66,14 @@ public sealed class BusinessWindow : Window
     private bool Matches(params string[] text) => text.Any(t => t.Contains(search.Text.Trim(), StringComparison.OrdinalIgnoreCase));
     private string Code(string id) => vm.Snapshot?.Projects.FirstOrDefault(p => p.Id == id)?.Code ?? id;
     private static string Mode(string mode) => mode switch { "Quote" => "Preventivo accettato", "Contract" => "Contratto", "Override" => "Deroga", _ => "Bloccato" };
-    private sealed record ProjectRow(WorkProject Item, string Code, string Title, string Mode, string Evidence, string Reason);
+    private sealed record ProjectRow(WorkProject Item, string Code, string Title, string Mode, string Evidence, string Reason,string Customer);
     private sealed record ActivityRow(WorkActivity Item, string Code, string Phase, string Title, string Assignee, DateOnly Start, DateOnly End, decimal Hours, int Progress);
     private sealed record TimeRow(WorkTime Item, DateOnly Day, string Code, string Activity, decimal Hours, string Description, string User);
     private void Render()
     {
         if (vm.Snapshot is not { } s) return;
         customers.ItemsSource = s.Customers.Where(c => Matches(c.Name, c.Vat, c.TaxCode, c.Address)).OrderBy(c => c.Name).ToArray();
-        projects.ItemsSource = s.Projects.Where(p => Matches(p.Code, p.Title)).Select(p => new ProjectRow(p, p.Code, p.Title, Mode(p.HoursMode), p.Evidence, p.Reason)).ToArray();
+        projects.ItemsSource = s.Projects.Select(p => new ProjectRow(p, p.Code, p.Title, Mode(p.HoursMode), p.Evidence, p.Reason,s.Customers.FirstOrDefault(c=>c.Id==p.CustomerId)?.Name??"Da associare")).Where(p=>Matches(p.Code,p.Title,p.Customer,p.Item.Subject,p.Item.Location)).ToArray();
         var rows = s.Activities.Where(a => Matches(Code(a.ProjectId), a.Title, a.Phase, a.Assignee)).ToArray();
         activities.ItemsSource = rows.Select(a => new ActivityRow(a, Code(a.ProjectId), a.Phase, a.Title, a.Assignee, a.Start, a.End, a.PlannedMinutes / 60m, a.Progress)).ToArray();
         times.ItemsSource = s.Times.Where(t => Matches(Code(t.ProjectId), t.Description, t.User)).OrderByDescending(t => t.Day).Select(t => new TimeRow(t, t.Day, Code(t.ProjectId), s.Activities.FirstOrDefault(a => a.Id == t.ActivityId)?.Title ?? "Attività fuori periodo", t.Minutes / 60m, t.Description, t.User)).ToArray();
@@ -95,6 +96,12 @@ public sealed class BusinessWindow : Window
         var mode = f.Choice("Condizione per inserire ore", modes, modes.First(x => x.Key == p.HoursMode), "Value");
         var evidence = f.Text("Riferimento al preventivo accettato / contratto", p.Evidence); var reason = f.Text("Motivazione della deroga", p.Reason); var until = f.Date("Autorizzato fino al (vuoto = nessuna scadenza)", p.Until?.ToDateTime(TimeOnly.MinValue));
         if (f.ShowDialog() == true) await vm.Save(new("SaveProject", Project: p with { CustomerId = (client.SelectedItem as Customer)?.Id ?? "", HoursMode = ((KeyValuePair<string, string>)mode.SelectedItem).Key, Evidence = evidence.Text, Reason = reason.Text, Until = until.SelectedDate is { } d ? DateOnly.FromDateTime(d) : null }));
+    }
+    private Task OpenProject()
+    {
+        if(projects.SelectedItem is not ProjectRow row)return Task.CompletedTask;
+        var detail=new ProjectDetailWindow(new ProjectDetailViewModel(vm,row.Item.Id)){Owner=this};
+        detail.Closed+=async(_,_)=>await vm.Refresh();detail.Show();return Task.CompletedTask;
     }
     private async Task EditActivity(WorkActivity? a)
     {

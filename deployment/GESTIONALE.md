@@ -42,6 +42,14 @@ Se manca il codice sorgente viene usata la partita IVA oppure il codice fiscale.
 
 L'anteprima non scrive dati. Alla conferma, i clienti sono riconciliati per identificativo sorgente o identificativo fiscale. I conflitti sono segnalati e saltati; una denominazione locale già presente non viene sovrascritta. Viene conservata la provenienza da ciascun portale. L'importazione non elimina clienti assenti da un'esportazione successiva. Ogni riga viene salvata con una transazione; in caso d'interruzione controllare il riepilogo e reimportare il file, senza creare duplicati per lo stesso identificativo.
 
+## Dettaglio commessa (2.24.0)
+
+La scheda Commesse espone codice, anno, numero, cliente associato e argomento. «Apri commessa» o il doppio clic apre le proprietà, le fasi e le attività della commessa. Il dettaglio non applica il filtro temporale del Gantt. Le entità hanno modelli, ViewModel e viste dedicati.
+
+La gerarchia è Commessa → Fase → Attività: nessuna sottofase. Il salvataggio delle proprietà richiede cliente e argomento; luogo e stato sono facoltativi. Anno e numero derivano dal codice e dalla cartella anno. Lo stato aperta/chiusa/fatturata è descrittivo e non cambia l'autorizzazione delle ore. Nessuna modifica dei percorsi sorgente.
+
+Le precedenti fasi testuali sono trasformate in entità distinte, una per commessa e nome, con recupero ripetibile. La rinomina della fase viene riportata nelle attività. Il server vieta fasi di un'altra commessa e impedisce di spostare attività con ore registrate a un'altra commessa o collaboratore. I vecchi client rimangono compatibili; per il dettaglio aggiornare prima il server, poi il client.
+
 ## Pianificazione e ore
 
 La scheda Commesse associa il cliente e stabilisce l'abilitazione delle ore: bloccate, preventivo accettato, contratto oppure deroga motivata. Il riferimento al documento è dichiarato dal responsabile: questa versione **non verifica automaticamente l'accettazione** del preventivo o la firma del contratto.

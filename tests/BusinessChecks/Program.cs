@@ -10,6 +10,7 @@ void Reject(Action action) { try { action(); } catch (Exception e) when (e is Ar
 try
 {
     FattureExcelChecks.Run();
+    ProjectStructureChecks.Run(Path.Combine(root,"project-structure"));
     if (args is ["--preview-excel", var excelPath])
     {
         var empty = new BusinessStore(Path.Combine(root, "excel-preview"));

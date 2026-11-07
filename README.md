@@ -1,6 +1,12 @@
-# TA-Gestione Cartelle Commesse — 2.23.1
+# TA-Gestione Cartelle Commesse — 2.24.0
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
+
+## Novità 2.24.0: commesse, clienti, fasi e attività
+
+La gerarchia gestionale è **Commessa → Fase → Attività**, con un solo livello di fasi. Dal gestionale, «Apri commessa» o il doppio clic apre il dettaglio con cliente associato, anno, numero, argomento, luogo e stato descrittivo. Le fasi e tutte le attività della commessa sono consultabili anche fuori dal periodo del Gantt. Le fasi testuali precedenti vengono recuperate automaticamente; le ore registrate restano conservate. Modelli, ViewModel e viste sono separati per entità.
+
+I dati vengono salvati dal server nel database gestionale locale. Lo stato aperta/chiusa/fatturata non modifica le autorizzazioni ore. Le cartelle originali non vengono rinominate né modificate.
 
 ## Gestione attività e archiviazione locale
 
@@ -8,7 +14,7 @@ Clienti importabili da Excel Fatture in Cloud o CSV con anteprima, commesse con 
 
 La nuova modalità locale recupera separatamente analisi e coordinate e ricostruisce l'inventario senza importare i vecchi inventari. I backup giornalieri funzionano anche quando una scansione è incompleta. Nessuna eliminazione automatica dei dati precedenti. [Attivazione, percorsi e recupero](deployment/ARCHIVIAZIONE-LOCALE.md).
 
-## Novità 2.23.1: SQLite, scansioni incrementali e backup
+## SQLite, scansioni incrementali e backup
 
 Il server conserva l'inventario corrente e i cataloghi in SQLite sul disco locale della VM. Non vengono memorizzati i documenti originali: solo metadati, dati delle classi e risultati delle analisi richieste. Non vengono più generate pagine JSON e generazioni per ogni scansione.
 
@@ -24,7 +30,7 @@ Il controllo delle dimensioni richiede comunque l'enumerazione dei metadati sull
 
 ## Catalogo MUR e mappa
 
-Catalogo MUR A.1/D.1 con progettisti, ruoli, tipologie, indirizzo, comune e coordinate. Ricerca esclusivamente in Commesse e Archivio, anche nei PDF di ZIP/7z; Gare escluse. Mappa OpenStreetMap con selezione collegata all'elenco. Le analisi e i riferimenti alle fonti sono conservati nel database del server; gli originali restano in sola lettura. I dati mancanti richiedono analisi su richiesta tramite ChatGPT. Aggiornare client, server e MCP alla 2.23.1; il tunnel va avviato manualmente sulla VM con la chiave runtime.
+Catalogo MUR A.1/D.1 con progettisti, ruoli, tipologie, indirizzo, comune e coordinate. Ricerca esclusivamente in Commesse e Archivio, anche nei PDF di ZIP/7z; Gare escluse. Mappa OpenStreetMap con selezione collegata all'elenco. Le analisi e i riferimenti alle fonti sono conservati nel database del server; gli originali restano in sola lettura. I dati mancanti richiedono analisi su richiesta tramite ChatGPT. Aggiornare client, server e MCP alla 2.24.0; il tunnel va avviato manualmente sulla VM con la chiave runtime.
 
 ## Politica delle scritture client
 
@@ -36,11 +42,11 @@ La nuova finestra **Analisi > IPRiPI — analisi MUR A.1/D.1** consulta PDF e ri
 
 ## Scarica la versione di produzione
 
-- [Aggiornatore diretto 2.23.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.23.1/TA-Commesse-Aggiornatore-2.23.1.exe) — prima Server sulla VM, poi Client sui PC.
-- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.23.1/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.23.1.exe)
-- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.23.1/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.23.1.exe)
-- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.23.1/TA-Commesse-MCP-2.23.1.zip)
-- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.23.1)
+- [Aggiornatore diretto 2.24.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.24.0/TA-Commesse-Aggiornatore-2.24.0.exe) — prima Server sulla VM, poi Client sui PC.
+- [Installazione iniziale Client](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.24.0/TA-Gestione-Cartelle-Commesse-Installazione-Iniziale-2.24.0.exe)
+- [Installazione iniziale Server](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.24.0/TA-Gestione-Cartelle-Commesse-Server-Installazione-Iniziale-2.24.0.exe)
+- [Componente MCP per la VM](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.24.0/TA-Commesse-MCP-2.24.0.zip)
+- [Tutti i pacchetti e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.24.0)
 
 Il runtime è incluso. L'aggiornatore verifica le impronte, conserva configurazioni e backup e sostituisce i file senza usare un installatore. I controlli degli aggiornamenti partono all'apertura del client o del gestore server, oppure su richiesta: nessuna attività pianificata. L’aggiornatore del server attende anche la chiusura effettiva del processo prima di sostituire i file. I pacchetti non sono firmati digitalmente.
 

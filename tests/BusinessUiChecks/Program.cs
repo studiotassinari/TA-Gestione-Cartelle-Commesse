@@ -33,6 +33,20 @@ internal static class Program
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); encoder.Save(stream);
         }
         if (!vm.CanEdit || snapshot.Times.Length != 1) throw new Exception("Dati non applicati");
+        var phase=new WorkPhase("phase","p1","Progettazione");
+        var detail=new ProjectDetails(snapshot.Projects[0] with{Year=2026,Number=1,Subject="Progetto dimostrativo",CustomerId="cliente"},snapshot.Customers[0],[phase],[snapshot.Activities[0] with{PhaseId=phase.Id}],snapshot.Customers,[snapshot.User],true);
+        using var detailBusiness=new BusinessViewModel((cmd,ct)=>Task.FromResult(JsonSerializer.SerializeToElement(detail)));
+        var detailVm=new ProjectDetailViewModel(detailBusiness,"p1");
+        detailVm.Refresh().GetAwaiter().GetResult();
+        var detailWindow=new ProjectDetailWindow(detailVm);
+        var detailBody=(FrameworkElement)detailWindow.Content;
+        detailBody.Measure(new Size(1210,760));detailBody.Arrange(new Rect(0,0,1210,760));detailBody.UpdateLayout();
+        if(detailVm.Activities.Length!=1||detailVm.Customer?.Name!="Cliente dimostrativo"||!detailVm.SaveProjectCommand.CanExecute(null))throw new Exception("Dettaglio MVVM incompleto");
+        var rendered=new RenderTargetBitmap(1210,760,96,96,PixelFormats.Pbgra32);rendered.Render(detailBody);
+        using(var output=File.Create("artifacts/checks/dettaglio-commessa.png"))
+        {var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(rendered));png.Save(output);}
+        detail=detail with{CanManage=false};detailVm.Refresh().GetAwaiter().GetResult();
+        if(detailVm.SaveProjectCommand.CanExecute(null)||detailVm.NewPhaseCommand.CanExecute(null)||detailVm.CanEdit)throw new Exception("Modifiche abilitate a utente non amministratore");
         Console.WriteLine("BusinessUiChecks: caricamento senza rete e cinque schede WPF renderizzate."); app.Shutdown();
     }
     private static IEnumerable<T> Descendants<T>(DependencyObject root) where T:DependencyObject
