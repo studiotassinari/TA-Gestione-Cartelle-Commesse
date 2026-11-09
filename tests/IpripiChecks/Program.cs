@@ -147,6 +147,15 @@ internal static class Program
         Check((await service.ReadAsync(new(wordRow.Id,"C26001"),default)).Text.Contains("Progettista di prova"), "Indice individua direttamente l'unità del documento senza ricerca globale");
         Check(IpripiIndexer.NextRun(new DateTime(2026,11,3,10,0,0,DateTimeKind.Utc)) == new DateTime(2026,11,3,23,0,0,DateTimeKind.Utc), "Scansione giornaliera alle 00:00 italiane");
         Check(IpripiIndexer.NextRun(new DateTime(2026,7,3,10,0,0,DateTimeKind.Utc)) == new DateTime(2026,7,3,22,0,0,DateTimeKind.Utc), "Scansione giornaliera rispetta ora legale italiana");
+        var first=service.Query(new(Limit:1),default);
+        var target=Path.Combine(service.Root,"candidati.json");
+        CatalogStorage.Write(settings,target,indexed with{CheckedUtc=indexed.CheckedUtc.AddMinutes(1),Running=true});
+        Check(service.Query(new(Limit:1),default).Version==first.Version,"Progresso e data scansione non invalidano la versione delle righe");
+        CatalogStorage.Write(settings,target,indexed with{Documents=indexed.Documents.Select(d=>d with{FileName="MUR modificato "+d.FileName}).ToList()});
+        var continuation=service.Query(new(Offset:1,Limit:1,Version:first.Version),default);
+        Check(continuation.Version==first.Version&&continuation.Total==first.Total&&!continuation.Documents[0].FileName.StartsWith("MUR modificato"),"Pagine coerenti durante pubblicazione concorrente del catalogo");
+        Check(service.Query(new(),default).Version!=first.Version,"Nuova ricerca vede il catalogo aggiornato");
+        await Denied<IOException>(()=>Task.Run(()=>service.Query(new(Code:"C26001",Offset:1,Version:first.Version),default)));
         return row with { Saved=saved };
     }
 }

@@ -13,6 +13,13 @@ namespace TA.Server;
 public sealed class IpripiService(ServerSettings settings, DocumentService documents)
 {
     private readonly IpripiEvidenceStore evidence = new();
+    private sealed record ReadSnapshot(IpripiQuery Filter,string Version,List<IpripiDocument> Rows,List<string> Warnings,DateTime Created);
+    private readonly object snapshotGate=new();
+    private readonly List<ReadSnapshot> snapshots=[];
+    private static IpripiQuery Filter(IpripiQuery q)=>q with{Offset=0,Limit=100,Version=null};
+    private static IpripiPage Page(ReadSnapshot snapshot,IpripiQuery q)=>new(snapshot.Version,snapshot.Rows.Count,q.Offset,
+        q.Offset+q.Limit<snapshot.Rows.Count?q.Offset+q.Limit:null,snapshot.Rows.Skip(q.Offset).Take(q.Limit).ToList(),snapshot.Warnings.ToList());
+
     public string Root
     {
         get
@@ -88,6 +95,17 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
     {
         if (query.Code == null || query.Code.Length > 40 || query.Search == null || query.Search.Length > 300 || query.Offset < 0 || query.Offset > 50000 || query.Limit is < 1 or > 100 || query.Offset > 0 && query.Version == null)
             throw new ArgumentException("Pagina IPRiPI non valida.");
+        token.ThrowIfCancellationRequested();
+        // Ogni caricamento prosegue sulla stessa fotografia, anche se il censimento pubblica nuove righe.
+        if(query.Offset>0)
+        {
+            lock(snapshotGate)
+            {
+                snapshots.RemoveAll(s=>DateTime.UtcNow-s.Created>TimeSpan.FromMinutes(10));
+                var snapshot=snapshots.LastOrDefault(s=>s.Version==query.Version&&s.Filter==Filter(query));
+                if(snapshot!=null)return Page(snapshot,query);
+            }
+        }
         // Include anche analisi di PDF rinominati e documenti non più censiti, senza perderne lo storico.
         var saved = ReadIndex().Where(r => r.Source.Category is "C" or "A")
             .Where(r => query.Code.Length == 0 || r.Source.ProjectCode.StartsWith(query.Code, StringComparison.OrdinalIgnoreCase)).ToDictionary(r => r.Source.Id);
@@ -107,11 +125,17 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
             .Concat(saved.Values.Where(s => !ids.Contains(s.Source.Id)).Select(s => s.Source with { Saved = s, OriginalAvailable = false }))
             .Where(r => !query.RecognizedOnly || r.FormType == "MUR A.1/D.1")
             .Where(r => string.Join(' ', r.ProjectCode, r.Year, r.FileName, r.Codes, r.Status, r.Designers, r.Typologies, r.Address, r.Municipality, r.Location).Contains(query.Search, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(r => AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ThenBy(r=>r.Id,StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal).ToList();
-        var version = Hash(JsonSerializer.Serialize(new { rows, warnings }));
+            .OrderByDescending(r => AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ThenBy(r=>r.Id,StringComparer.Ordinal).ToList();
+        var version = Hash(JsonSerializer.Serialize(rows));
         if (query.Version != null && query.Version != version) throw new IOException("Catalogo cambiato: ripartire dalla prima pagina.");
-        return new(version, rows.Count, query.Offset, query.Offset + query.Limit < rows.Count ? query.Offset + query.Limit : null,
-            rows.Skip(query.Offset).Take(query.Limit).ToList(), warnings);
+        var current=new ReadSnapshot(Filter(query),version,rows,warnings,DateTime.UtcNow);
+        lock(snapshotGate)
+        {
+            snapshots.RemoveAll(s=>DateTime.UtcNow-s.Created>TimeSpan.FromMinutes(10)||(s.Version==version&&s.Filter==current.Filter));
+            while(snapshots.Count>=16)snapshots.RemoveAt(0);
+            snapshots.Add(current);
+        }
+        return Page(current,query);
     }
     private IpripiDocument Find(string id, string code, CancellationToken token)
     {

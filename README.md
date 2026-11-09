@@ -1,6 +1,10 @@
-# TA-Gestione Cartelle Commesse — 2.29.0
+# TA-Gestione Cartelle Commesse — 2.29.1
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
+
+## Correzione 2.29.1: caricamento catalogo MUR
+
+La lettura paginata usa una fotografia in memoria del catalogo (fino a 10 minuti, massimo 16 ricerche) per evitare errori quando il censimento pubblica nuovi risultati. Data e avanzamento della scansione non invalidano le righe. Una nuova ricerca legge i dati aggiornati. Catalogo e risultati rimangono nel database SQLite del server, non in ChatGPT.
 
 ## Novità 2.29.0: interfaccia compatta e analisi parallele
 
