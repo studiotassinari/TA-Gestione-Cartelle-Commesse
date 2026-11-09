@@ -25,6 +25,8 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
             var verified=snapshots.SelectMany(s=>(s.Snapshot?.Records??[]).Select(r=>(Category:s.Prefix.ToString(),Record:r))).GroupBy(x=>x.Category+"|"+x.Record.Path,StringComparer.OrdinalIgnoreCase).ToDictionary(g=>g.Key,g=>g.First().Record,StringComparer.OrdinalIgnoreCase);
             var plan = InventoryPlanner.Plan(snapshots.Select(s => (s.Prefix.ToString(), s.Root, s.Snapshot?.Records ?? [])), settings.JobsRoot, token);
             var folders = plan.Units.Where(u => !FileInventoryReader.IsArchive(u.Path)).Select(u => Path.GetFullPath(u.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            // Rimuove solo metadati locali fuori ambito, mai archivi o file sorgenti.
+            foreach(var excluded in store.Manifests().Where(m=>m.Unit.Category=="A"&&!ArchiveScope.Contains(settings.ArchivedJobsRoot,m.Unit.Path)).ToArray())store.RemoveConfirmed(excluded.Unit.Id);
             var previous = store.Latest();
             var reports = new ConcurrentBag<InventoryManifest>();
             var progressGate = new object();

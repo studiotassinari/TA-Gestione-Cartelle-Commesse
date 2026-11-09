@@ -75,7 +75,9 @@ internal static class Program
         Inventory();
         var bidUnit = unit with { Id = new string('B',64), Category = "G", Code = "G26001" };
         store.Save(bidUnit,new([Entry("MUR_A1_D1.pdf")],[],true),default);
-        var archiveUnit = unit with { Id = new string('C',64), Category = "A", Code = "C25001", Year = "2025" };
+        var archiveRoot=Directory.CreateDirectory(ArchiveScope.Root(settings.ArchivedJobsRoot)).FullName;
+        var archiveFile=Path.Combine(archiveRoot,"C25001 - Cliente - Progetto.zip");File.Copy(zipPath,archiveFile);
+        var archiveUnit = unit with { Id = new string('C',64), Category = "A", Code = "C25001", Year = "2025", Path=archiveFile };
         store.Save(archiveUnit,new([new("MUR_A1_D1.pdf","file","pratica.zip",100,stamp)],[],true),default);
         var scans = new ScanCoordinator(settings,NullLogger<ScanCoordinator>.Instance,new ChangeHub(false),new AnalysisService(settings,NullLogger<AnalysisService>.Instance));
         var service = new IpripiService(settings,new DocumentService(settings,scans));

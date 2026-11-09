@@ -1,6 +1,12 @@
-# TA-Gestione Cartelle Commesse — 2.29.1
+# TA-Gestione Cartelle Commesse — 2.30.0
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
+
+## Novità 2.30.0: Archivio limitato e approfondimento su richiesta
+
+La radice archivio aziendale viene limitata a `archivio\_lavori`: ZIP/7z direttamente nella radice o nelle sottocartelle immediate, senza attraversare livelli ulteriori. Nessun archivio di lavori viene aggiunto alla scheda Archivio; gli archivi dentro le commesse restano parte dell'inventario delle rispettive commesse. L'inventario non crea unità residue ricorsive per la categoria Archivio. Al riavvio vengono rimossi dal database locale solo gli inventari fuori ambito; gli originali non vengono modificati. Le analisi storiche restano conservate ma fuori dal catalogo attivo se la fonte è esclusa.
+
+Il nuovo strumento MCP `approfondisci_commessa` richiede una richiesta esplicita e l'ID di una commessa censita. Azioni `avvia`, `stato`, `annulla`; criteri separati da punto e virgola (es. preventivo;contratto). Un solo lavoro alla volta, tre minuti e 100.000 voci, risultati paginati fino a 1.000 candidati. Il server salva un riepilogo per commessa nel database locale, senza sostituire l'inventario ordinario. I percorsi restituiti sono pronti per `leggi_documento`: riconoscimento del committente e conferma dei documenti richiedono una lettura esplicita, non vengono dedotti dal solo nome. Il lavoro richiesto può completarsi dopo la risposta iniziale; nessun polling o riavvio automatico. Dopo riavvio del servizio gli ID dei lavori in memoria non sono più validi; il riepilogo rimane nel database. Nessuna API del modello viene chiamata autonomamente.
 
 ## Correzione 2.29.1: caricamento catalogo MUR
 

@@ -8,6 +8,7 @@ public sealed class LocalSource : IReadOnlySource, IGeologyAnalysisSource, IIpri
     private readonly LocalPipeConnection connection = new();
     public Task<CategoryState> State(string category, CancellationToken token) => Send<CategoryState>(new Request("State", category), token);
     public Task<FolderEntry[]> Children(string category, string id, string relative, CancellationToken token) => Send<FolderEntry[]>(new Request("Children", category, id, relative), token);
+    public Task<System.Text.Json.JsonElement> DeepInspection(string category,DeepInspectionQuery query,CancellationToken token)=>Send<System.Text.Json.JsonElement>(new Request("DeepInspection",category,DeepInspection:query),token);
     public Task<AnalysisStatus> AnalysisStatus(CancellationToken token)=>Send<AnalysisStatus>(new Request("AnalysisStatus"),token);
     public Task<ScanProgress> Progress(CancellationToken token) => Send<ScanProgress>(new Request("Progress"), token);
     public Task<FileSearchPage> Files(FileSearchQuery query, CancellationToken token) => Send<FileSearchPage>(new Request("Files", Files: query), token);

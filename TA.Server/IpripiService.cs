@@ -46,7 +46,7 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
             ?? throw new IOException("Inventario non disponibile: non equivale ad assenza di MUR.");
         var watch = Stopwatch.StartNew(); var rows = new List<IpripiDocument>();
         var warnings = run.Issues.Take(10).ToList();
-        foreach (var manifest in run.Inventories.Where(m => m.Unit.Category is "C" or "A")
+        foreach (var manifest in run.Inventories.Where(m => m.Unit.Category is "C" or "A").Where(m=>m.Unit.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,m.Unit.Path))
             .Where(m => code.Length == 0 || m.Unit.Code.StartsWith(code, StringComparison.OrdinalIgnoreCase)))
         {
             if (!manifest.Complete && warnings.Count < 20) warnings.Add("Inventario parziale: " + manifest.Unit.Code);
@@ -107,7 +107,7 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
             }
         }
         // Include anche analisi di PDF rinominati e documenti non più censiti, senza perderne lo storico.
-        var saved = ReadIndex().Where(r => r.Source.Category is "C" or "A")
+        var saved = ReadIndex().Where(r => r.Source.Category is "C" or "A").Where(r=>r.Source.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,r.Source.PhysicalPath))
             .Where(r => query.Code.Length == 0 || r.Source.ProjectCode.StartsWith(query.Code, StringComparison.OrdinalIgnoreCase)).ToDictionary(r => r.Source.Id);
         var catalogPath = Path.Combine(Root, "candidati.json");
         List<IpripiDocument> sources; List<string> warnings;
@@ -120,7 +120,7 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
         }
         else (sources, warnings) = Sources(query.Code, query.AllPdfs, token, saved.Keys.ToHashSet());
         var ids = sources.Select(r => r.Id).ToHashSet();
-        var rows = sources.Where(r => query.AllPdfs || IsCandidate(r.FileName) || saved.ContainsKey(r.Id))
+        var rows = sources.Where(r=>r.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,r.PhysicalPath)).Where(r => query.AllPdfs || IsCandidate(r.FileName) || saved.ContainsKey(r.Id))
             .Select(r => r with { Saved = saved.GetValueOrDefault(r.Id) })
             .Concat(saved.Values.Where(s => !ids.Contains(s.Source.Id)).Select(s => s.Source with { Saved = s, OriginalAvailable = false }))
             .Where(r => !query.RecognizedOnly || r.FormType == "MUR A.1/D.1")

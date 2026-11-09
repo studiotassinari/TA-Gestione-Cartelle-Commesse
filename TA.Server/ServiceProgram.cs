@@ -15,6 +15,7 @@ builder.Logging.AddProvider(new StartupLogProvider());
 var settingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Tassinari", "CommesseServer", "server-settings.json");
 builder.Configuration.AddJsonFile(settingsFile, optional: true, reloadOnChange: false).AddEnvironmentVariables("TA_");
 var settings = builder.Configuration.GetSection("Server").Get<ServerSettings>() ?? new();
+settings.ArchivedJobsRoot = ArchiveScope.Root(settings.ArchivedJobsRoot);
 if (string.IsNullOrWhiteSpace(settings.AllowedGroup)
     || settings.Port is < 1024 or > 65535 or 8080 or 8443
     || new[] { settings.JobsRoot, settings.BidsRoot, settings.ArchivedJobsRoot }.Any(p => !p.StartsWith(@"\\"))
@@ -45,6 +46,7 @@ builder.Services.AddSingleton<AnalysisService>();
 builder.Services.AddSingleton<FileSearchService>();
 builder.Services.AddSingleton<GeologyService>();
 builder.Services.AddSingleton<IpripiService>();
+builder.Services.AddSingleton<DeepInspectionService>();
 builder.Services.AddSingleton<GeologyIndexer>();
 builder.Services.AddSingleton<IpripiIndexer>();
 builder.Services.AddSingleton<TA.Server.Documents.DocumentService>();

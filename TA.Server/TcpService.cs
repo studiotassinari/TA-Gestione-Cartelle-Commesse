@@ -11,7 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 // Ogni comando richiede cifratura, firma, autenticazione Windows mutua e appartenenza al gruppo configurato.
-public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, Business.BusinessService? business = null) : BackgroundService
+public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, Business.BusinessService? business = null, DeepInspectionService? deepInspection = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -147,6 +147,7 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
             case "Refresh": return Reply.Ok(await scans.RefreshAsync(request.Category));
             case "Cancel": scans.Get(request.Category).Cancel(); return Reply.Ok(true);
             case "Children": return Reply.Ok(HierarchyService.Children(scans.Get(request.Category).State, request.FolderId ?? "", request.RelativePath));
+            case "DeepInspection": return Reply.Ok((deepInspection??throw new InvalidOperationException("Approfondimento non disponibile")).Execute(request.Category,request.DeepInspection??throw new ArgumentException("Richiesta mancante")));
             case "AnalysisStatus": return Reply.Ok(scans.AnalysisStatus());
             case "Progress": return Reply.Ok(scans.Progress);
             case "DailyReport": return Reply.Ok(scans.DailyReport());

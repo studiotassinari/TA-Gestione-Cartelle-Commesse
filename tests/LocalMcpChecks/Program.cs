@@ -6,9 +6,12 @@ using TA.Server;
 using TA.Transport;
 
 void Check(bool ok, string message) { if (!ok) throw new Exception(message); }
+try
+{
 LocalReadOnlyPolicy.Validate(new Request("Info"));
 AnalysisStatusChecks.Run();
-foreach(var (operation,tool) in new[]{("State","cerca_cartelle"),("Children","sottocartelle"),("DailyReport","report_giornaliero"),("Analysis","analisi_file"),("Files","cerca_file"),("AnalysisStatus","stato_analisi"),("Progress","stato_scansione"),("ReadDocument","leggi_documento"),("ListDocuments","elenca_documenti")})
+DeepInspectionChecks.Run();
+foreach(var (operation,tool) in new[]{("DeepInspection","approfondisci_commessa"),("State","cerca_cartelle"),("Children","sottocartelle"),("DailyReport","report_giornaliero"),("Analysis","analisi_file"),("Files","cerca_file"),("AnalysisStatus","stato_analisi"),("Progress","stato_scansione"),("ReadDocument","leggi_documento"),("ListDocuments","elenca_documenti")})
 {
     LocalReadOnlyPolicy.Validate(new Request(operation,CorrelationId:Guid.NewGuid().ToString("N"),McpTool:tool));
     try{LocalReadOnlyPolicy.Validate(new Request(operation));throw new Exception("MCP precedente ammesso");}catch(UnauthorizedAccessException){}
@@ -49,3 +52,6 @@ await send;
 server.Disconnect();
 Check(reply.Success && reply.Data.GetString() == "test", "Risposta non ricevuta prima della disconnessione");
 Console.WriteLine("PASS: allowlist sola lettura, ACL con rete negata, divieto creazione istanze al gruppo, PID del server, identità Windows e scambio messaggi.");
+
+}
+catch(Exception ex){Console.Error.WriteLine(ex);Environment.ExitCode=1;}

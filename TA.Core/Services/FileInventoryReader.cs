@@ -6,11 +6,11 @@ namespace TA_Gestione_Cartelle_Commesse.Services;
 // Non estrae archivi e non apre stream dei documenti: solo directory e intestazioni ZIP/7z.
 public static class FileInventoryReader
 {
-    public static InventoryResult Read(string root, ISet<string> excludedRoots, CancellationToken token, Action<string>? currentDirectory = null, bool readArchives = true)
+    public static InventoryResult Read(string root, ISet<string> excludedRoots, CancellationToken token, Action<string>? currentDirectory = null, bool readArchives = true, int maximum = 1_000_000)
     {
         var entries = new List<InventoryEntry>(); var issues = new List<string>();
-        const int maximum = 1_000_000;
-        void Add(InventoryEntry entry) { if (entries.Count >= maximum) throw new InvalidDataException("Limite di un milione di voci: censimento parziale."); entries.Add(entry); }
+        if(maximum<1||maximum>1_000_000)throw new ArgumentOutOfRangeException(nameof(maximum));
+        void Add(InventoryEntry entry) { if (entries.Count >= maximum) throw new InvalidDataException("Limite di voci raggiunto: censimento parziale."); entries.Add(entry); }
         string Relative(string path) => Path.GetRelativePath(root, path).Replace('\\', '/');
         void Archive(string path, string container)
         {

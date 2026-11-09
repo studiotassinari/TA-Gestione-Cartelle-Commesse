@@ -49,8 +49,10 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
                 throw new InvalidDataException("Relazione con identità, campi o coordinate non validi nel catalogo.");
         }
         catalog=GeologyListReferences.Merge(settings,catalog);
+        catalog=catalog with{Reports=catalog.Reports.Where(r=>r.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,r.PhysicalPath)).ToList()};
         var analyzed = MergeAnalyses(catalog, JsonSerializer.SerializeToUtf8Bytes(catalog));
-        return MergePositions(analyzed.Catalog, analyzed.Bytes);
+        var positioned=MergePositions(analyzed.Catalog, analyzed.Bytes);
+        return (positioned.Catalog with{Reports=positioned.Catalog.Reports.Where(r=>r.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,r.PhysicalPath)).ToList()},positioned.Version);
     }
     public async Task<DocumentPage> ReadAsync(GeologicalReadQuery q, CancellationToken token, bool scheduled=false)
     {

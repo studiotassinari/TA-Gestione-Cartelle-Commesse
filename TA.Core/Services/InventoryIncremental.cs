@@ -3,15 +3,24 @@ using TA_Gestione_Cartelle_Commesse.Contracts;
 namespace TA_Gestione_Cartelle_Commesse.Services;
 public sealed partial class InventoryStore
 {
-    public void RemoveConfirmed(string id)
+    public void RemoveConfirmed(string id)=>RemoveConfirmedMany([id],CancellationToken.None);
+    public void RemoveConfirmedMany(IEnumerable<string> ids,CancellationToken token)
     {
-        lock(Gate)
+        foreach(var batch in ids.Distinct().Chunk(100))
         {
-            using var db=Open();using var tx=db.BeginTransaction();
-            Execute(db,tx,"DELETE FROM entries WHERE unit_id=$id",("$id",id));
-            Execute(db,tx,"DELETE FROM units WHERE id=$id",("$id",id));
-            Execute(db,tx,"DELETE FROM state WHERE key=$key",("$key","doc:source-signature:"+id));
-            Bump(db,tx);tx.Commit();
+            token.ThrowIfCancellationRequested();
+            lock(Gate)
+            {
+                using var db=Open();using var tx=db.BeginTransaction();
+                foreach(var id in batch)
+                {
+                    token.ThrowIfCancellationRequested();
+                    Execute(db,tx,"DELETE FROM entries WHERE unit_id=$id",("$id",id));
+                    Execute(db,tx,"DELETE FROM units WHERE id=$id",("$id",id));
+                    Execute(db,tx,"DELETE FROM state WHERE key=$key",("$key","doc:source-signature:"+id));
+                }
+                Bump(db,tx);tx.Commit();
+            }
         }
     }
     // Confronta tutti i nomi fisici e i metadati: rileva anche rinomine e modifiche a dimensione invariata.

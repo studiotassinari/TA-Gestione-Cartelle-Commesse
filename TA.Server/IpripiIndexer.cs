@@ -41,7 +41,7 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
         using var lease = CatalogStorage.Lock(settings,Path.Combine(service.Root, "censimento.lock"));
         var groups = new Dictionary<string, List<IpripiDocument>>();
         if (CatalogStorage.Exists(settings,target))
-            foreach (var group in CatalogStorage.Read<IpripiCandidateCatalog>(settings,target).Documents.GroupBy(r => r.FolderId)) groups[group.Key] = group.ToList();
+            foreach (var group in CatalogStorage.Read<IpripiCandidateCatalog>(settings,target).Documents.Where(r=>r.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,r.PhysicalPath)).GroupBy(r => r.FolderId)) groups[group.Key] = group.ToList();
         var savedIds = service.SavedIds(); var warnings = new List<string>(); var seen = new HashSet<string>();
         int processed = 0; var watch = Stopwatch.StartNew();
         IpripiCandidateCatalog Publish(bool running)
@@ -52,7 +52,7 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
             if (JsonSerializer.SerializeToUtf8Bytes(catalog).Length > 64 * 1024 * 1024) throw new IOException("Catalogo candidati MUR oltre 64 MiB.");
             CatalogStorage.Write(settings,target, catalog); watch.Restart(); return catalog;
         }
-        var ordered=store.Manifests().Where(m => m.Unit.Category is "C" or "A").OrderByDescending(m=>AnalysisOrder.Year(m.Unit.Year,m.Unit.Code)).ThenByDescending(m=>AnalysisOrder.Number(m.Unit.Code)).ThenBy(m=>m.Unit.Id,StringComparer.Ordinal).ToArray();
+        var ordered=store.Manifests().Where(m=>m.Unit.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,m.Unit.Path)).Where(m => m.Unit.Category is "C" or "A").OrderByDescending(m=>AnalysisOrder.Year(m.Unit.Year,m.Unit.Code)).ThenByDescending(m=>AnalysisOrder.Number(m.Unit.Code)).ThenBy(m=>m.Unit.Id,StringComparer.Ordinal).ToArray();
         indexProgress=Progress with{Total=ordered.Length};
         foreach (var manifest in ordered)
         {

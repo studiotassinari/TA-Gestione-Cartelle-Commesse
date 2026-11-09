@@ -28,10 +28,11 @@ public static class ArchivedJobsReader
     public static ScanResult Scan(string root, CancellationToken token, bool readFileMetadata = true, Action<string>? currentDirectory = null)
     {
         var records = new List<FolderRecord>(); var warnings = new List<string>();
-        var pending = new Stack<string>(); pending.Push(root); bool incomplete = false;
+        var pending = new Stack<(string Path,int Depth)>(); pending.Push((root,0)); bool incomplete = false;
         var pattern = new Regex(@"^(?<code>C(?<year>\d{2})(?<number>\d{3}))\s*-\s*(?<client>.+?)\s+-\s+(?<subject>.+)$", RegexOptions.IgnoreCase);
-        while (pending.TryPop(out var directory))
+        while (pending.TryPop(out var item))
         {
+            var directory=item.Path;
             token.ThrowIfCancellationRequested();
             currentDirectory?.Invoke(directory);
             try
@@ -44,7 +45,7 @@ public static class ArchivedJobsReader
                     {
                         var attributes = File.GetAttributes(path);
                         if ((attributes & FileAttributes.ReparsePoint) != 0 || FolderReader.IsExcluded(path)) continue;
-                        if ((attributes & FileAttributes.Directory) != 0) { pending.Push(path); continue; }
+                        if ((attributes & FileAttributes.Directory) != 0) { if(item.Depth==0)pending.Push((path,1)); continue; }
                         if (!new[] { ".zip", ".7z" }.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)) continue;
                         var name = Path.GetFileNameWithoutExtension(path); var match = pattern.Match(name);
                         var code = Regex.Match(name, @"^C(?<year>\d{2})(?<number>\d{3})", RegexOptions.IgnoreCase);

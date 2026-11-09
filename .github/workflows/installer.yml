@@ -67,7 +67,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.29.1"
+          $version = "2.30.0"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -269,9 +269,10 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
-          Correzione 2.29.1: il catalogo MUR/IPRiPI mantiene una fotografia coerente durante il caricamento delle pagine, anche se il server pubblica nuovi risultati nel frattempo. Data e avanzamento della scansione non invalidano più il caricamento.
-          Nuove ricerche vedono i dati aggiornati. Test di aggiornamento concorrente superati. Nessuna modifica ai documenti originali o ad Active Directory. Compatibile con il tunnel MCP 2.29.0.
-          Installatori iniziali, updater e pacchetti Client/Server/MCP con SHA256. Pacchetti non firmati digitalmente.
+          Versione 2.30.0: Archivio limitato a archivio\_lavori e sottocartelle immediate. Nessuna ricerca ricorsiva degli ZIP nelle altre cartelle; inventario e cataloghi escludono i metadati fuori ambito. Originali sempre invariati.
+          Nuovo comando MCP approfondisci_commessa: scansione mirata su richiesta, stato, annullamento e riepilogo persistente nel database. Un lavoro attivo, limite tre minuti e 100.000 voci, candidati da nomi e metadati anche in ZIP/7z. I contenuti si leggono con leggi_documento soltanto su richiesta; nessuna analisi cloud automatica.
+          Pulizia dei soli inventari esclusi a lotti, senza toccare le analisi storiche. Installatori, updater e pacchetti Client/Server/MCP con SHA256.
+          Per il nuovo comando avviare manualmente il tunnel MCP 2.30.0. Nessuna modifica ad Active Directory. Pacchetti non firmati digitalmente.
           '@
           # Salva le note UTF-8 in un file per preservare accenti e interruzioni di riga.
           $notes | Set-Content release-notes.txt -Encoding utf8

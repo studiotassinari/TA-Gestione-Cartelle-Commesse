@@ -14,6 +14,7 @@ public interface IReadOnlySource
     Task<FolderEntry[]> Children(string category, string id, string relative, CancellationToken token);
     Task<string> DailyReport(CancellationToken token);
     Task<AnalysisPage> Analysis(AnalysisQuery query, CancellationToken token);
+    Task<System.Text.Json.JsonElement> DeepInspection(string category,DeepInspectionQuery query,CancellationToken token)=>throw new NotSupportedException();
     Task<AnalysisStatus> AnalysisStatus(CancellationToken token)=>throw new NotSupportedException();
     Task<ScanProgress> Progress(CancellationToken token);
     Task<FileSearchPage> Files(FileSearchQuery query, CancellationToken token);
@@ -27,6 +28,7 @@ public sealed class WindowsSource(string host, int port) : IReadOnlySource, IGeo
         Send<CategoryState>(new Request("State", category), token);
     public Task<FolderEntry[]> Children(string category, string id, string relative, CancellationToken token) =>
         Send<FolderEntry[]>(new Request("Children", category, id, relative), token);
+    public Task<System.Text.Json.JsonElement> DeepInspection(string category,DeepInspectionQuery query,CancellationToken token)=>Send<System.Text.Json.JsonElement>(new Request("DeepInspection",category,DeepInspection:query),token);
     public Task<AnalysisStatus> AnalysisStatus(CancellationToken token)=>Send<AnalysisStatus>(new Request("AnalysisStatus"),token);
     public Task<ScanProgress> Progress(CancellationToken token) => Send<ScanProgress>(new Request("Progress"), token);
     public Task<FileSearchPage> Files(FileSearchQuery query, CancellationToken token) => Send<FileSearchPage>(new Request("Files", Files: query), token);

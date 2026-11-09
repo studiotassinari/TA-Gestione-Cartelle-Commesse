@@ -7,7 +7,7 @@ using TA.Transport;
 namespace TA.Server;
 
 // Endpoint locale: ACL Windows, consultazioni e sola scrittura tipizzata del catalogo, se abilitata.
-public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null) : BackgroundService
+public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, DeepInspectionService? deepInspection = null) : BackgroundService
 {
     public static PipeSecurity Security(SecurityIdentifier owner, SecurityIdentifier group, SecurityIdentifier? admins)
     {
@@ -102,6 +102,7 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
                 return Reply.Ok(state with { Snapshot = state.Snapshot == null ? null : state.Snapshot with {
                     Records = state.Snapshot.Records.Select(r => r.Inspection == null ? r : r with { Inspection = r.Inspection with { ArchiveDirectories = [] } }).ToList() } });
             case "Children": return Reply.Ok(HierarchyService.Children(scans.Get(request.Category).State, request.FolderId ?? "", request.RelativePath));
+            case "DeepInspection": return Reply.Ok((deepInspection??throw new InvalidOperationException("Approfondimento non disponibile")).Execute(request.Category,request.DeepInspection??throw new ArgumentException("Richiesta mancante")));
             case "AnalysisStatus": return Reply.Ok(scans.AnalysisStatus());
             case "Progress": return Reply.Ok(scans.Progress);
             case "DailyReport": return Reply.Ok(scans.DailyReport());

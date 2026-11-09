@@ -44,7 +44,7 @@ public sealed class GeologyIndexer(ServerSettings settings, ILogger<GeologyIndex
         if (CatalogStorage.Exists(settings,target))
         {
             var old = CatalogStorage.Read<GeologyCatalog>(settings,target);
-            foreach (var group in old.Reports.GroupBy(r => r.InventoryUnitId)) groups[group.Key] = group.ToList();
+            foreach (var group in old.Reports.Where(r=>r.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,r.PhysicalPath)).GroupBy(r => r.InventoryUnitId)) groups[group.Key] = group.ToList();
         }
         var issues = new List<string>(); int processed = 0; bool partial = false;
         var references=GeologyListReferences.Read(settings).GroupBy(r=>r.Report.InventoryUnitId).ToDictionary(g=>g.Key,g=>g.ToList());
@@ -64,7 +64,7 @@ public sealed class GeologyIndexer(ServerSettings settings, ILogger<GeologyIndex
             CatalogStorage.Write(settings,target, catalog); watch.Restart(); return catalog;
         }
         // Profondità fissa: non attraversa le generazioni storiche e non segue collegamenti di directory.
-        var ordered=store.Manifests().OrderByDescending(m=>AnalysisOrder.Year(m.Unit.Year,m.Unit.Code)).ThenByDescending(m=>AnalysisOrder.Number(m.Unit.Code)).ThenBy(m=>m.Unit.Id,StringComparer.Ordinal).ToArray();
+        var ordered=store.Manifests().Where(m=>m.Unit.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,m.Unit.Path)).OrderByDescending(m=>AnalysisOrder.Year(m.Unit.Year,m.Unit.Code)).ThenByDescending(m=>AnalysisOrder.Number(m.Unit.Code)).ThenBy(m=>m.Unit.Id,StringComparer.Ordinal).ToArray();
         indexProgress=Progress with{Total=ordered.Length};
         foreach (var manifest in ordered)
         {

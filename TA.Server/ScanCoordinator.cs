@@ -10,7 +10,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     {
         ['C'] = new('C', settings.JobsRoot, settings.ArchiveFolder, logger, changes, databaseFolder: settings.InventoryFolder),
         ['G'] = new('G', settings.BidsRoot, settings.ArchiveFolder, logger, changes, databaseFolder: settings.InventoryFolder),
-        ['A'] = new('A', settings.ArchivedJobsRoot, settings.ArchiveFolder, logger, changes, additionalArchiveRoot: settings.JobsRoot, databaseFolder: settings.InventoryFolder)
+        ['A'] = new('A', settings.ArchivedJobsRoot, settings.ArchiveFolder, logger, changes, databaseFolder: settings.InventoryFolder)
     };
     private readonly object gate = new();
     private ScanProgress progress = new(false, "Avvio", 0, null, "Caricamento del servizio");
@@ -132,6 +132,10 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
         }
         catch(OperationCanceledException) when(stoppingToken.IsCancellationRequested){return;}
         catch(Exception ex){logger.LogWarning(ex,"Pulizia sospesa: inventario SQLite disponibile, JSON residui conservati");}
+        // Pulizia esclusivamente dei metadati SQLite esclusi dalla nuova politica Archivio.
+        var inventoryStore=new TA_Gestione_Cartelle_Commesse.Services.InventoryStore(settings.InventoryFolder);
+        SetProgress(new(true,"Pulizia inventario Archivio",0,null,"Rimozione metadati fuori da _lavori e sottocartelle immediate"));
+        inventoryStore.RemoveConfirmedMany(inventoryStore.Manifests().Where(m=>m.Unit.Category=="A"&&!ArchiveScope.Contains(settings.ArchivedJobsRoot,m.Unit.Path)).Select(m=>m.Unit.Id).ToArray(),stoppingToken);
         InventoryReady=true;
         bool scheduleLoaded = false;
         try

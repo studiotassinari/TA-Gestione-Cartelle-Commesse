@@ -25,6 +25,7 @@ public static class InventoryPlanner
             foreach(var record in source.Records)
                 units.TryAdd(record.Path, new(record.Id, source.Category, Year(record.Path, record.Year), record.Code,
                     record.Client, record.Subject, record.Path, "censita"));
+            if(source.Category=="A")continue; // Solo archivi esplicitamente censiti: nessuna esplorazione residua.
             // Anche i file non assegnati nelle cartelle annuali conservano il proprio anno.
             try
             {

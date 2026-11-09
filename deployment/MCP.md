@@ -83,3 +83,7 @@ Da un altro PC il trasporto opzionale `kerberos` richiede il DNS con SPN registr
 Dopo `dotnet build TA.Mcp -c Release`, eseguire `tests/McpChecks`, `tests/LocalMcpChecks` e `tests/DocumentChecks` con `dotnet run --project ... -c Release`.
 
 Le prove usano dati fittizi: nessuna connessione al servizio aziendale per avvio/catalogo/inattività, una sola connessione per chiamata autorizzata, sessioni scadute o senza permesso contenuti rifiutate, ACL Windows, percorsi, PDF/DOCX/XLSX/testi, ZIP/7z, pagine e integrità degli originali. Il collaudo del tunnel reale richiede l'avvio interattivo sulla VM; non si presume riuscito dai soli test locali.
+
+## Approfondimento esplicito di una commessa (2.30.0)
+
+Dopo inizia_consultazione e cerca_cartelle, usare approfondisci_commessa(category, id, documentiCercati="preventivo;contratto"). La risposta contiene Id del lavoro; azione="stato" e lavoroId consentono la consultazione su richiesta, azione="annulla" interrompe il lavoro. Non rinnova la sessione e non avvia scansioni cloud. ReadRelativePath e ArchiveEntry dei risultati servono per leggi_documento. Le informazioni dal nome non sono conferme di committente o accettazione del preventivo. Gli archivi della categoria A sono limitati a _lavori e al primo livello fisico.

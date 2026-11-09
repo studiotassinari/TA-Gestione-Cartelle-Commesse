@@ -18,5 +18,5 @@ public sealed class McpInvocation : IDisposable
         if(call is not {active:true})throw new InvalidOperationException("Accesso ai dati consentito solo durante una richiesta esplicita al plugin.");
         return request with {CorrelationId=call.Id,McpTool=call.Tool};
     }
-    public void Dispose(){active=false;current.Value=previous;Console.Error.WriteLine($"MCP richiesta {Id}: {Tool} conclusa in {clock.ElapsedMilliseconds} ms; nessuna attività accodata");}
+    public void Dispose(){active=false;current.Value=previous;Console.Error.WriteLine($"MCP richiesta {Id}: {Tool} conclusa in {clock.ElapsedMilliseconds} ms; {(Tool=="approfondisci_commessa"?"eventuale lavoro esplicito consultabile con il suo ID":"nessuna attività accodata")}");}
 }
