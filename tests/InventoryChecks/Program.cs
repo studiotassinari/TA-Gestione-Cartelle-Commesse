@@ -11,6 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 
 static void Check(bool ok, string message) { if (!ok) throw new Exception(message); Console.WriteLine("PASS " + message); }
 var root = Path.Combine(Path.GetTempPath(), "TA-InventoryChecks-" + Guid.NewGuid().ToString("N"));
+SismicadChecks.Run(root);
 var jobs = Directory.CreateDirectory(Path.Combine(root,"lavori")).FullName;
 var bids = Directory.CreateDirectory(Path.Combine(root,"gare")).FullName;
 var archives = Directory.CreateDirectory(Path.Combine(root,"archivio")).FullName;

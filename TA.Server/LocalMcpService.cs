@@ -102,6 +102,7 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
                 return Reply.Ok(state with { Snapshot = state.Snapshot == null ? null : state.Snapshot with {
                     Records = state.Snapshot.Records.Select(r => r.Inspection == null ? r : r with { Inspection = r.Inspection with { ArchiveDirectories = [] } }).ToList() } });
             case "Children": return Reply.Ok(HierarchyService.Children(scans.Get(request.Category).State, request.FolderId ?? "", request.RelativePath));
+            case "AnalysisStatus": return Reply.Ok(scans.AnalysisStatus());
             case "Progress": return Reply.Ok(scans.Progress);
             case "DailyReport": return Reply.Ok(scans.DailyReport());
             case "Files": return Reply.Ok(files.Search(request.Files ?? new(), token));

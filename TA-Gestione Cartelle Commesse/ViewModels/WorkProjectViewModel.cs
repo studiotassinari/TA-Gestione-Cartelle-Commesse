@@ -24,6 +24,7 @@ public sealed class WorkProjectViewModel : Observable,IDisposable
     public string Code=>Model.Code;
     public int Year=>Model.Year;
     public int Number=>Model.Number;
+    public string NumberText=>Number.ToString("D3");
     public string SourceCustomerName=>Model.SourceCustomerName;
     private string customerId,subject,location,status;
     public CustomerViewModel? Customer {get;private set;}

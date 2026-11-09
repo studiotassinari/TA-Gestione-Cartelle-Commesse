@@ -7,6 +7,16 @@ public sealed class ProjectDetailViewModel : Observable
 {
     private readonly BusinessViewModel business;
     private readonly string id;
+    public string Id=>id;
+    public bool CanLeave()
+    {
+        if(Busy){Status="Attendi il completamento dell'operazione prima di cambiare commessa.";Notify(nameof(Status));return false;}
+        bool dirty;
+        try { dirty=(Project!=null&&Project.ToModel()!=Project.Model)||(Phase!=null&&Phase.ToModel()!=Phase.Model)||(Activity!=null&&Activity.ToModel()!=Activity.Model); }
+        catch(ArgumentException){dirty=true;}
+        if(dirty){Status="Salva le modifiche prima di cambiare commessa, oppure premi Annulla per ricaricare i dati salvati.";Notify(nameof(Status));return false;}
+        return true;
+    }
     private readonly CustomerDirectory customers = new();
     public BusinessViewModel Business => business;
     public CustomerSelectionViewModel CustomerSelection {get;}=new();

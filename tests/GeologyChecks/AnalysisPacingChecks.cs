@@ -12,6 +12,9 @@ internal static class AnalysisPacingChecks
         void Reject(Action action){try{action();}catch(IOException){return;}throw new Exception("Lettura concorrente o anticipata ammessa");}
         var now=new DateTime(2026,11,7,10,0,0,DateTimeKind.Utc);
         var schedule=new AnalysisReadSchedule(()=>now);
+        var separate=new AnalysisReadSchedule(()=>now);
+        using(var geology=schedule.Enter("geologia"))using(var mur=separate.Enter("mur")){Reject(()=>schedule.Enter("altro"));Reject(()=>separate.Enter("altro"));}
+
         using(var first=schedule.Enter("geologia")){Reject(()=>schedule.Enter("mur"));Reject(()=>schedule.Enter("geologia"));}
         using(schedule.Enter("geologia")){} // Altre pagine dello stesso documento.
         now=now.AddSeconds(59);Reject(()=>schedule.Enter("mur"));
@@ -25,6 +28,16 @@ internal static class AnalysisPacingChecks
         Check(GeologyListReferences.Match("R01.pdf","R010 - Relazione geologica")==null,"Codice parziale accettato");
         Check(GeologyListReferences.Match("R01.pdf","R01 - Relazione tecnica")==null,"Relazione tecnica spacciata per geologica");
         var settings=new ServerSettings{ArchiveFolder=Path.Combine(root,"elenchi"),JobsRoot=Path.Combine(root,"originali-inesistenti")};
+        var documentService=new DocumentService(settings,null!);
+        using(documentService.GeologySchedule.Enter("geo-1"))using(documentService.MurSchedule.Enter("mur-1"))
+        {
+            Check(documentService.GeologySchedule.Status("GEOLOGIA").IsReading,"Stato canale geologia non occupato");
+            Check(documentService.MurSchedule.Status("MUR").IsReading,"Stato canale MUR non occupato");
+        }
+        Check(!documentService.GeologySchedule.Status("GEOLOGIA").IsReading,"Canale non rilasciato");
+        var restarted=new DocumentService(settings,null!);
+        Reject(()=>restarted.GeologySchedule.Enter("geo-2"));
+        Reject(()=>restarted.MurSchedule.Enter("mur-2"));
         var store=new InventoryStore(settings.InventoryFolder);
         var unit=new InventoryUnit(new string('A',64),"C","2026","C26199","Cliente","Progetto",Path.Combine(settings.JobsRoot,"2026","C26199"),"censita");
         var entries=new List<InventoryEntry>{new("Elenco_elaborati.pdf","file",Bytes:10,ModifiedUtc:now),new("R01.pdf","file",Bytes:20,ModifiedUtc:now)};
@@ -41,6 +54,6 @@ internal static class AnalysisPacingChecks
         entries.RemoveAt(1);store.Save(unit,new(entries,[],true),default);
         Check(GeologyListReferences.Merge(settings,indexer.Refresh(default)).Reports.Count==1,"Riferimento eliminato resuscitato");
         Check(!Directory.Exists(settings.JobsRoot),"Sono state aperte o create sorgenti originali");
-        Console.WriteLine("PASS: intervallo condiviso 60 secondi, esclusione concorrente, ordine anni, elenchi e riferimenti senza apertura originali");
+        Console.WriteLine("PASS: intervallo 60 secondi per canale, geologia e MUR indipendenti, esclusione concorrente, ordine anni, elenchi e riferimenti senza apertura originali");
     }
 }

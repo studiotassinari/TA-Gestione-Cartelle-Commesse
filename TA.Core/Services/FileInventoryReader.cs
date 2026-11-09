@@ -21,6 +21,7 @@ public static class FileInventoryReader
                 var before = new FileInfo(path); long size = before.Length; var stamp = MetadataDates.Read(() => before.LastWriteTimeUtc, path, issues);
                 using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 using var archive = ArchiveFactory.OpenArchive(stream);
+                var excludedProjects=SismicadExclusion.ArchiveRoots(archive.Entries.Select(e=>e.Key));
                 var dirs = new HashSet<string>(StringComparer.Ordinal);
                 foreach (var item in archive.Entries)
                 {
@@ -28,6 +29,7 @@ public static class FileInventoryReader
                     var key = (item.Key ?? "").Replace('\\', '/').TrimEnd('/');
                     if (key.Length == 0 || key.StartsWith('/') || key.Split('/').Any(p => p is "." or ".." || p.Contains(':')))
                     { issues.Add(container + ": percorso interno non valido"); continue; }
+                    if(SismicadExclusion.Contains(key,excludedProjects))continue;
                     var segments = key.Split('/');
                     var inner=item.IsDirectory ? key : string.Join('/',segments.SkipLast(1));
                     if(inner!=lastDirectory){currentDirectory?.Invoke(path+" > "+(inner.Length==0?"/":inner));lastDirectory=inner;}
@@ -67,6 +69,7 @@ public static class FileInventoryReader
                     currentDirectory?.Invoke(dir);
                     try
                     {
+                        if(SismicadExclusion.IsProject(dir))continue;
                         foreach (var path in Directory.EnumerateFileSystemEntries(dir).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
                         {
                             token.ThrowIfCancellationRequested();
@@ -75,7 +78,7 @@ public static class FileInventoryReader
                             {
                                 var attributes = File.GetAttributes(path);
                                 if ((attributes & FileAttributes.ReparsePoint) != 0) { issues.Add(Relative(path) + ": collegamento escluso"); continue; }
-                                if ((attributes & FileAttributes.Directory) != 0) { Add(new(Relative(path), "directory")); pending.Push(path); }
+                                if ((attributes & FileAttributes.Directory) != 0) { if(SismicadExclusion.IsProject(path))continue; Add(new(Relative(path), "directory")); pending.Push(path); }
                                 else { FileEntry(path, Relative(path)); if(IsArchive(path))currentDirectory?.Invoke(dir); }
                             }
                             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentOutOfRangeException)

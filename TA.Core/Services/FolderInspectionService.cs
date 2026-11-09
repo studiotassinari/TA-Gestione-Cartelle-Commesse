@@ -59,6 +59,7 @@ public static class FolderInspectionService
                     issues.Add("Collegamento escluso: " + item.Path);
                     continue;
                 }
+                if(SismicadExclusion.IsProject(item.Path))continue;
                 foreach (var entry in Directory.EnumerateFileSystemEntries(item.Path).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
                 {
                     token.ThrowIfCancellationRequested();
@@ -73,6 +74,7 @@ public static class FolderInspectionService
                         }
                         if ((attributes & FileAttributes.Directory) != 0)
                         {
+                            if(SismicadExclusion.IsProject(entry))continue;
                             directories.Add(Path.GetRelativePath(root, entry).Replace(Path.DirectorySeparatorChar, '/'));
                             Hash(new { Type = "Directory", Path = Path.GetRelativePath(root, entry) });
                             bool isAdmin = AdministrationNames.Contains(Path.GetFileName(entry));

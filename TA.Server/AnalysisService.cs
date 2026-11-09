@@ -30,7 +30,7 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
             var progressGate = new object();
             var locations = new ConcurrentDictionary<string,ScanLocation>();
             int completed=0; bool warnings=plan.Issues.Count>0;
-            Parallel.ForEach(plan.Units, new ParallelOptions { CancellationToken=token, MaxDegreeOfParallelism=Math.Clamp(settings.MaxConcurrentScans,1,4) }, unit =>
+            Parallel.ForEach(plan.Units.OrderByDescending(u=>AnalysisOrder.Year(u.Year,u.Code)).ThenByDescending(u=>AnalysisOrder.Number(u.Code)).ThenBy(u=>u.Id,StringComparer.Ordinal), new ParallelOptions { CancellationToken=token, MaxDegreeOfParallelism=Math.Clamp(settings.MaxConcurrentScans,1,4) }, unit =>
             {
                 token.ThrowIfCancellationRequested();
                 void Report(string path, string phase)
@@ -43,17 +43,18 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
                 {
                     var excluded = new HashSet<string>(folders, StringComparer.OrdinalIgnoreCase); excluded.Remove(Path.GetFullPath(unit.Path));
                     var oldManifest = store.Find(unit.Id);
+                    var exclusionCurrent=store.Document("sismicad-exclusion:"+unit.Id)=="1";
                     var inspection=verified.GetValueOrDefault(unit.Category+"|"+unit.Path)?.Inspection;
                     var signature=inspection?.Complete==true && !string.IsNullOrEmpty(inspection.ContentSignature) ? inspection.ContentSignature : null;
                     void SaveSignature() { if(signature!=null)store.SaveDocument("source-signature:"+unit.Id,signature); }
-                    if(oldManifest?.Complete==true && oldManifest.Unit==unit && signature!=null && inspection!.CheckedUtc>=oldManifest.CheckedUtc && store.Document("source-signature:"+unit.Id)==System.Text.Json.JsonSerializer.Serialize(signature))
+                    if(exclusionCurrent && oldManifest?.Complete==true && oldManifest.Unit==unit && signature!=null && inspection!.CheckedUtc>=oldManifest.CheckedUtc && store.Document("source-signature:"+unit.Id)==System.Text.Json.JsonSerializer.Serialize(signature))
                     { reports.Add(store.Touch(oldManifest,token)); return; }
-                    var probe = oldManifest?.Complete==true ? FileInventoryReader.Read(unit.Path, excluded, token, path=>Report(path,"Verifica metadati"), readArchives:false) : null;
+                    var probe = exclusionCurrent && oldManifest?.Complete==true ? FileInventoryReader.Read(unit.Path, excluded, token, path=>Report(path,"Verifica metadati"), readArchives:false) : null;
                     if (oldManifest?.Complete == true && probe?.Complete == true && store.PhysicalMatches(oldManifest, probe))
                     { reports.Add(store.Touch(oldManifest, token)); SaveSignature(); return; }
                     var result = FileInventoryReader.Read(unit.Path, excluded, token,
                         path => Report(path,"Analisi approfondita"));
-                    var manifest=store.Save(unit,result,token); reports.Add(manifest); if(result.Complete)SaveSignature();
+                    var manifest=store.Save(unit,result,token); reports.Add(manifest); if(result.Complete){SaveSignature();store.SaveDocument("sismicad-exclusion:"+unit.Id,1);}
                     lock(progressGate) warnings |= !manifest.Complete;
                 }
                 catch (OperationCanceledException) { throw; }

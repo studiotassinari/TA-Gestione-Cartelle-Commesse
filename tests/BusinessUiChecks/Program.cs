@@ -59,6 +59,7 @@ internal static class Program
         PhaseCreationChecks.Run();
         CustomerSelectorChecks.Run();
         CustomerProjectsChecks.Run();
+        WorkspaceChecks.Run();
         foreach(var category in new[]{"G","A"})
         {
             detail=detail with{Project=detail.Project with{Category=category,Code=category=="G"?"G26001":"C26001"}};

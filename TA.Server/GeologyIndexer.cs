@@ -24,7 +24,17 @@ public sealed class GeologyIndexer(ServerSettings settings, ILogger<GeologyIndex
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
     }
-    public GeologyCatalog Refresh(CancellationToken token)
+    private readonly object refreshGate=new();
+    private ScanProgress indexProgress=new(false,"In attesa",0,null,"Attende il completamento dell'inventario file");
+    public ScanProgress Progress=>Volatile.Read(ref indexProgress);
+    public GeologyCatalog Refresh(CancellationToken token){lock(refreshGate)return RefreshTracked(token);}
+    private GeologyCatalog RefreshTracked(CancellationToken token)
+    {
+        indexProgress=new(true,"Censimento candidati",0,null,"Preparazione",DateTime.UtcNow);
+        try { var result=RefreshCore(token);indexProgress=Progress with{IsRunning=false,Phase="Completato",FinishedUtc=DateTime.UtcNow,Message="Catalogo aggiornato; contenuti analizzati solo su richiesta"};return result; }
+        catch(Exception ex){indexProgress=Progress with{IsRunning=false,Phase="Interrotto",HasErrors=true,Message=ex.Message,FinishedUtc=DateTime.UtcNow};throw;}
+    }
+    private GeologyCatalog RefreshCore(CancellationToken token)
     {
         var store = new InventoryStore(settings.InventoryFolder);
         var root = GeologyStorage.Root(settings); var target = GeologyStorage.CatalogPath(settings);
@@ -54,9 +64,12 @@ public sealed class GeologyIndexer(ServerSettings settings, ILogger<GeologyIndex
             CatalogStorage.Write(settings,target, catalog); watch.Restart(); return catalog;
         }
         // Profondità fissa: non attraversa le generazioni storiche e non segue collegamenti di directory.
-        foreach (var manifest in store.Manifests())
+        var ordered=store.Manifests().OrderByDescending(m=>AnalysisOrder.Year(m.Unit.Year,m.Unit.Code)).ThenByDescending(m=>AnalysisOrder.Number(m.Unit.Code)).ThenBy(m=>m.Unit.Id,StringComparer.Ordinal).ToArray();
+        indexProgress=Progress with{Total=ordered.Length};
+        foreach (var manifest in ordered)
         {
             token.ThrowIfCancellationRequested();
+            indexProgress=Progress with{Completed=processed,Message=manifest.Unit.Code+" — "+manifest.Unit.Path};
             var unit = store.UnitDirectory(manifest.Unit);
             try
             {
@@ -106,6 +119,7 @@ public sealed class GeologyIndexer(ServerSettings settings, ILogger<GeologyIndex
         }
         if (processed == 0) throw new IOException("Nessuna unità di inventario leggibile: attendere il censimento dei nomi. I dati precedenti sono conservati.");
         if (groups.Keys.Any(id => !seen.Contains(id))) { partial = true; issues.Add("Conservate relazioni di unità temporaneamente non disponibili; assenze non confermate."); }
+        indexProgress=Progress with{Completed=processed};
         var result = Publish(false);
         logger.LogInformation("Catalogo geologico aggiornato: {Count} candidati da {Units} unità JSON; nessuna lettura contenuti e nessuna notifica", result.Reports.Count, processed);
         return result;

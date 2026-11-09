@@ -18,7 +18,7 @@ public sealed partial class GeologyService
         var pending = catalog.Reports.Where(r => !r.AnalysisCurrent && r.CanRead &&
             r.ProjectCode.Contains(query.Code, StringComparison.OrdinalIgnoreCase) &&
             string.Join(' ', r.Title, r.FileName, r.RelativePath).Contains(query.Search, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(r=>AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>r.ProjectCode,StringComparer.Ordinal)
+            .OrderByDescending(r=>AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ThenBy(r=>r.Id,StringComparer.Ordinal)
             .ThenBy(r=>r.Kind=="Elenco elaborati"?0:1).ThenByDescending(r => r.SourceModifiedUtc).ThenBy(r => r.Id, StringComparer.Ordinal).ToList();
         return new(catalog.UpdatedUtc, pending.Count, pending.Take(1).ToList(), catalog.Warnings.Concat(new[]{"Un documento per volta, dalle commesse più recenti. Completare e salvare l'analisi prima del prossimo file; almeno 60 secondi tra nuovi documenti."}).ToList());
     }

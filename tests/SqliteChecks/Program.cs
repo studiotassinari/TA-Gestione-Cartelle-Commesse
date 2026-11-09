@@ -7,6 +7,14 @@ var root=Path.Combine(Path.GetTempPath(),"TA-Sqlite-"+Guid.NewGuid().ToString("N
 Directory.CreateDirectory(root);
 try
 {
+ var retentionNow=new DateTime(2026,11,9,12,0,0,DateTimeKind.Utc);
+ var daily=Enumerable.Range(0,8).Select(i=>"gestionale-"+retentionNow.AddDays(-i).ToString("yyyyMMdd")+".sqlite").ToArray();
+ var obsolete=BackupRetentionPolicy.Obsolete(daily,7,retentionNow,false);
+ Check(obsolete.Length==3&&obsolete.Contains("gestionale-20261104.sqlite")&&!obsolete.Contains("gestionale-20261105.sqlite"),"vecchia configurazione 7 limitata a cinque giorni incluso oggi");
+ Check(BackupRetentionPolicy.Obsolete([daily[0],daily[7]],5,retentionNow,false).SequenceEqual([daily[7]]),"backup scaduti rimossi anche con giorni mancanti");
+ var inventoryDays=Enumerable.Range(0,8).Select(i=>"TA-Commesse-"+retentionNow.AddDays(-i).ToString("yyyyMMdd'T'HHmmssfffffff")+".sqlite").ToArray();
+ Check(BackupRetentionPolicy.Obsolete(inventoryDays,30,retentionNow,true).Length==3,"stesso limite per backup inventario");
+ Check(BackupRetentionPolicy.Obsolete(["TA-Commesse-20261104T2330000000000.sqlite"],5,retentionNow,true).Length==0,"confine giorno inventario convertito in ora italiana");
  var store=new InventoryStore(Path.Combine(root,"db"));
  var unit=new InventoryUnit(new string('A',64),"C","2026","C26001","Cliente","Progetto",Path.Combine(root,"source"),"censita");
  var stamp=DateTime.UtcNow;

@@ -25,7 +25,7 @@
   </Grid.ColumnDefinitions>
   <TextBlock Text="{Binding Code}" Foreground="#135F6E" FontWeight="SemiBold"/>
   <TextBlock Grid.Column="1" Text="{Binding Year}"/>
-  <TextBlock Grid.Column="2" Text="{Binding Number}"/>
+  <TextBlock Grid.Column="2" Text="{Binding NumberText}"/>
   <TextBlock Grid.Column="3" Text="{Binding Client}" ToolTip="{Binding Client}" FontWeight="SemiBold"/>
   <TextBlock Grid.Column="4" Text="{Binding Subject}" ToolTip="{Binding Subject}"/>
   <TextBlock Grid.Column="5" Text="{Binding SizeText}" ToolTip="{Binding SizeText}"/>

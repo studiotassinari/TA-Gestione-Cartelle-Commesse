@@ -11,7 +11,7 @@ public sealed partial class CustomerManagementViewModel : Observable,IDisposable
     {
         this.business=business;initialId=id;
         InitializeProjects();
-        CustomerSelection.SelectionChanged+=customer=>Selected=customer;
+        CustomerSelection.SelectionChanged+=customer=>{if(CanLeave())Selected=customer;else CustomerSelection.SelectId(Selected?.Id);};
         RefreshCommand=new(async()=>await Refresh(),()=>!Busy);
         NewCommand=new(()=>{Selected=null;SetEditor(new Customer("",""));},()=>CanEdit);
         SaveCommand=new(async()=>await Save(),()=>CanEdit&&Editor!=null);
@@ -32,9 +32,14 @@ public sealed partial class CustomerManagementViewModel : Observable,IDisposable
     public Customer? Selected {get=>selected;set{selected=value;CustomerSelection.SelectId(value?.Id);Notify();SetEditor(value);UpdateAssociatedProjects();}}
     public void SelectCustomer(string id)
     {
-        if(Editor!=null&&Editor.ToModel()!=Editor.Model)
-        {Status="Salva le modifiche al cliente prima di aprire un'altra scheda.";Notify(nameof(Status));return;}
+        if(!CanLeave())return;
         if(all.FirstOrDefault(c=>c.Id==id) is {} found){Filter="";Selected=found;}
+    }
+    public bool CanLeave()
+    {
+        if(Busy||Editor!=null&&Editor.ToModel()!=Editor.Model)
+        {Status="Completa e salva le modifiche al cliente, oppure aggiorna l'elenco per ricaricare i dati salvati.";Notify(nameof(Status));return false;}
+        return true;
     }
     private void SetEditor(Customer? customer)
     {

@@ -62,7 +62,7 @@ Le modifiche contemporanee alla stessa scheda sono rilevate tramite revisione: a
 
 ## Backup e documenti
 
-Ogni cinque minuti il servizio controlla se il gestionale è cambiato e produce una copia SQLite coerente, verificata con controllo d'integrità e confronto SHA-256, nella cartella condivisa `backup-gestionale`. Mantiene una copia per giorno e il numero di giorni configurato in `BackupRetention` (predefinito 7). Nessuna attività pianificata Windows. Un errore lascia la copia precedente e viene mostrato nello stato del gestionale.
+Ogni cinque minuti il servizio controlla se il gestionale è cambiato e produce una copia SQLite coerente, verificata con controllo d'integrità e confronto SHA-256, nella cartella condivisa `backup-gestionale`. Mantiene una copia per giorno e il numero di giorni configurato in `BackupRetention` (predefinito e massimo 5, oggi incluso). Nessuna attività pianificata Windows. Un errore lascia la copia precedente e viene mostrato nello stato del gestionale.
 
 Il lettore documenti usa temporaneamente il disco locale configurato come TEMP dal servizio, anche per un documento dentro ZIP/7z: massimo 50 MiB e cancellazione alla chiusura della copia. Non copia interi archivi e non avvia analisi esterne autonomamente. Gli originali restano sempre in sola lettura.
 

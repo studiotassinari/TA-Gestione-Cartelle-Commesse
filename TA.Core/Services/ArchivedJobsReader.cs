@@ -36,6 +36,7 @@ public static class ArchivedJobsReader
             currentDirectory?.Invoke(directory);
             try
             {
+                if(SismicadExclusion.IsProject(directory))continue;
                 foreach (var path in Directory.EnumerateFileSystemEntries(directory))
                 {
                     token.ThrowIfCancellationRequested();
@@ -78,12 +79,14 @@ public static class ArchivedJobsReader
             var before = new FileInfo(path); var length = before.Length; var modified = MetadataDates.Read(() => before.LastWriteTimeUtc, path, issues);
             using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var archive = ArchiveFactory.OpenArchive(file);
+            var excludedProjects=SismicadExclusion.ArchiveRoots(archive.Entries.Select(e=>e.Key));
             int entries = 0;
             foreach (var entry in archive.Entries)
             {
                 token.ThrowIfCancellationRequested();
                 if (++entries > 1_000_000) throw new InvalidDataException("Limite di un milione di voci superato.");
                 var key = (entry.Key ?? "").Replace('\\', '/').TrimEnd('/');
+                if(SismicadExclusion.Contains(key,excludedProjects))continue;
                 var segments = key.Split('/', StringSplitOptions.RemoveEmptyEntries);
                 if (key.StartsWith('/') || segments.Any(s => s is "." or ".." || s.Contains(':')))
                 { issues.Add("Percorso interno non valido: " + key); continue; }

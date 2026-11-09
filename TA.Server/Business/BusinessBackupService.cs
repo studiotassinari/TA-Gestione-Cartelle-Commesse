@@ -30,7 +30,7 @@ public sealed class BusinessBackupService(BusinessService business,ServerSetting
                 if(!SHA256.HashData(a).SequenceEqual(SHA256.HashData(b)))throw new IOException("Copia di rete non verificata.");
             File.Move(temp,target,true);lastRevision=revision;lastDay=day;
             store.BackupStatus="Backup gestionale verificato: "+TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow,"W. Europe Standard Time").ToString("dd/MM/yyyy HH:mm");
-            foreach(var file in Directory.EnumerateFiles(targetFolder,"gestionale-*.sqlite").Where(p=>System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(p),"^gestionale-[0-9]{8}\\.sqlite$")).OrderDescending().Skip(Math.Clamp(configuration.BackupRetention,1,30)))
+            foreach(var file in BackupRetentionPolicy.Obsolete(Directory.EnumerateFiles(targetFolder,"gestionale-*.sqlite").Where(p=>System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(p),"^gestionale-[0-9]{8}\\.sqlite$")),configuration.BackupRetention,DateTime.UtcNow,false))
                 if((File.GetAttributes(file)&FileAttributes.ReparsePoint)==0)File.Delete(file);
         }
         finally {if(File.Exists(local))File.Delete(local);if(File.Exists(temp))File.Delete(temp);}

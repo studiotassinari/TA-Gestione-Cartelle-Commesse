@@ -17,7 +17,13 @@ internal static class CustomerSelectorChecks
             :JsonSerializer.SerializeToElement(new ProjectCatalog([project],clients,true))));
         var vm=new ProjectDetailViewModel(business,"p");vm.Refresh().GetAwaiter().GetResult();
         var view=new WorkProjectView{DataContext=vm};Layout(view);
-        var selector=Walk(view).OfType<CustomerSelectionView>().Single();
+        var autocomplete=Walk(view).OfType<CustomerAutocompleteView>().Single();
+        var search=(TextBox)autocomplete.Content;
+        if(search.Text!="Stesso nome")throw new Exception("Cliente iniziale non mostrato nel campo compatto");
+        search.Text="002";
+        if(vm.CustomerSelection.Rows.Length!=1||vm.Project!.CustomerId!="a")throw new Exception("Ricerca compatta altera associazione");
+        vm.CustomerSelection.Filter="";
+        var selector=new CustomerSelectionView{DataContext=vm.CustomerSelection};Layout(selector);
         var list=(ListBox)selector.FindName("CustomersList");
         if((list.SelectedItem as Customer)?.Id!="a")throw new Exception("Associazione iniziale non visualizzata");
         vm.Project!.Subject="Bozza argomento";vm.Project.Location="Bozza luogo";
@@ -31,6 +37,7 @@ internal static class CustomerSelectorChecks
         vm.ReloadCustomers(created).GetAwaiter().GetResult();Layout(view);
         if((list.SelectedItem as Customer)?.Id!="c"||vm.Project.CustomerId!="c"||vm.Customer?.Id!="c"
             ||vm.CustomerSelection.Filter!="")throw new Exception($"Ritorno: lista={(list.SelectedItem as Customer)?.Id}; progetto={vm.Project.CustomerId}; cliente={vm.Customer?.Id}; filtro={vm.CustomerSelection.Filter}; stato={vm.Status}");
+        if(search.Text!="Cliente creato")throw new Exception("Campo compatto non aggiornato dopo scelta cliente");
         if(vm.Project.Subject!="Bozza argomento"||vm.Project.Location!="Bozza luogo")throw new Exception("Ricarica clienti perde bozze");
         vm.CustomerSelection.Filter="nessuna corrispondenza";Layout(view);
         if(list.Items.Count!=0||vm.Project.CustomerId!="c")throw new Exception("Filtro vuoto cancella l'associazione");

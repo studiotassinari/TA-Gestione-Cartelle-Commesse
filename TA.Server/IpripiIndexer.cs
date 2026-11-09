@@ -23,7 +23,17 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
     }
-    public IpripiCandidateCatalog Refresh(CancellationToken token)
+    private readonly object refreshGate=new();
+    private ScanProgress indexProgress=new(false,"In attesa",0,null,"Attende il completamento dell'inventario file");
+    public ScanProgress Progress=>Volatile.Read(ref indexProgress);
+    public IpripiCandidateCatalog Refresh(CancellationToken token){lock(refreshGate)return RefreshTracked(token);}
+    private IpripiCandidateCatalog RefreshTracked(CancellationToken token)
+    {
+        indexProgress=new(true,"Censimento candidati",0,null,"Preparazione",DateTime.UtcNow);
+        try { var result=RefreshCore(token);indexProgress=Progress with{IsRunning=false,Phase="Completato",FinishedUtc=DateTime.UtcNow,Message="Catalogo aggiornato; contenuti analizzati solo su richiesta"};return result; }
+        catch(Exception ex){indexProgress=Progress with{IsRunning=false,Phase="Interrotto",HasErrors=true,Message=ex.Message,FinishedUtc=DateTime.UtcNow};throw;}
+    }
+    private IpripiCandidateCatalog RefreshCore(CancellationToken token)
     {
         var store = new InventoryStore(settings.InventoryFolder);
         var target = Path.Combine(service.Root, "candidati.json");
@@ -42,9 +52,12 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
             if (JsonSerializer.SerializeToUtf8Bytes(catalog).Length > 64 * 1024 * 1024) throw new IOException("Catalogo candidati MUR oltre 64 MiB.");
             CatalogStorage.Write(settings,target, catalog); watch.Restart(); return catalog;
         }
-        foreach (var manifest in store.Manifests().Where(m => m.Unit.Category is "C" or "A"))
+        var ordered=store.Manifests().Where(m => m.Unit.Category is "C" or "A").OrderByDescending(m=>AnalysisOrder.Year(m.Unit.Year,m.Unit.Code)).ThenByDescending(m=>AnalysisOrder.Number(m.Unit.Code)).ThenBy(m=>m.Unit.Id,StringComparer.Ordinal).ToArray();
+        indexProgress=Progress with{Total=ordered.Length};
+        foreach (var manifest in ordered)
         {
             token.ThrowIfCancellationRequested();
+            indexProgress=Progress with{Completed=processed,Message=manifest.Unit.Code+" — "+manifest.Unit.Path};
             var unit = store.UnitDirectory(manifest.Unit);
             try
             {
@@ -72,6 +85,7 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
         if (processed == 0) throw new IOException("Inventario non ancora disponibile: nuova verifica tra cinque minuti.");
         foreach (var id in groups.Keys.Where(id => !seen.Contains(id)).ToList())
             groups[id] = groups[id].Select(r => r with { OriginalAvailable = false }).ToList();
+        indexProgress=Progress with{Completed=processed};
         var result = Publish(false);
         logger.LogInformation("Censimento MUR completato: {Count} candidati da {Units} unità; successiva scansione alle 00:00", result.Documents.Count, processed);
         return result;

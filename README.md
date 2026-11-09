@@ -1,6 +1,22 @@
-# TA-Gestione Cartelle Commesse — 2.28.0
+# TA-Gestione Cartelle Commesse — 2.29.0
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
+
+## Novità 2.29.0: interfaccia compatta e analisi parallele
+
+Scheda commessa con Salva e Annulla in alto: Annulla ricarica i dati salvati, comprese le bozze di pianificazione. Ricerca cliente a comparsa per nome o partita IVA; selezione per ID e scheda cliente separata, senza pannello anagrafico permanente.
+
+Interfaccia principale con quattro menu: Gestione, Analisi e report, Sistema e Aiuto. Esportazioni raggruppate sotto Analisi e report; connessione, diagnostica e aggiornamenti sotto Sistema. Numero commessa sempre a tre cifre (es. 005), senza cambiare il valore nel database.
+
+Una finestra paritaria per il dettaglio commessa/gara/archivio e una per i clienti, riutilizzate da tutti i punti di accesso. Cambia il contenuto, non viene aperta una nuova finestra per ogni voce. Controlli MVVM riutilizzabili per dettaglio progetto, editor cliente e selezione cliente. La scelta di un cliente ritorna alla commessa di origine senza dialoghi modali; prima di cambiare scheda occorre salvare eventuali bozze oppure ricaricare i dati salvati.
+
+Client e Gestore server ammettono ciascuno una sola istanza nella stessa sessione Windows. Un secondo avvio ripristina la finestra esistente, anche dall'area di notifica, mantenendo la massimizzazione. Le sessioni Windows diverse restano indipendenti. Nessun file di blocco o log viene scritto: il controllo usa oggetti Windows in memoria e viene rilasciato all'uscita, anche dopo una terminazione imprevista. L'aggiornatore può chiudere e riavviare il programma; il processo separato di copia documenti rimane escluso dal controllo.
+
+L'inventario dei file e i due cataloghi si aggiornano indipendentemente: durante una scansione lunga, geologia e MUR/IPRiPI rileggono in parallelo l'inventario locale disponibile ogni minuto. Il comando MCP `stato_analisi` espone avanzamento, date, candidati, analisi salvate e ancora necessarie, canali occupati e prossimo orario di lettura. Non avvia scansioni o trasmissioni automatiche.
+
+Le cartelle Sismicad identificate dal file `main.scj` e i loro discendenti sono esclusi, anche dentro ZIP/7z. I rami fratelli restano inclusi. Il criterio deriva dal Manuale Concrete Sismicad 12, capitolo 17; non si escludono intere commesse solo perché contengono un progetto Sismicad. Il primo ricensimento applica la nuova esclusione anche agli inventari invariati.
+
+Il tunnel attuale trasmette il testo estratto su richiesta, non il PDF binario: i PDF costituiti da immagini richiedono ancora una componente OCR. Nessuna analisi cloud autonoma o API a pagamento viene attivata.
 
 ## Novità 2.28.0: clienti e commesse associate
 
@@ -19,7 +35,7 @@ Aggiornare prima il server e poi i client. Nessuna modifica alle cartelle origin
 
 ## Analisi documentale progressiva (2.25.0)
 
-Le analisi tramite MCP procedono dalle commesse più recenti alle più vecchie, per anno e progressivo. La coda geologica restituisce un documento alla volta; la ricerca MUR propone una voce per pagina come impostazione iniziale. Il server ammette una sola lettura documentale concorrente e almeno 60 secondi tra nuovi documenti geologici/MUR richiesti dal plugin. Le pagine successive dello stesso file non ripetono l'attesa; il limite temporale è conservato nel database locale anche dopo un riavvio. Una richiesta anticipata restituisce il tempo residuo, senza accodare lavoro nascosto.
+Le analisi tramite MCP procedono dalle commesse più recenti alle più vecchie, per anno e progressivo. La coda geologica restituisce un documento alla volta; la ricerca MUR propone una voce per pagina come impostazione iniziale. Il server ammette due letture documentali concorrenti: una geologica e una MUR/IPRiPI. Ogni canale ammette un solo documento alla volta e almeno 60 secondi tra documenti nuovi richiesti dal plugin. Le pagine successive dello stesso file non ripetono l'attesa; il limite temporale è conservato nel database locale anche dopo un riavvio. Una richiesta anticipata restituisce il tempo residuo, senza accodare lavoro nascosto.
 
 Gli elenchi elaborati sono candidati di supporto: quando vengono letti su richiesta, i riferimenti testuali geologico/geotecnici con nome o codice file esatto vengono confrontati con l'inventario della stessa commessa. I documenti corrispondenti diventano candidati, senza aprirli automaticamente. Riferimenti ambigui, scansioni senza testo e codici non corrispondenti richiedono verifica; non costituiscono un riconoscimento certo.
 
@@ -45,7 +61,7 @@ Il server conserva l'inventario corrente e i cataloghi in SQLite sul disco local
 - Due letture concorrenti per impostazione predefinita, limite configurabile da 1 a 4; scritture SQLite coordinate e transazionali.
 - Ricerche dei file paginate nel database, senza caricare tutto l'inventario nel client.
 - Modalità precedente compatibile; per abbandonare il vecchio inventario utilizzare la transizione locale documentata.
-- Backup giornaliero verificato sulla rete, ultimi sette backup più la copia di migrazione. Errori e ultimo backup sono mostrati nello stato della scansione.
+- Backup giornaliero verificato sulla rete, massimo cinque copie negli ultimi cinque giorni (oggi incluso), più la copia di migrazione. Errori e ultimo backup sono mostrati nello stato della scansione.
 
 Il controllo delle dimensioni richiede comunque l'enumerazione dei metadati sulla rete. Nomi e date sono verificati insieme alle dimensioni: una modifica a dimensione invariata non viene ignorata. Contenuti letti soltanto su richiesta, nessuna API OpenAI automatica e nessuna attività pianificata Windows.
 

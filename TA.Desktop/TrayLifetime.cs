@@ -48,7 +48,7 @@ public sealed class TrayLifetime : IDisposable
         Application.Current.SessionEnding += (_, _) => exit = true;
         window.Closed += (_, _) => Dispose();
     }
-    private void Open() { window.Show(); window.WindowState = WindowState.Normal; window.Activate(); }
+    private void Open() => SessionInstance.Restore(window);
     public void Notify(string title, string message)
     {
         // Non disturba con una notifica per ogni file o per ogni scansione periodica.

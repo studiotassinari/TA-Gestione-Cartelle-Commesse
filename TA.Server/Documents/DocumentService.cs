@@ -6,10 +6,14 @@ using TA_Gestione_Cartelle_Commesse.Contracts;
 namespace TA.Server.Documents;
 public sealed class DocumentService(ServerSettings settings,ScanCoordinator scans)
 {
-    public AnalysisReadSchedule AnalysisSchedule {get;}=new(load:()=>
-        new TA_Gestione_Cartelle_Commesse.Services.InventoryStore(settings.InventoryFolder).Document("ANALISI/RITMO") is {} json?JsonSerializer.Deserialize<AnalysisReadState>(json):null,
-        save:state=>new TA_Gestione_Cartelle_Commesse.Services.InventoryStore(settings.InventoryFolder).SaveDocument("ANALISI/RITMO",state));
-    private readonly SemaphoreSlim slots=new(1);
+    private readonly Lazy<AnalysisReadSchedule> geologySchedule=new(()=>Schedule(settings,"GEOLOGIA"));
+    private readonly Lazy<AnalysisReadSchedule> murSchedule=new(()=>Schedule(settings,"MUR"));
+    public AnalysisReadSchedule GeologySchedule=>geologySchedule.Value;
+    public AnalysisReadSchedule MurSchedule=>murSchedule.Value;
+    private static AnalysisReadSchedule Schedule(ServerSettings settings,string category)=>new(load:()=>
+        new TA_Gestione_Cartelle_Commesse.Services.InventoryStore(settings.InventoryFolder).Document("ANALISI/RITMO/"+category) is {} json?JsonSerializer.Deserialize<AnalysisReadState>(json):null,
+        save:state=>new TA_Gestione_Cartelle_Commesse.Services.InventoryStore(settings.InventoryFolder).SaveDocument("ANALISI/RITMO/"+category,state));
+    private readonly SemaphoreSlim slots=new(2);
     public async Task<DocumentWorkReply> ExecuteAsync(string category,DocumentQuery? read,DocumentListQuery? list,CancellationToken token)
     {
         if(read!=null)DocumentValidation.Validate(read);else if(list!=null)DocumentValidation.Validate(list);else throw new ArgumentException("Richiesta mancante.");

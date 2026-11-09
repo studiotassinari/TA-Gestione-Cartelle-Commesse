@@ -16,6 +16,7 @@ namespace TA_Gestione_Cartelle_Commesse
     public partial class App : Application
     // Inizio del blocco di istruzioni o della definizione precedente.
     {
+        private TA.Desktop.SessionInstance? instance;
         // Il processo di copia su richiesta non avvia finestre, connessioni o controlli aggiornamento.
         protected override async void OnStartup(StartupEventArgs e)
         {
@@ -24,8 +25,17 @@ namespace TA_Gestione_Cartelle_Commesse
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
                 await Services.GeologyDocumentCopy.RunWorkerAsync(); Shutdown(); return;
             }
-            StartupUri = new Uri("MainWindow.xaml", UriKind.Relative);
+            instance = new TA.Desktop.SessionInstance("Client");
+            if (!instance.IsPrimary) { Shutdown(); return; }
             base.OnStartup(e);
+            MainWindow = new MainWindow();
+            instance.Listen(MainWindow);
+            MainWindow.Show();
+        }
+        protected override void OnExit(ExitEventArgs e)
+        {
+            instance?.Dispose();
+            base.OnExit(e);
         }
     // Fine del blocco di istruzioni o della definizione corrente.
     }

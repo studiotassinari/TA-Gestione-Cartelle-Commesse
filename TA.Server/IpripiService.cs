@@ -107,7 +107,7 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
             .Concat(saved.Values.Where(s => !ids.Contains(s.Source.Id)).Select(s => s.Source with { Saved = s, OriginalAvailable = false }))
             .Where(r => !query.RecognizedOnly || r.FormType == "MUR A.1/D.1")
             .Where(r => string.Join(' ', r.ProjectCode, r.Year, r.FileName, r.Codes, r.Status, r.Designers, r.Typologies, r.Address, r.Municipality, r.Location).Contains(query.Search, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(r => AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>r.ProjectCode,StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal).ToList();
+            .OrderByDescending(r => AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ThenBy(r=>r.Id,StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal).ToList();
         var version = Hash(JsonSerializer.Serialize(new { rows, warnings }));
         if (query.Version != null && query.Version != version) throw new IOException("Catalogo cambiato: ripartire dalla prima pagina.");
         return new(version, rows.Count, query.Offset, query.Offset + query.Limit < rows.Count ? query.Offset + query.Limit : null,
@@ -143,7 +143,7 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
     {
         if (string.IsNullOrWhiteSpace(query.DocumentId) || query.DocumentId.Length > 128) throw new ArgumentException("ID documento non valido.");
         var source = Find(query.DocumentId, query.Code, token);
-        using var schedule=scheduled?documents.AnalysisSchedule.Enter(source.Id):null;
+        using var schedule=scheduled?documents.MurSchedule.Enter(source.Id):null;
         var page = await ReadSource(source, query, token);
         evidence.Remember(source.Id, page);
         return page;

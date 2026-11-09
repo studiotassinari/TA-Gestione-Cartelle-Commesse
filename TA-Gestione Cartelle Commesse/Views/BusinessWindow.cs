@@ -61,7 +61,7 @@ public sealed class BusinessWindow : Window
     private static DataGrid Table(params (string Label, string Path)[] columns)
     {
         var grid = new DataGrid { AutoGenerateColumns = false, IsReadOnly = true, CanUserAddRows = false, SelectionMode = DataGridSelectionMode.Single };
-        foreach (var c in columns) grid.Columns.Add(new DataGridTextColumn { Header = c.Label, Binding = new Binding(c.Path), MinWidth = 100, Width = DataGridLength.SizeToCells }); return grid;
+        foreach (var c in columns) grid.Columns.Add(new DataGridTextColumn { Header = c.Label, Binding = new Binding(c.Path) { StringFormat = c.Path == "Item.Number" ? "D3" : null }, MinWidth = 100, Width = DataGridLength.SizeToCells }); return grid;
     }
     private bool Matches(params string[] text) => text.Any(t => t.Contains(search.Text.Trim(), StringComparison.OrdinalIgnoreCase));
     private string Code(string id) => vm.Snapshot?.Projects.FirstOrDefault(p => p.Id == id)?.Code ?? id;
@@ -79,12 +79,10 @@ public sealed class BusinessWindow : Window
         times.ItemsSource = s.Times.Where(t => Matches(Code(t.ProjectId), t.Description, t.User)).OrderByDescending(t => t.Day).Select(t => new TimeRow(t, t.Day, Code(t.ProjectId), s.Activities.FirstOrDefault(a => a.Id == t.ActivityId)?.Title ?? "Attività fuori periodo", t.Minutes / 60m, t.Description, t.User)).ToArray();
         gantt.Update(rows, DateOnly.FromDateTime(vm.From), DateOnly.FromDateTime(vm.To), group.SelectedIndex == 1, Code, a => { if (vm.CanEdit) _ = EditActivity(a); });
     }
-    private async Task EditCustomer(Customer? old)
+    private Task EditCustomer(Customer? old)
     {
-        if (!vm.CanEdit) return;
-        var editor=new CustomerManagementViewModel(vm,old?.Id??"");
-        new CustomerWindow(editor,startNew:old==null){Owner=this}.ShowDialog();
-        await vm.Refresh();
+        if(vm.CanEdit&&(Application.Current.MainWindow.DataContext is MainViewModel main))main.Workspace?.ShowCustomers(old?.Id??"",startNew:old==null);
+        return Task.CompletedTask;
     }
     private async Task EditProject()
     {
@@ -100,8 +98,8 @@ public sealed class BusinessWindow : Window
     private Task OpenProject()
     {
         if(projects.SelectedItem is not ProjectRow row)return Task.CompletedTask;
-        var detail=new ProjectDetailWindow(new ProjectDetailViewModel(vm,row.Item.Id)){Owner=this};
-        detail.Closed+=async(_,_)=>await vm.Refresh();detail.Show();return Task.CompletedTask;
+        if(Application.Current.MainWindow.DataContext is MainViewModel main)main.Workspace?.ShowProject(row.Item.Id);
+        return Task.CompletedTask;
     }
     private async Task EditActivity(WorkActivity? a)
     {

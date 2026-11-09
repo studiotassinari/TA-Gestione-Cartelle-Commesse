@@ -15,6 +15,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     private readonly object gate = new();
     private ScanProgress progress = new(false, "Avvio", 0, null, "Caricamento del servizio");
     private CancellationToken shutdown;
+    public bool InventoryReady {get;private set;}
     private Task current = Task.CompletedTask;
     private DateTime retryAfter = DateTime.MinValue;
     private DateTime? lastCompleted;
@@ -39,6 +40,11 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
         }
     }
     private void SetProgress(ScanProgress value) { lock (gate) progress = value with { FinishedUtc=value.FinishedUtc ?? lastCompleted }; }
+    public AnalysisStatus AnalysisStatus()=>new(DateTime.UtcNow,Progress,
+        AnalysisStatusReader.Geology(settings,catalogServices?.GetService<GeologyIndexer>()?.Progress),
+        AnalysisStatusReader.Mur(settings,catalogServices?.GetService<IpripiIndexer>()?.Progress),
+        catalogServices?.GetService<Documents.DocumentService>() is {} documents
+            ?[documents.GeologySchedule.Status("Geologia"),documents.MurSchedule.Status("MUR/IPRiPI")]:null);
     public CategoryWorker Get(string category) => category.ToUpperInvariant() switch
     { "C" => workers['C'], "G" => workers['G'], "A" => workers['A'], _ => throw new ArgumentException("Categoria non valida") };
     public bool Refresh(string category) { _ = Get(category).RefreshIndexAsync(shutdown); return true; }
@@ -65,9 +71,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
                 var mur = catalogServices.GetRequiredService<IpripiIndexer>();
                 var geology = catalogServices.GetRequiredService<GeologyIndexer>();
                 SetProgress(new(true, "Catalogo MUR", 0, null, "Aggiornamento database MUR", started));
-                await Task.Run(() => mur.Refresh(token), token);
-                SetProgress(new(true, "Catalogo geologico", 0, null, "Aggiornamento JSON geologia", started));
-                await Task.Run(() => geology.Refresh(token), token);
+                await Task.WhenAll(Task.Run(()=>mur.Refresh(token),token),Task.Run(()=>geology.Refresh(token),token));
             }
             DailyReports.Save(ReportsDirectory, DailyReports.ItalianTime(new DateTimeOffset(started)), workers.Values, new DateTimeOffset(started), currentOnly:true);
             SetProgress(new(true,"Backup database",0,null,"Verifica e copia sulla rete",started));
@@ -128,6 +132,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
         }
         catch(OperationCanceledException) when(stoppingToken.IsCancellationRequested){return;}
         catch(Exception ex){logger.LogWarning(ex,"Pulizia sospesa: inventario SQLite disponibile, JSON residui conservati");}
+        InventoryReady=true;
         bool scheduleLoaded = false;
         try
         {

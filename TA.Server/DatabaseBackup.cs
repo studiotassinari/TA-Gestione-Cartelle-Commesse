@@ -32,8 +32,8 @@ public static class DatabaseBackup
             token.ThrowIfCancellationRequested();File.Move(temporary,target);
             var status=new DatabaseBackupStatus(now,DateTime.UtcNow,target,"");store.SaveDocument("backup:status",status);
             // Si eliminano solo backup generati dall'app, dopo il completamento del nuovo backup.
-            foreach(var old in Directory.EnumerateFiles(folder).Where(p=>Regex.IsMatch(Path.GetFileName(p),@"^TA-Commesse-\d{8}T\d{13}\.sqlite$"))
-                .OrderByDescending(Path.GetFileName,StringComparer.Ordinal).Skip(Math.Clamp(settings.BackupRetention,1,30)))
+            foreach(var old in BackupRetentionPolicy.Obsolete(Directory.EnumerateFiles(folder).Where(p=>Regex.IsMatch(Path.GetFileName(p),@"^TA-Commesse-\d{8}T\d{13}\.sqlite$"))
+                ,settings.BackupRetention,now,true))
             {
                 token.ThrowIfCancellationRequested();
                 if(!Path.GetFullPath(old).StartsWith(folder+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase))throw new IOException("Percorso backup inatteso");

@@ -27,7 +27,7 @@ public sealed class ServerSettings
         }
     }
     public int MaxConcurrentScans { get; set; } = 2;
-    public int BackupRetention { get; set; } = 7;
+    public int BackupRetention { get; set; } = 5;
     public string GeologyCatalogPath { get; set; } = "";
     // Modificabile dall'amministratore per passare a un'istanza Nominatim aziendale senza aggiornare il client.
     public string NominatimSearchUrl { get; set; } = "https://nominatim.openstreetmap.org/search";

@@ -7,7 +7,8 @@ using TA.Transport;
 
 void Check(bool ok, string message) { if (!ok) throw new Exception(message); }
 LocalReadOnlyPolicy.Validate(new Request("Info"));
-foreach(var (operation,tool) in new[]{("State","cerca_cartelle"),("Children","sottocartelle"),("DailyReport","report_giornaliero"),("Analysis","analisi_file"),("Files","cerca_file"),("Progress","stato_scansione"),("ReadDocument","leggi_documento"),("ListDocuments","elenca_documenti")})
+AnalysisStatusChecks.Run();
+foreach(var (operation,tool) in new[]{("State","cerca_cartelle"),("Children","sottocartelle"),("DailyReport","report_giornaliero"),("Analysis","analisi_file"),("Files","cerca_file"),("AnalysisStatus","stato_analisi"),("Progress","stato_scansione"),("ReadDocument","leggi_documento"),("ListDocuments","elenca_documenti")})
 {
     LocalReadOnlyPolicy.Validate(new Request(operation,CorrelationId:Guid.NewGuid().ToString("N"),McpTool:tool));
     try{LocalReadOnlyPolicy.Validate(new Request(operation));throw new Exception("MCP precedente ammesso");}catch(UnauthorizedAccessException){}

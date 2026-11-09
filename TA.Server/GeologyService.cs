@@ -25,7 +25,7 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
         var terms = q.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var rows = catalog.Reports.Where(r => (!q.OnlyLocated || r.HasPosition) && r.ProjectCode.Contains(q.Code, StringComparison.OrdinalIgnoreCase) &&
             terms.All(t => string.Join(' ', r.Title, r.FileName, r.Municipality, r.Address, r.ProjectCode, r.Client, r.Author, r.Kind, r.Notes, r.DossierTitle, r.AnalysisStatus).Contains(t, StringComparison.OrdinalIgnoreCase)))
-            .OrderBy(r => r.Municipality, StringComparer.OrdinalIgnoreCase).ThenBy(r => r.ProjectCode, StringComparer.Ordinal).ThenBy(r => r.Title, StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal).ToArray();
+            .OrderByDescending(r=>AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ThenBy(r => r.Title, StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal).ToArray();
         return new(version, catalog.UpdatedUtc, rows.Length, q.Offset, q.Offset + q.Limit < rows.Length ? q.Offset + q.Limit : null, rows.Skip(q.Offset).Take(q.Limit).ToList(), catalog.Warnings);
     }
     private (GeologyCatalog Catalog, string Version) ReadCatalog(CancellationToken token)
@@ -57,7 +57,7 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
         ValidateRead(q);
         var report = ReadCatalog(token).Catalog.Reports.SingleOrDefault(r => r.Id == q.ReportId) ?? throw new KeyNotFoundException("Relazione non presente nel catalogo.");
         if (!report.CanRead) throw new IOException("Il catalogo non contiene ancora il collegamento al documento originale.");
-        using var schedule=scheduled?documents.AnalysisSchedule.Enter(report.Id):null;
+        using var schedule=scheduled?documents.GeologySchedule.Enter(report.Id):null;
         DocumentPage page;
         if (string.IsNullOrWhiteSpace(report.PhysicalPath))
             page = (await documents.ExecuteAsync(report.Category, new(report.FolderId, report.RelativePath, report.ArchiveEntry, q.Offset, q.Length, q.Version), null, token)).Document!;
