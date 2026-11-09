@@ -1,3 +1,4 @@
+# Release 2.30: include verifiche dell’approfondimento MCP esplicito e dell’ambito Archivio.
 # Assegna il nome del workflow mostrato nella scheda Actions.
 name: Installer Windows
 # Definisce gli eventi che avviano la compilazione e la pubblicazione.
