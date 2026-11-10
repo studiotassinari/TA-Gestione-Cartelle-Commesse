@@ -25,7 +25,7 @@ public sealed class ConfigurationWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var panel = new StackPanel { Margin = new Thickness(22) };
         panel.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12),
-            Text = "Questi dati identificano l'installazione e vengono salvati solo su questo server, in " + ConfigurationFile.Path + ". Le modifiche valgono dal successivo avvio del servizio." });
+            Text = "Questi dati identificano l'installazione e vengono salvati solo su questo server, in " + ConfigurationFile.Path + ". Le modifiche valgono dal successivo avvio del servizio: dopo il salvataggio viene proposto il riavvio." });
         Add(panel, "Dominio Active Directory (per esempio azienda.example; vuoto = dominio di questo server)", domain);
         Add(panel, "Gruppi autorizzati a usare il programma — uno per riga, obbligatorio", groups);
         Add(panel, "Gruppo collaboratori per attività e ore — facoltativo", collaborators);

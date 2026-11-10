@@ -47,7 +47,7 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
         IpripiCandidateCatalog Publish(bool running)
         {
             var notes = warnings.Take(20).ToList();
-            notes.Add("PDF e DOCX candidati dai nomi in Commesse e Archivio. Analisi dei contenuti tramite ChatGPT su richiesta; originali in sola lettura.");
+            notes.Add("PDF e DOCX candidati dai nomi in Commesse e Archivio. " + (settings.EnableLocalAnalysis ? "Analisi dei contenuti automatica in locale e su richiesta tramite ChatGPT" : "Analisi dei contenuti tramite ChatGPT su richiesta") + "; originali in sola lettura.");
             var catalog = new IpripiCandidateCatalog(1, DateTime.UtcNow, running, groups.Values.SelectMany(x => x).DistinctBy(r => r.Id).ToList(), notes);
             if (JsonSerializer.SerializeToUtf8Bytes(catalog).Length > 64 * 1024 * 1024) throw new IOException("Catalogo candidati MUR oltre 64 MiB.");
             CatalogStorage.Write(settings,target, catalog); watch.Restart(); return catalog;

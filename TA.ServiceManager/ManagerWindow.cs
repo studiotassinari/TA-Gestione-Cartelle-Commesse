@@ -110,13 +110,42 @@ public sealed class ManagerWindow : Window
     }
     private async Task Diagnose() { Note("Lettura configurazione e registri Windows..."); Note(await Task.Run(ServiceDiagnostics.Inspect)); }
     private Task Open(string path) { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); return Task.CompletedTask; }
-    private Task LaunchConfiguration()
+    private async Task LaunchConfiguration()
     {
         var dialog = new ConfigurationWindow(ServerFolder) { Owner = this };
-        Note(dialog.ShowDialog() == true
-            ? "Configurazione salvata: dominio, gruppi e utenti di gestione valgono dal prossimo avvio del servizio. La console mostra permessi e firewall."
-            : "Configurazione non modificata.");
-        return Task.CompletedTask;
+        if (dialog.ShowDialog() != true) { Note("Configurazione non modificata."); return; }
+        Note("Configurazione salvata. La console mostra permessi e firewall.");
+        await RestartAfterConfiguration();
+    }
+    // Il servizio legge la configurazione solo all'avvio: senza riavvio gruppi, utenti di gestione e analisi automatica restano quelli precedenti.
+    private async Task RestartAfterConfiguration()
+    {
+        bool running;
+        try { using var service = new ServiceController("TACommesseServer"); running = service.Status is ServiceControllerStatus.Running or ServiceControllerStatus.StartPending; }
+        catch (Exception ex) { Note("Stato del servizio non leggibile: " + ex.GetBaseException().Message + " La configurazione vale dal prossimo avvio."); return; }
+        if (!running) { Note("Servizio fermo: la nuova configurazione vale dal prossimo avvio."); return; }
+        if (busy || MessageBox.Show(this, "La nuova configurazione diventa attiva solo dopo il riavvio del servizio.\n\nRiavviarlo adesso? Le scansioni in corso vengono annullate e i client si ricollegano da soli; i client già aperti vanno chiusi e riaperti per aggiornare i permessi di gestione.",
+            "Riavvio del servizio", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+        { Note("ATTENZIONE: configurazione salvata ma NON ancora attiva. Riavviare il servizio con Arresta e poi Avvia."); return; }
+        busy = true; actions.ForEach(b => b.IsEnabled = false);
+        Note("Riavvio del servizio per applicare la configurazione...");
+        try
+        {
+            await Task.Run(() =>
+            {
+                using var service = new ServiceController("TACommesseServer");
+                if (service.Status != ServiceControllerStatus.Stopped)
+                { if (service.Status != ServiceControllerStatus.StopPending) service.Stop(); service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(60)); }
+                service.Start(); service.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(60));
+            });
+            Note("Servizio riavviato: la nuova configurazione è attiva. Chiudere e riaprire i client già aperti.");
+        }
+        catch (Exception ex)
+        {
+            Note("Riavvio non riuscito: " + ex.Message + " | " + ex.GetBaseException().Message);
+            Note(await Task.Run(ServiceDiagnostics.Inspect));
+        }
+        finally { busy = false; actions.ForEach(b => b.IsEnabled = true); await Refresh(); }
     }
     // Prima installazione o configurazione precedente incompleta: la finestra viene proposta senza cercarla.
     private async Task ProposeConfiguration()
