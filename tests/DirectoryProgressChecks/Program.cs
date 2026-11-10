@@ -14,8 +14,10 @@ try
     Check(paths.Contains(nested),"Lettura metadati comunica la sottocartella reale");
     paths.Clear();FileInventoryReader.Read(job,new HashSet<string>(),CancellationToken.None,paths.Add);
     Check(paths.Contains(nested) && paths.Contains(zip+" > Disegni/Strutture"),"Inventario comunica cartelle e percorsi interni ZIP senza estrazione");
-    paths.Clear();ArchivedJobsReader.ScanRoots([root],CancellationToken.None,paths.Add);
-    Check(paths.Contains(nested),"Censimento archivi comunica il percorso anche nella fase iniziale");
+    paths.Clear();var scan=ArchivedJobsReader.ScanRoots([root],CancellationToken.None,paths.Add);
+    // Il censimento dei contenitori si ferma al primo livello; l'inventario interno resta approfondito.
+    Check(paths.Contains(root) && paths.Contains(Path.Combine(root,"2026")),"Censimento archivi comunica radice e sottocartella immediata");
+    Check(!paths.Contains(job) && !paths.Contains(nested) && scan.Records.Count==0,"Censimento archivi non visita i livelli esclusi e non include i loro ZIP");
     paths.Clear();ArchivedJobsReader.Inspect(zip,CancellationToken.None,true,paths.Add);
     Check(paths.Contains(zip+" > Disegni/Strutture"),"Verifica metadati ZIP comunica la directory interna");
     Check(File.ReadAllText(file)=="fixture" && Directory.GetFiles(root,"*",SearchOption.AllDirectories).Length==2,"Sorgenti invariate e nessun file estratto");
