@@ -186,7 +186,7 @@
                 <MenuItem Header="Verifica comunicazione" Command="{Binding CheckCommunicationCommand}"/>
                 <MenuItem Header="Modifiche ricevute" Command="{Binding ChangesCommand}"/>
                 <Separator/>
-                <MenuItem Header="Gestione servizio (Antonio e Giuseppe)" Command="{Binding ManageServerCommand}"/>
+                <MenuItem Header="Gestione servizio (responsabili autorizzati)" Command="{Binding ManageServerCommand}"/>
                 <MenuItem Header="Verifica aggiornamenti" Command="{Binding UpdateCommand}"/>
             </MenuItem>
             <MenuItem Header="_Aiuto"><MenuItem Header="Informazioni" Command="{Binding AboutCommand}"/></MenuItem>

@@ -23,6 +23,7 @@ Soluzione `TA-Gestione Cartelle Commesse.slnx`, .NET 10, solo Windows (`net10.0-
 - Candidati, dati parziali e posizioni non accertate vanno sempre indicati come tali, mai come risultati certi.
 - Mai nel repository: documenti reali, cataloghi reali, coordinate riservate, chiavi del tunnel, credenziali. I casi di prova sono sintetici o anonimizzati.
 - I permessi si decidono sul server (token Windows), mai da campi della richiesta.
+- Nessun dominio, gruppo, utente o nome di persona nel codice e nei messaggi: provengono da `server-settings.json` (Gestore server > Configura). Nei testi usare «responsabili autorizzati».
 
 ## Stile del codice
 

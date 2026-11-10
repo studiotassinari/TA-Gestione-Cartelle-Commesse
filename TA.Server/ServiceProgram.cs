@@ -16,13 +16,15 @@ var settingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFol
 builder.Configuration.AddJsonFile(settingsFile, optional: true, reloadOnChange: false).AddEnvironmentVariables("TA_");
 var settings = builder.Configuration.GetSection("Server").Get<ServerSettings>() ?? new();
 settings.ArchivedJobsRoot = ArchiveScope.Root(settings.ArchivedJobsRoot);
-if (string.IsNullOrWhiteSpace(settings.AllowedGroup)
+if (settings.AuthorizedGroups().Length == 0
     || settings.Port is < 1024 or > 65535 or 8080 or 8443
     || new[] { settings.JobsRoot, settings.BidsRoot, settings.ArchivedJobsRoot }.Any(p => !p.StartsWith(@"\\"))
     || string.IsNullOrWhiteSpace(settings.ArchiveFolder))
-    throw new InvalidOperationException("Configurare gruppo, porta TCP dedicata e percorsi UNC in " + settingsFile);
+    throw new InvalidOperationException("Configurare gruppi autorizzati, porta TCP dedicata e percorsi UNC dal Gestore server (Configura) oppure in " + settingsFile);
+// Gli utenti di gestione straordinaria sono confrontati per SID con il token autenticato.
+TA.Transport.ManagementAccess.Configure(settings.ManagementUsers);
 using (var serviceIdentity = System.Security.Principal.WindowsIdentity.GetCurrent())
-    StartupLog.Write($"Configurazione valida; account servizio={serviceIdentity.Name}; gruppo autorizzato={settings.AllowedGroup}; versione={System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}.");
+    StartupLog.Write($"Configurazione valida; account servizio={serviceIdentity.Name}; gruppi autorizzati={string.Join(", ", settings.AuthorizedGroups())}; utenti di gestione straordinaria={settings.ManagementUsers?.Length ?? 0}; versione={System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}.");
 if (string.IsNullOrWhiteSpace(settings.DatabaseFolder))
     settings.DatabaseFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Tassinari", "CommesseServer", "Data");
 settings.MaxConcurrentScans = Math.Clamp(settings.MaxConcurrentScans, 1, 4);

@@ -5,6 +5,7 @@ using System.Text.Json;
 using TA.Updater;
 static void Check(bool condition, string text) { if (!condition) throw new Exception(text); Console.WriteLine("PASS: " + text); }
 if(args.Contains("--exit-fixture")) { Thread.Sleep(100); return; }
+ConfigurationChecks.Run(Check);
 using(var current=Process.GetCurrentProcess())
 {
     try{ProcessExitWait.Wait(current,TimeSpan.Zero);throw new Exception("Processo ancora attivo accettato");}

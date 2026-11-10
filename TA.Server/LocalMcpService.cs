@@ -9,14 +9,15 @@ namespace TA.Server;
 // Endpoint locale: ACL Windows, consultazioni e sola scrittura tipizzata del catalogo, se abilitata.
 public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, DeepInspectionService? deepInspection = null) : BackgroundService
 {
-    public static PipeSecurity Security(SecurityIdentifier owner, SecurityIdentifier group, SecurityIdentifier? admins)
+    public static PipeSecurity Security(SecurityIdentifier owner, SecurityIdentifier group, SecurityIdentifier? admins) => Security(owner, new[] { group }, admins);
+    public static PipeSecurity Security(SecurityIdentifier owner, SecurityIdentifier[] groups, SecurityIdentifier? admins)
     {
         var security = new PipeSecurity();
         security.SetAccessRuleProtection(true, false);
         security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.NetworkSid, null), PipeAccessRights.FullControl, AccessControlType.Deny));
         security.AddAccessRule(new PipeAccessRule(owner, PipeAccessRights.FullControl, AccessControlType.Allow));
         security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null), PipeAccessRights.FullControl, AccessControlType.Allow));
-        security.AddAccessRule(new PipeAccessRule(group, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+        foreach (var group in groups) security.AddAccessRule(new PipeAccessRule(group, PipeAccessRights.ReadWrite, AccessControlType.Allow));
         if (admins != null) security.AddAccessRule(new PipeAccessRule(admins, PipeAccessRights.ReadWrite, AccessControlType.Allow));
         return security;
     }
@@ -28,13 +29,16 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
             try
             {
                 using var serviceIdentity = WindowsIdentity.GetCurrent();
-                var group = (SecurityIdentifier)new NTAccount(settings.AllowedGroup).Translate(typeof(SecurityIdentifier));
+                var resolved = AccessGroups.Resolve(settings.AuthorizedGroups());
+                foreach (var missing in resolved.Unresolved) logger.LogWarning("MCP locale: gruppo configurato non risolto: {Group}", missing);
+                var group = resolved.Sids;
+                if (group.Length == 0) throw new InvalidOperationException("Nessun gruppo autorizzato risolvibile.");
                 var domainSid = serviceIdentity.User?.AccountDomainSid;
                 var admins = domainSid == null ? null : new SecurityIdentifier(domainSid.Value + "-512");
                 using var pipe = NamedPipeServerStreamAcl.Create(LocalPipeConnection.PipeName, PipeDirection.InOut, 1,
                     PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.FirstPipeInstance, 4096, 4096,
                     Security(serviceIdentity.User!, group, admins));
-                logger.LogInformation("MCP locale pronto: originali in sola lettura, scrittura catalogo={CatalogWrites}, accesso rete negato, gruppo {Group}", settings.EnableMcpGeologyWrites, settings.AllowedGroup);
+                logger.LogInformation("MCP locale pronto: originali in sola lettura, scrittura catalogo={CatalogWrites}, accesso rete negato, gruppi {Group}", settings.EnableMcpGeologyWrites, string.Join(", ", settings.AuthorizedGroups()));
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     await pipe.WaitForConnectionAsync(stoppingToken);
@@ -51,7 +55,7 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
             }
         }
     }
-    private async Task Handle(NamedPipeServerStream pipe, SecurityIdentifier group, SecurityIdentifier? admins, CancellationToken stoppingToken)
+    private async Task Handle(NamedPipeServerStream pipe, SecurityIdentifier[] groups, SecurityIdentifier? admins, CancellationToken stoppingToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
@@ -67,7 +71,7 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
                 using var identity = WindowsIdentity.GetCurrent(true) ?? throw new UnauthorizedAccessException("Identità Windows assente.");
                 user = identity.Name;
                 var principal = new WindowsPrincipal(identity);
-                allowed = principal.IsInRole(group) || (admins != null && principal.IsInRole(admins));
+                allowed = groups.Any(sid => principal.IsInRole(sid)) || (admins != null && principal.IsInRole(admins));
             });
             if (!allowed) throw new UnauthorizedAccessException("Account non autorizzato al canale MCP locale.");
             LocalCatalogPolicy.Validate(request);

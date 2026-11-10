@@ -60,24 +60,27 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
                 using var serviceIdentity = WindowsIdentity.GetCurrent();
                 var domainSid = serviceIdentity.User?.AccountDomainSid;
                 bool domainAdmin = domainSid != null && new WindowsPrincipal(identity).IsInRole(new SecurityIdentifier(domainSid.Value + "-512"));
-                // Risolve esplicitamente il gruppo per distinguere configurazione errata da utente escluso.
-                SecurityIdentifier groupSid;
-                try { groupSid = (SecurityIdentifier)new NTAccount(settings.AllowedGroup).Translate(typeof(SecurityIdentifier)); }
-                catch (IdentityNotMappedException)
+                // Risolve esplicitamente i gruppi per distinguere configurazione errata da utente escluso.
+                var principal = new WindowsPrincipal(identity);
+                var groups = AccessGroups.Resolve(settings.AuthorizedGroups());
+                foreach (var missing in groups.Unresolved) logger.LogWarning("Gruppo configurato non risolto: {Group}; utente {User}", missing, identity.Name);
+                if (groups.Sids.Length == 0)
                 {
-                    logger.LogWarning("Gruppo configurato non risolto: {Group}; utente {User}", settings.AllowedGroup, identity.Name);
                     received = await WireProtocol.ReadAsync<Request>(authenticated, ct);
-                    await WireProtocol.WriteAsync(authenticated, Reply.Fail("Gruppo autorizzato non risolvibile sul server. Contattare l'amministratore."), ct);
+                    await WireProtocol.WriteAsync(authenticated, Reply.Fail("Nessun gruppo autorizzato risolvibile sul server. Contattare l'amministratore."), ct);
                     return;
                 }
                 bool collaborator = false;
-                try { collaborator = new WindowsPrincipal(identity).IsInRole((SecurityIdentifier)new NTAccount("INGTASSINARI", settings.CollaboratorsGroup).Translate(typeof(SecurityIdentifier))); }
-                catch (IdentityNotMappedException) { /* Il gruppo storico rimane valido per i client precedenti. */ }
-                if (!new WindowsPrincipal(identity).IsInRole(groupSid) && !domainAdmin && !collaborator)
+                if (!string.IsNullOrWhiteSpace(settings.CollaboratorsGroup))
+                {
+                    try { collaborator = principal.IsInRole((SecurityIdentifier)new NTAccount(settings.CollaboratorsGroup.Trim()).Translate(typeof(SecurityIdentifier))); }
+                    catch (IdentityNotMappedException) { /* Gruppo collaboratori facoltativo: valgono i gruppi autorizzati. */ }
+                }
+                if (!groups.Sids.Any(sid => principal.IsInRole(sid)) && !domainAdmin && !collaborator)
                 {
                     // Il canale e gia autenticato e cifrato: risponde senza eseguire il comando.
                     received = await WireProtocol.ReadAsync<Request>(authenticated, ct);
-                    Trace("Autorizzazione", "Negata", "Account escluso dal gruppo autorizzato"); await WireProtocol.WriteAsync(authenticated, Reply.Fail("Il tuo account Windows non risulta nel gruppo autorizzato dal server. Verificare il gruppo e rinnovare l'accesso Windows."), ct);
+                    Trace("Autorizzazione", "Negata", "Account escluso dal gruppo autorizzato"); await WireProtocol.WriteAsync(authenticated, Reply.Fail("Il tuo account Windows non risulta in un gruppo autorizzato dal server. Verificare il gruppo e rinnovare l'accesso Windows."), ct);
                     return;
                 }
                 var request = received = await WireProtocol.ReadAsync<Request>(authenticated, ct); Trace(request.Operation, "Ricevuta", "Categoria=" + request.Category + "; client=" + request.ClientVersion + (request.Operation == "AdminAudit" ? "; azione dichiarata=" + request.RelativePath : ""));

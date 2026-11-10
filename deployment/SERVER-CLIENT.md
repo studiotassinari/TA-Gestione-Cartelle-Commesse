@@ -1,3 +1,18 @@
+## Configurazione dell'installazione: dominio, gruppi e utenti di gestione
+
+Dominio, gruppi autorizzati e utenti ammessi alla gestione straordinaria non sono più scritti nel programma: stanno soltanto nel file `%ProgramData%\Tassinari\CommesseServer\server-settings.json` del server e si impostano dal **Gestore server > Configura**. La finestra si apre da sola al primo avvio del Gestore, oppure quando mancano i gruppi o gli utenti di gestione.
+
+| Campo | Proprietà nel file | Uso |
+|---|---|---|
+| Dominio Active Directory | `Domain` | Lettura dei collaboratori e verifica che un collaboratore appartenga al dominio. Vuoto = dominio del server |
+| Gruppi autorizzati | `AllowedGroups` | Chi può collegarsi con il client e con il canale MCP locale. Almeno uno |
+| Gruppo collaboratori | `CollaboratorsGroup` | Facoltativo: elenco di chi riceve attività e inserisce ore |
+| Utenti di gestione straordinaria | `ManagementUsers` | Gestione del servizio dal client, registri, archiviazione ZIP, amministrazione del gestionale |
+
+La finestra verifica che ogni nome esista in Active Directory, conserva tutte le altre impostazioni già presenti nel file e poi applica permessi della cartella e regola firewall con `Configure-Server.ps1 -KeepSettings`. Le modifiche valgono dal successivo avvio del servizio. Il client non contiene alcun nome: chiede al server se l'account collegato è tra gli utenti di gestione, e il server ricontrolla ogni operazione sul SID autenticato.
+
+**Aggiornamento da una versione precedente.** I nomi che prima erano nel programma non vengono più applicati. Subito dopo l'aggiornamento del server aprire **Configura**, indicare gruppo collaboratori e utenti di gestione e riavviare il servizio; fino ad allora chi accedeva solo tramite il gruppo collaboratori non entra e la gestione straordinaria è disattivata per tutti. Per evitare l'intervallo, aggiungere prima dell'aggiornamento `CollaboratorsGroup` e `ManagementUsers` alla sezione `Server` del file: la versione precedente li ignora o li usa già.
+
 ## Versione 2.9.0: apertura su Z e archivi sotto lavori
 
 Il doppio clic e i comandi Apri del client traducono la condivisione aziendale nel percorso Z del PC. La conversione supporta sia il nome DNS completo sia quello breve, senza cambiare condivisioni diverse. Il server mantiene i percorsi UNC originali. Gli archivi vengono selezionati in Esplora file senza estrazione.
@@ -58,7 +73,7 @@ L'SPN deve essere univoco. Se era stato registrato sull'account macchina per una
 5. Dalla cartella del server, in PowerShell amministrativa:
 
 ```powershell
-.\Configure-Server.ps1 -AllowedGroup 'INGTASSINARI\GG_TA_Commesse_Users' -Port 5443 -OpenDomainFirewall
+.\Configure-Server.ps1 -AllowedGroups 'DOMINIO\Gruppo utenti' -ManagementUsers 'responsabile@dominio.example' -JobsRoot '\\server\dati\lavori' -BidsRoot '\\server\dati\gare' -ArchivedJobsRoot '\\server\dati\archivio' -ArchiveFolder '\\server\dati\gestione' -Port 5443 -OpenDomainFirewall
 ```
 
 Lo script salva le impostazioni in `%ProgramData%\Tassinari\CommesseServer\server-settings.json`. Il parametro firewall apre soltanto TCP 5443 per l'eseguibile del server, profilo Dominio e sottorete locale. Per PC su altre sottoreti, far adattare l'ambito dal responsabile della rete. Lo script non crea utenti, non registra SPN e non modifica i permessi sulle condivisioni.

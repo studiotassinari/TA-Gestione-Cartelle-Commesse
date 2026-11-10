@@ -92,6 +92,8 @@ public sealed partial class MainViewModel : Observable
             }
         }
         archiveWindow?.Close(); archiveSessions.Clear();
+        // I permessi appartengono alla connessione precedente: si ripartono da zero.
+        ApplyManagementAccess(false);
         CloseProjectWindows(); businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
         Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); NonconformityReportCommand.Refresh();
@@ -111,12 +113,28 @@ public sealed partial class MainViewModel : Observable
             }
             if (Commesse.LastConnectionError is not System.Security.Authentication.AuthenticationException and not ServerRejectedException && Gare.LastConnectionError is not System.Security.Authentication.AuthenticationException and not ServerRejectedException)
             {
+                await RefreshManagementAccessAsync(connection);
                 StartProgressPolling(connection);
                 pushCancellation = new CancellationTokenSource();
                 _ = WatchLoopAsync(connection, pushCancellation.Token);
             }
         }
         finally { connecting = false; ConnectCommand.Refresh(); }
+    }
+    // Chiede al server se l'account autenticato è tra gli utenti di gestione straordinaria configurati.
+    private async Task RefreshManagementAccessAsync(ServerConnection current)
+    {
+        bool allowed = false;
+        try { allowed = (await current.SendAsync<TA_Gestione_Cartelle_Commesse.Contracts.ServerPermissions>(new("Permissions"))).DomainAdministrator; }
+        catch (Exception ex) { ClientLog.Write("Permessi di gestione non disponibili", ex); }
+        if (ReferenceEquals(current, connection)) ApplyManagementAccess(allowed);
+    }
+    private void ApplyManagementAccess(bool allowed)
+    {
+        DomainAdministration.Set(allowed); Notify(nameof(CanManageServer)); ManageServerCommand.Refresh(); ArchiveFolderCommand.Refresh();
+        // Le righe già visibili rivalutano il comando del menu contestuale.
+        foreach (var category in new[] { Commesse, Gare, Archivio })
+            foreach (var row in category.Projects) row.ArchiveFolderCommand.Refresh();
     }
     // Dopo un errore non ripete credenziali errate: evita tentativi automatici fino al blocco dell'account AD.
     private async Task PollAsync()
@@ -192,7 +210,7 @@ public sealed partial class MainViewModel : Observable
     private void ShowServerManagement()
     {
         if (!CanManageServer) return;
-        if (!UseCurrentAccount) { ReportStatus = "La gestione del servizio richiede l'account Windows corrente di Antonio o Giuseppe."; return; }
+        if (!UseCurrentAccount) { ReportStatus = "La gestione del servizio richiede l'accesso con il proprio account Windows, non con un account alternativo."; return; }
         if (Uri.CheckHostName(host.Trim()) != UriHostNameType.Dns || !int.TryParse(port, out var number)) { ReportStatus = "Configurare prima il server."; return; }
         var panel = new Views.ServerManagementView(host.Trim(), new ServerConnection(host.Trim(), number));
         var window = new System.Windows.Window { Title = "Gestione server — " + host.Trim(), Width = 1200, Height = 800, Content = panel, Owner = System.Windows.Application.Current.MainWindow };
