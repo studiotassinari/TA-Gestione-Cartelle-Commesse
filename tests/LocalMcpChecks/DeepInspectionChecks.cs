@@ -19,6 +19,10 @@ internal static class DeepInspectionChecks
         using(var zip=ZipFile.Open(Path.Combine(folder,"documenti.zip"),ZipArchiveMode.Create)){using var w=new StreamWriter(zip.CreateEntry("Contratto.pdf").Open());w.Write("fixture");}
         var record=new FolderRecord("C26001","26","001","Cliente","Progetto",folder,"Valido");
         var before=File.GetLastWriteTimeUtc(Path.Combine(admin,"Preventivo.txt"));
+        var limited=FileInventoryReader.Read(folder,new HashSet<string>(),default,maximum:1);
+        Check(!limited.Complete && limited.Entries.Count==1 && limited.Issues.Any(i=>i.Contains("Limite di voci")),"Limite su cartelle restituisce inventario parziale senza interrompere le altre scansioni");
+        var limitedZip=FileInventoryReader.Read(Path.Combine(folder,"documenti.zip"),new HashSet<string>(),default,maximum:1);
+        Check(!limitedZip.Complete && limitedZip.Entries.Count==1,"Limite su ZIP dichiarato parziale senza superare il massimo");
         var result=DeepInspectionService.Inspect(settings,"C",record,"preventivo;contratto",default);
         Check(result.GetProperty("Documents").GetArrayLength()==2,"Approfondimento mirato include sottocartelle e ZIP, esclude Sismicad");
         Check(!result.ToString().Contains("TESTO RISERVATO"),"Nessun contenuto letto o inviato automaticamente");

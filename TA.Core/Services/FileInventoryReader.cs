@@ -92,6 +92,9 @@ public static class FileInventoryReader
             }
         }
         catch (OperationCanceledException) { throw; }
+        // Il limite protegge memoria e tempi: restituisce dati parziali, senza interrompere
+        // le altre unità elaborate dal coordinatore. Complete=false impedisce false rimozioni.
+        catch (InvalidDataException ex) { issues.Add(root + ": " + ex.Message); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { issues.Add(root + ": " + ex.Message); }
         return new(entries.OrderBy(e => e.Container, StringComparer.Ordinal).ThenBy(e => e.RelativePath, StringComparer.Ordinal).ThenBy(e => e.Kind).ToList(), issues.Distinct().ToList(), issues.Count == 0);
     }

@@ -8,6 +8,8 @@ La radice archivio aziendale viene limitata a `archivio\_lavori`: ZIP/7z diretta
 
 Il nuovo strumento MCP `approfondisci_commessa` richiede una richiesta esplicita e l'ID di una commessa censita. Azioni `avvia`, `stato`, `annulla`; criteri separati da punto e virgola (es. preventivo;contratto). Un solo lavoro alla volta, tre minuti e 100.000 voci, risultati paginati fino a 1.000 candidati. Il server salva un riepilogo per commessa nel database locale, senza sostituire l'inventario ordinario. I percorsi restituiti sono pronti per `leggi_documento`: riconoscimento del committente e conferma dei documenti richiedono una lettura esplicita, non vengono dedotti dal solo nome. Il lavoro richiesto può completarsi dopo la risposta iniziale; nessun polling o riavvio automatico. Dopo riavvio del servizio gli ID dei lavori in memoria non sono più validi; il riepilogo rimane nel database. Nessuna API del modello viene chiamata autonomamente.
 
+Il raggiungimento del limite di voci restituisce un inventario parziale con segnalazione, senza interrompere le altre commesse o interpretare le voci non lette come file eliminati.
+
 ## Correzione 2.29.1: caricamento catalogo MUR
 
 La lettura paginata usa una fotografia in memoria del catalogo (fino a 10 minuti, massimo 16 ricerche) per evitare errori quando il censimento pubblica nuovi risultati. Data e avanzamento della scansione non invalidano le righe. Una nuova ricerca legge i dati aggiornati. Catalogo e risultati rimangono nel database SQLite del server, non in ChatGPT.
