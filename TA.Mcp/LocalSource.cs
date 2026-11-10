@@ -3,7 +3,7 @@ using TA_Gestione_Cartelle_Commesse.Contracts;
 
 namespace TA.Mcp;
 
-public sealed class LocalSource : IReadOnlySource, IGeologyAnalysisSource, IIpripiSource
+public sealed class LocalSource : IReadOnlySource, IGeologyAnalysisSource, IIpripiSource, IFolderArchiveSource
 {
     private readonly LocalPipeConnection connection = new();
     public Task<CategoryState> State(string category, CancellationToken token) => Send<CategoryState>(new Request("State", category), token);
@@ -25,5 +25,6 @@ public sealed class LocalSource : IReadOnlySource, IGeologyAnalysisSource, IIpri
     public Task<IpripiRules> IpripiRules(CancellationToken token) => Send<IpripiRules>(new("IpripiRules"), token);
     public Task<DocumentPage> ReadIpripi(IpripiReadQuery query, CancellationToken token) => Send<DocumentPage>(new("ReadIpripi", IpripiRead: query), token);
     public Task<IpripiAnalysisRecord> SaveIpripi(IpripiAnalysisDraft draft, CancellationToken token) => Send<IpripiAnalysisRecord>(new("SaveIpripi", IpripiAnalysis: draft), token);
+    public Task<FolderArchiveStatus> Archive(string operation, string category, FolderArchiveQuery query, CancellationToken token) => Send<FolderArchiveStatus>(new Request(operation, category, FolderArchive: query), token);
     private Task<T> Send<T>(Request request, CancellationToken token) { var tagged = McpInvocation.Tag(request); return McpErrors.Run(() => connection.SendAsync<T>(tagged, token)); }
 }

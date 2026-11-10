@@ -12,7 +12,7 @@ public static class AnalysisStatusReader
             if(!CatalogStorage.Exists(settings,path))return Missing("Geologia",indexing,"Catalogo non ancora disponibile");
             var catalog=CatalogStorage.Read<GeologyCatalog>(settings,path);
             var saved=new GeologyAnalysisStore(settings).Read();var byId=saved.ToDictionary(x=>x.Analysis.ReportId);
-            var rows=catalog.Reports.Where(r=>r.OriginalAvailable).ToArray();
+            var rows=catalog.Reports.Where(r=>r.OriginalAvailable&&(r.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,r.PhysicalPath))).ToArray();
             bool Current(GeologicalReport r)=>r.SourceFingerprint.Length==64&&byId.TryGetValue(r.Id,out var a)&&a.Analysis.SourceFingerprint==r.SourceFingerprint;
             var pending=rows.Where(r=>!Current(r)).OrderByDescending(r=>AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ToArray();
             return new("Geologia",indexing,catalog.UpdatedUtc,rows.Length,saved.Count,rows.Count(Current),pending.Length,
@@ -30,10 +30,14 @@ public static class AnalysisStatusReader
             var catalog=CatalogStorage.Read<IpripiCandidateCatalog>(settings,path);var index=Path.Combine(root,"indice.json");
             var saved=CatalogStorage.Exists(settings,index)?CatalogStorage.Read<IpripiAnalysisIndex>(settings,index).Records:[];
             var byId=saved.ToDictionary(r=>r.Source.Id);
-            var rows=catalog.Documents.Where(r=>r.OriginalAvailable&&r.Category is "C" or "A").Select(r=>r with{Saved=byId.GetValueOrDefault(r.Id)}).ToArray();
+            var rows=catalog.Documents.Where(r=>r.OriginalAvailable&&r.Category is "C" or "A")
+                .Where(r=>r.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,r.PhysicalPath))
+                .Where(r=>IpripiService.IsCandidate(r.FileName)||byId.ContainsKey(r.Id))
+                .Select(r=>r with{Saved=byId.GetValueOrDefault(r.Id)}).ToArray();
             var pending=rows.Where(r=>!r.AnalysisCurrent).OrderByDescending(r=>AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ToArray();
             return new("MUR A.1/D.1 — IPRiPI",indexing,catalog.CheckedUtc,rows.Length,saved.Count,rows.Count(r=>r.AnalysisCurrent),pending.Length,
-                pending.Count(r=>r.Saved!=null),saved.Select(r=>(DateTime?)r.SavedUtc).Max(),pending.FirstOrDefault()?.ProjectCode,catalog.Warnings.ToArray());
+                pending.Count(r=>r.Saved!=null),saved.Select(r=>(DateTime?)r.SavedUtc).Max(),pending.FirstOrDefault()?.ProjectCode,catalog.Warnings.ToArray(),
+                rows.Count(r=>r.CatalogEligible),rows.Count(r=>r.AnalysisCurrent&&!r.CatalogEligible));
         }
         catch(Exception ex) when(ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
         {return Missing("MUR A.1/D.1 — IPRiPI",indexing,ex.Message);}

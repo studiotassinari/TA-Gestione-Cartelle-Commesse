@@ -63,7 +63,7 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
             {
                 var cache = Path.Combine(service.Root, "unita", Path.GetRelativePath(store.Root, unit) + ".json");
                 var old = CatalogStorage.Exists(settings,cache) ? CatalogStorage.Read<IpripiUnitIndex>(settings,cache) : null;
-                if (old?.Generation != manifest.Generation || old.SchemaVersion < 2)
+                if (old?.Generation != manifest.Generation || old.SchemaVersion < 3)
                 {
                     var rows = new List<IpripiDocument>();
                     foreach (var entry in store.Entries(manifest))
@@ -73,7 +73,7 @@ public sealed class IpripiIndexer(ServerSettings settings, IpripiService service
                         var location = entry.Location ?? FileLocator.Locate(manifest.Unit, entry);
                         if (IpripiService.Supported(location.Extension) && (IpripiService.IsCandidate(location.Name) || savedIds.Contains(location.Id))) rows.Add(IpripiService.Describe(manifest, entry));
                     }
-                    old = new(manifest.Generation, rows, 2); CatalogStorage.Write(settings,cache, old);
+                    old = new(manifest.Generation, rows, 3); CatalogStorage.Write(settings,cache, old);
                 }
                 groups[manifest.Unit.Id] = old.Documents; seen.Add(manifest.Unit.Id); processed++;
                 if (!manifest.Complete && warnings.Count < 20) warnings.Add("Inventario parziale: " + manifest.Unit.Code);

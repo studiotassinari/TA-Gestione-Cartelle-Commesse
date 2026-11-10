@@ -47,6 +47,7 @@ builder.Services.AddSingleton<FileSearchService>();
 builder.Services.AddSingleton<GeologyService>();
 builder.Services.AddSingleton<IpripiService>();
 builder.Services.AddSingleton<DeepInspectionService>();
+builder.Services.AddSingleton<TA.Server.Archiving.FolderArchiveService>();
 builder.Services.AddSingleton<GeologyIndexer>();
 builder.Services.AddSingleton<IpripiIndexer>();
 builder.Services.AddSingleton<TA.Server.Documents.DocumentService>();

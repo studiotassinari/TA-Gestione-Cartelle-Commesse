@@ -2,7 +2,17 @@
 
 Funzionalità introdotta nella versione **2.19.0**. Il menu **Analisi > IPRiPI — analisi MUR A.1/D.1** apre una finestra indipendente, non modale, a istanza unica. Il servizio usa il plugin ChatGPT già previsto dal progetto: non richiede chiavi API OpenAI e non chiama modelli dal server.
 
-## Catalogo territoriale MUR
+## Catalogo e coda di analisi — versione 2.31.0
+
+Il catalogo mostra esclusivamente MUR A.1/D.1 con analisi attuale ed esito **IPRiPI individuati**, interventi dichiarati o dedotti con codice, livello e citazioni, senza requisiti mancanti. Altri moduli, opere rilevanti, esiti negativi, classificazioni incerte e documenti modificati restano nello storico ma non nel catalogo. La sola sigla MUR nel nome non basta per la candidatura iniziale.
+
+La finestra non offre più i filtri per includere altri PDF. La ricerca MCP parte dal catalogo filtrato; per analizzare documenti nuovi chiedere esplicitamente `cerca_mur_ipripi(recognizedOnly=false)`. `allPdfs=true` consente di individuare moduli rinominati nella commessa richiesta: sono candidati, non risultati del catalogo.
+
+Il censimento automatico aggiorna nomi e metadati, non invia documenti al modello. Un tunnel attivo non avvia ChatGPT: le analisi procedono durante una richiesta esplicita in chat, con salvataggio di un documento alla volta. `stato_analisi` distingue candidati, analisi salvate, attuali, pendenti e data dell'ultimo salvataggio; per MUR aggiunge `CatalogDocuments` ed `ExcludedOrUncertainAnalyses`. Nessuna API a pagamento o analisi cloud automatica è stata introdotta.
+
+Con SQLite configurato, i nomi logici `ipripi/*.json` sotto indicati sono documenti del database locale gestiti da CatalogStorage, non file sulla condivisione.
+
+## Catalogo territoriale MUR — funzionamento precedente
 
 Il servizio genera `ipripi/candidati.json` a ogni avvio (quindi dopo ogni aggiornamento) e ogni giorno alle **00:00, ora italiana**, senza attività pianificate di Windows. Viene eseguito dopo la scansione completa delle sorgenti, e usa i nuovi JSON dell'inventario generale, senza aprire i contenuti. Gli indici delle unità sono in `ipripi/unita/<categoria>/<anno>/<commessa>/`; il catalogo è pubblicato progressivamente ed evita la rilettura dell'intero inventario a ogni apertura della finestra. Le fonti parziali sono segnalate. Se l'inventario non è ancora disponibile, riprova dopo cinque minuti.
 

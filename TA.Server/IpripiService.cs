@@ -35,7 +35,8 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
         }
     }
     private string Index => Path.Combine(Root, "indice.json");
-    public static bool IsCandidate(string name) => Regex.IsMatch(name.Replace('_', ' '), @"\b(?:MUR|IPRIPI)\b|\bA[ ._-]*1[ ._/-]*D[ ._-]*1\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    // MUR comprende anche altri procedimenti: la sola sigla non identifica A.1/D.1.
+    public static bool IsCandidate(string name) => Regex.IsMatch(name.Replace('_', ' '), @"\bIPRIPI\b|\bA[ ._-]*1[ ._/-]*D[ ._-]*1\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
     private (List<IpripiDocument> Rows, List<string> Warnings) Sources(string code, bool allPdfs, CancellationToken token, HashSet<string>? savedIds = null, string? documentId = null)
@@ -123,10 +124,15 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
         var rows = sources.Where(r=>r.Category!="A"||ArchiveScope.Contains(settings.ArchivedJobsRoot,r.PhysicalPath)).Where(r => query.AllPdfs || IsCandidate(r.FileName) || saved.ContainsKey(r.Id))
             .Select(r => r with { Saved = saved.GetValueOrDefault(r.Id) })
             .Concat(saved.Values.Where(s => !ids.Contains(s.Source.Id)).Select(s => s.Source with { Saved = s, OriginalAvailable = false }))
-            .Where(r => !query.RecognizedOnly || r.FormType == "MUR A.1/D.1")
+            .Where(r => !query.RecognizedOnly || r.CatalogEligible)
             .Where(r => string.Join(' ', r.ProjectCode, r.Year, r.FileName, r.Codes, r.Status, r.Designers, r.Typologies, r.Address, r.Municipality, r.Location).Contains(query.Search, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(r => AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ThenBy(r=>r.Id,StringComparer.Ordinal).ToList();
         var version = Hash(JsonSerializer.Serialize(rows));
+        var lastAnalysis = saved.Values.Select(r => (DateTime?)r.SavedUtc).Max();
+        warnings.Insert(0, "Analisi dei contenuti su richiesta ChatGPT, non in esecuzione automatica. Ultimo salvataggio: " +
+            (lastAnalysis?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "nessuno"));
+        if (query.RecognizedOnly)
+            warnings.Insert(0, "Solo MUR A.1/D.1 con IPRiPI identificati e analisi attuale. Candidati, esiti non pertinenti e analisi da verificare esclusi.");
         if (query.Version != null && query.Version != version) throw new IOException("Catalogo cambiato: ripartire dalla prima pagina.");
         var current=new ReadSnapshot(Filter(query),version,rows,warnings,DateTime.UtcNow);
         lock(snapshotGate)

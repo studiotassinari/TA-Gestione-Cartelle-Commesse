@@ -40,8 +40,13 @@ internal static class Program
         Directory.CreateDirectory(root);
         // Lascia in temp solo fixture sintetiche in caso di errore, per la diagnosi.
         var row = Run(root).GetAwaiter().GetResult();
-        using var model = new IpripiViewModel((q,t) => Task.FromResult(new IpripiPage("v",1,0,null,[row],[])));
+        using var model = new IpripiViewModel((q,t) =>
+        {
+            Check(q.RecognizedOnly && !q.AllPdfs, "Client richiede sempre il catalogo IPRiPI filtrato");
+            return Task.FromResult(new IpripiPage("v",2,0,null,[row,row with { Id="estraneo", Saved=null }],[]));
+        });
         model.LoadAsync().GetAwaiter().GetResult(); model.Selected = row;
+        Check(model.Rows.Count==1, "Client esclude candidati anche da una risposta di un server precedente");
         Check(model.ChatRequest().Contains("analisiIpripi=true") && model.Details.Contains("B.4.4.a"), "Richiesta ChatGPT e dettagli con citazioni");
         var window = new IpripiWindow(model); window.Width = 1280; window.Height = 820;
         window.Measure(new Size(1280,820)); window.Arrange(new Rect(0,0,1280,820)); window.UpdateLayout();
@@ -60,6 +65,8 @@ internal static class Program
         Check(rules.Rules.Count == 83 && rules.Rules.Select(r => r.Code.Split('.').Take(3).Aggregate((a,b) => a+"."+b)).Distinct().Count() == 57, "Catalogo normativo: 57 voci, 83 varianti");
         Check(rules.Rules.Single(r => r.Code == "B.4.4.a").Levels.SequenceEqual(["L0"]), "Livello B.4.4.a verificato dalla fonte");
         Check(IpripiService.IsCandidate("MUR_A1_D1.pdf") && IpripiService.IsCandidate("MUR A.1 D.1 firmato.pdf") && !IpripiService.IsCandidate("muro.pdf"), "Ricerca nomi MUR senza falso positivo muro");
+        Check(!IpripiService.IsCandidate("MUR_D2_opere_rilevanti.pdf") && !IpripiService.IsCandidate("MUR.pdf") &&
+            IpripiService.IsCandidate("IPRIPI firmato.docx"), "La sigla MUR generica non ammette altri moduli tra i candidati");
         var settings = new ServerSettings { JobsRoot = Path.Combine(root,"lavori"), BidsRoot = Path.Combine(root,"gare"), ArchivedJobsRoot = Path.Combine(root,"archivio"), ArchiveFolder = Path.Combine(root,"json") };
         var folder = Directory.CreateDirectory(Path.Combine(settings.JobsRoot,"2026","C26001 - Prova")).FullName;
         const string text = "MUR A.1/D.1. Intervento B.4.4.a: demolizione di divisori interni non strutturali. Progettista Mario Rossi. Via Roma 10, Bologna.";
@@ -106,6 +113,20 @@ internal static class Program
         await Denied<ArgumentException>(() => service.SaveAsync(draft with {Interventions=[item with {Basis="Dedotto",MissingData=["Dimensioni"]}]},"test",default));
         await Denied<ArgumentException>(() => service.SaveAsync(draft with {FormEvidence=[new(0,"Citazione inventata")]},"test",default));
         var saved = await service.SaveAsync(draft,"utente-test",default);
+        var confirmed = row with { Saved = saved };
+        Check(confirmed.CatalogEligible && !(row with { Saved = null }).CatalogEligible, "Catalogo distinto dai candidati senza analisi");
+        foreach (var outcome in new[] { "Non pertinente", "Nessun IPRiPI dichiarato", "Da verificare", "Non leggibile" })
+            Check(!(confirmed with { Saved = saved with { Analysis = draft with { Outcome = outcome } } }).CatalogEligible,
+                "Escluso dal catalogo: " + outcome);
+        Check(!(confirmed with { Saved = saved with { Analysis = draft with { FormType = "Altro" } } }).CatalogEligible,
+            "Altri moduli esclusi anche con esito positivo incoerente");
+        Check(!(confirmed with { Saved = saved with { Analysis = draft with { Interventions = [item with { Basis = "Da verificare" }] } } }).CatalogEligible,
+            "Classificazione incerta esclusa dal catalogo");
+        Check(!(confirmed with { OriginalAvailable = false }).CatalogEligible &&
+            !(confirmed with { SourceFingerprint = new string('F', 64) }).CatalogEligible,
+            "Originali assenti o cambiati esclusi dal catalogo attuale");
+        Check(service.Query(new(RecognizedOnly:true),default).Total == 1,
+            "Filtro server ammette solo analisi IPRiPI valide prima della paginazione");
         Check(service.Query(new(Search: "Mario Rossi", RecognizedOnly: true), default).Total == 1 &&
             service.Query(new(Search: "divisori"), default).Total == 1 && service.Query(new(Search: "Bologna"), default).Total == 1,
             "Catalogo ricercabile per progettista, tipologia e indirizzo");
@@ -124,6 +145,7 @@ internal static class Program
         await Denied<IOException>(() => service.SaveAsync(draft with {ExpectedRevision=saved.Revision},"test",default));
         Inventory();
         Check(!service.Query(new(),default).Documents.Single(r=>r.Id==row.Id).AnalysisCurrent,"Modifica della fonte invalida analisi, checksum protegge anche prima del ricensimento");
+        Check(service.Query(new(RecognizedOnly:true),default).Total == 0,"Analisi obsoleta conservata ma rimossa dalla vista catalogo");
         var restarted = new IpripiService(settings,new DocumentService(settings,scans));
         Check(restarted.Query(new(),default).Documents.Single(r=>r.Id==row.Id).Saved?.Revision == saved.Revision,"Analisi conservata dopo riavvio");
         store.Save(unit,new([Entry("rinominato.pdf")],[],true),default);

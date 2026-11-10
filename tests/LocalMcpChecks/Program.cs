@@ -10,6 +10,7 @@ try
 {
 LocalReadOnlyPolicy.Validate(new Request("Info"));
 AnalysisStatusChecks.Run();
+FolderArchiveChecks.Run();
 DeepInspectionChecks.Run();
 foreach(var (operation,tool) in new[]{("DeepInspection","approfondisci_commessa"),("State","cerca_cartelle"),("Children","sottocartelle"),("DailyReport","report_giornaliero"),("Analysis","analisi_file"),("Files","cerca_file"),("AnalysisStatus","stato_analisi"),("Progress","stato_scansione"),("ReadDocument","leggi_documento"),("ListDocuments","elenca_documenti")})
 {

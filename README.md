@@ -1,4 +1,12 @@
-# TA-Gestione Cartelle Commesse — 2.30.0
+# TA-Gestione Cartelle Commesse — 2.31.0
+
+## Novità 2.31.0 — catalogo IPRiPI e archiviazione confermata
+
+Il catalogo client IPRiPI mostra solo MUR A.1/D.1 con IPRiPI identificati e analisi attuale, escludendo candidati, altri moduli, esiti negativi e classificazioni incerte. Il plugin distingue la ricerca dei candidati (`recognizedOnly=false`) dal catalogo e indica quante analisi vi sono effettivamente ammesse. Un tunnel attivo non comporta analisi automatica: i contenuti vengono elaborati da ChatGPT solo durante la richiesta esplicita in chat.
+
+Aggiunta l'[archiviazione ZIP di lavori e gare](deployment/ARCHIVIAZIONE-ZIP.md), separata dalle analisi in sola lettura: preparazione, verifica e successiva eliminazione solo dopo nuova conferma. Solo Antonio/Giuseppe autenticati, nessuna esecuzione su cartelle reali durante i test. Aggiornare client e servizio alla 2.31.0 e avviare manualmente il nuovo pacchetto MCP; il processo espone 24 strumenti.
+
+[Scarica aggiornatore 2.31.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.31.0/TA-Commesse-Aggiornatore-2.31.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.31.0).
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 

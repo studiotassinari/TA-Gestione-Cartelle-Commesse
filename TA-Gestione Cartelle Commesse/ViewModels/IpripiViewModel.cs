@@ -9,7 +9,7 @@ public sealed class IpripiViewModel : Observable, IDisposable
     private readonly Func<IpripiQuery, CancellationToken, Task<IpripiPage>>? load;
     private readonly CancellationTokenSource lifetime = new();
     private bool busy, allPdfs, opening, disposed, recognizedOnly;
-    private string code = "", search = "", status = "Cerca una commessa o consulta i candidati MUR censiti.";
+    private string code = "", search = "", status = "Catalogo dei soli MUR A.1/D.1 relativi a opere IPRiPI analizzate.";
     private IpripiDocument? selected;
     public IpripiViewModel(Func<IpripiQuery, CancellationToken, Task<IpripiPage>>? load)
     {
@@ -69,7 +69,7 @@ public sealed class IpripiViewModel : Observable, IDisposable
         var row = Selected;
         return $"Analizza e salva nel catalogo IPRiPI il documento PDF/DOCX MUR A.1/D.1 selezionato della commessa {row.ProjectCode}: {row.FileName}. " +
             $"ID documento: {row.Id}. Usa il plugin TA – Gestione Commesse: inizia_consultazione con contenuti=true e analisiIpripi=true, " +
-            "cerca_mur_ipripi, regole_ipripi, leggi_mur_ipripi e salva_analisi_ipripi. " +
+            "cerca_mur_ipripi con recognizedOnly=false, regole_ipripi, leggi_mur_ipripi e salva_analisi_ipripi. " +
             "Individua gli interventi secondo la DGR Emilia-Romagna 2272/2016, Allegato 1. " +
             "Distingui codici dichiarati, dedotti e da verificare; cita il testo con offset, specifica livelli L0/L1/L2, requisiti mancanti, spunte non leggibili e limiti. " +
             "Non trattare opzioni prestampate come interventi selezionati. Non leggere altri documenti automaticamente. Non modificare gli originali.";
@@ -80,12 +80,14 @@ public sealed class IpripiViewModel : Observable, IDisposable
         busy = true; RefreshCommand.Refresh(); Status = "Consultazione dell'inventario e delle analisi salvate...";
         try
         {
-            var query = new IpripiQuery(Code.Trim(), Search.Trim(), AllPdfs, RecognizedOnly: RecognizedOnly);
+            // La finestra è il catalogo, non la coda dei documenti da classificare.
+            var query = new IpripiQuery(Code.Trim(), Search.Trim(), RecognizedOnly: true);
             var rows = new List<IpripiDocument>(); IpripiPage? page = null;
             do
             {
                 page = await load(query with { Offset = page?.NextOffset ?? 0, Version = page?.Version }, lifetime.Token);
-                rows.AddRange(page.Documents);
+                // Mantiene il perimetro anche collegandosi temporaneamente a un server precedente.
+                rows.AddRange(page.Documents.Where(r => r.CatalogEligible));
                 if (rows.Count > 50000 || page.NextOffset.HasValue && page.NextOffset <= page.Offset) throw new System.IO.InvalidDataException("Paginazione IPRiPI non valida.");
             } while (page.NextOffset.HasValue);
             lifetime.Token.ThrowIfCancellationRequested();

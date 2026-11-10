@@ -17,6 +17,14 @@ public sealed record IpripiDocument(string Id, string Category, string FolderId,
     IpripiAnalysisRecord? Saved = null, bool OriginalAvailable = true, string InventoryCode = "")
 {
     public bool AnalysisCurrent => OriginalAvailable && Saved?.Analysis.SourceFingerprint == SourceFingerprint;
+    // Il nome del file non basta per l'ammissione al catalogo. I candidati e gli
+    // esiti negativi restano nell'inventario per non ripetere le letture inutilmente.
+    public bool CatalogEligible => AnalysisCurrent &&
+        Saved?.Analysis is { FormType: "MUR A.1/D.1", Outcome: "IPRiPI individuati" } analysis &&
+        analysis.FormEvidence.Count > 0 && analysis.Interventions.Count > 0 &&
+        analysis.Interventions.All(i => i.Basis is "Dichiarato" or "Dedotto" &&
+            i.RuleCode.Length > 0 && i.Level is "L0" or "L1" or "L2" &&
+            i.MissingData.Count == 0 && i.Evidence.Count > 0);
     public string Status => Saved == null ? "Candidato da analizzare" : !OriginalAvailable ? "Originale non censito — analisi conservata" :
         !AnalysisCurrent ? "Documento modificato — da rianalizzare" : Saved.Analysis.Outcome + " — proposta da verificare";
     public string Codes => Saved == null ? "" : string.Join(", ", Saved.Analysis.Interventions.Select(i => i.RuleCode).Where(c => c.Length > 0).Distinct());

@@ -68,7 +68,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.30.0"
+          $version = "2.31.0"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -86,7 +86,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Build MCP fallita' }
           dotnet publish TA.Mcp/TA.Mcp.csproj -c Release -r win-x64 --self-contained true -p:Version=$env:APP_VERSION -o artifacts/mcp-package/Mcp
           if ($LASTEXITCODE -ne 0) { throw 'Pubblicazione MCP fallita' }
-          Copy-Item deployment/Start-McpTunnel.ps1,deployment/MCP.md,deployment/ANALISI-NOMI.md,deployment/GEOLOGIA.md,deployment/IPRIPI.md,deployment/THIRD-PARTY-NOTICES.txt artifacts/mcp-package
+          Copy-Item deployment/Start-McpTunnel.ps1,deployment/MCP.md,deployment/ANALISI-NOMI.md,deployment/GEOLOGIA.md,deployment/IPRIPI.md,deployment/ARCHIVIAZIONE-ZIP.md,deployment/THIRD-PARTY-NOTICES.txt artifacts/mcp-package
           New-Item -ItemType Directory -Path artifacts/installer -Force | Out-Null
           Compress-Archive -Path artifacts/mcp-package/* -DestinationPath "artifacts/installer/TA-Commesse-MCP-$env:APP_VERSION.zip"
       - name: Pubblica aggiornatore e pacchetti diretti
@@ -270,10 +270,10 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
-          Versione 2.30.0: Archivio limitato a archivio\_lavori e sottocartelle immediate. Nessuna ricerca ricorsiva degli ZIP nelle altre cartelle; inventario e cataloghi escludono i metadati fuori ambito. Originali sempre invariati.
-          Nuovo comando MCP approfondisci_commessa: scansione mirata su richiesta, stato, annullamento e riepilogo persistente nel database. Un lavoro attivo, limite tre minuti e 100.000 voci, candidati da nomi e metadati anche in ZIP/7z. I contenuti si leggono con leggi_documento soltanto su richiesta; nessuna analisi cloud automatica.
-          Pulizia dei soli inventari esclusi a lotti, senza toccare le analisi storiche. Installatori, updater e pacchetti Client/Server/MCP con SHA256.
-          Per il nuovo comando avviare manualmente il tunnel MCP 2.30.0. Nessuna modifica ad Active Directory. Pacchetti non firmati digitalmente.
+          Versione 2.31.0: catalogo dei soli MUR A.1/D.1 con IPRiPI identificati e analisi attuale. Candidati, altri moduli, esiti negativi e classificazioni incerte esclusi dalla vista ma conservati nello storico. Stato analisi con contatori distinti e data dell'ultimo risultato.
+          Nuovi comandi MCP prepara_zip_cartella, stato_zip_cartella, elimina_cartella_zippata. Solo lavori/gare e utenti Antonio/Giuseppe autenticati. ZIP verificato integralmente, originali eliminati soltanto dopo nuova conferma. Archivio e scansioni restano in sola lettura.
+          Installatori iniziali, updater e pacchetti Client/Server/MCP con SHA256. Nessuna analisi cloud automatica o modifica ad Active Directory. Pacchetti non firmati digitalmente.
+          Avviare manualmente il tunnel MCP 2.31.0 e aggiornare l'elenco strumenti del plugin: 24 comandi. Administrator non è autorizzato all'archiviazione ZIP.
           '@
           # Salva le note UTF-8 in un file per preservare accenti e interruzioni di riga.
           $notes | Set-Content release-notes.txt -Encoding utf8

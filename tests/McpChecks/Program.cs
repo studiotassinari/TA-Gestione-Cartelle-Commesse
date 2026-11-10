@@ -62,7 +62,7 @@ var transport=new StdioClientTransport(new StdioClientTransportOptions{
 });
 await using var client=await McpClient.CreateAsync(transport,cancellationToken:timeout.Token);
 var catalog=await client.ListToolsAsync(cancellationToken:timeout.Token);
-Check(catalog.Select(t=>t.Name).Order().SequenceEqual(new[]{"approfondisci_commessa","analisi_file","cerca_cartelle","cerca_file","cerca_relazioni_geologiche","dettaglio_cartella","elenca_documenti","inizia_consultazione","leggi_documento","leggi_relazione_geologica","report_giornaliero","sottocartelle","stato_analisi","stato_scansione","prossime_relazioni_da_analizzare","salva_analisi_geologica","elenca_fascicoli_geologici","cerca_mur_ipripi","regole_ipripi","leggi_mur_ipripi","salva_analisi_ipripi"}.Order()),"Ventuno strumenti: consultazione e catalogazione esplicita");
+Check(catalog.Select(t=>t.Name).Order().SequenceEqual(new[]{"prepara_zip_cartella","stato_zip_cartella","elimina_cartella_zippata","approfondisci_commessa","analisi_file","cerca_cartelle","cerca_file","cerca_relazioni_geologiche","dettaglio_cartella","elenca_documenti","inizia_consultazione","leggi_documento","leggi_relazione_geologica","report_giornaliero","sottocartelle","stato_analisi","stato_scansione","prossime_relazioni_da_analizzare","salva_analisi_geologica","elenca_fascicoli_geologici","cerca_mur_ipripi","regole_ipripi","leggi_mur_ipripi","salva_analisi_ipripi"}.Order()),"Ventiquattro strumenti: consultazione, catalogazione e archiviazione esplicita");
 await Task.Delay(300);
 Check(connections==0,"Avvio, catalogo e inattività senza connessioni al servizio");
 var noSession=await client.CallToolAsync("cerca_cartelle",new Dictionary<string,object?>{["category"]="C"},cancellationToken:timeout.Token);

@@ -11,15 +11,14 @@
     <Grid Margin="24" Background="#F3F6F6">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,18">
-            <TextBlock Text="Catalogo dei moduli MUR A.1/D.1" FontSize="25" FontWeight="SemiBold" Foreground="#135F6E"/>
+            <TextBlock Text="Catalogo MUR A.1/D.1 · Opere IPRiPI" FontSize="25" FontWeight="SemiBold" Foreground="#135F6E"/>
             <TextBlock Text="MUR A.1/D.1 · DGR Emilia-Romagna 2272/2016, Allegato 1" FontSize="14" Margin="0,6,0,0"/>
             <TextBlock Text="Proposte di ChatGPT con fonti verificabili. Originali in sola lettura; verifica tecnica a cura del progettista." TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#526070"/>
         </StackPanel>
         <WrapPanel Grid.Row="1" Margin="0,0,0,12" VerticalAlignment="Center">
             <StackPanel Margin="0,0,12,6"><TextBlock Text="Codice commessa"/><TextBox Width="145" Padding="6" Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Codice commessa"/></StackPanel>
             <StackPanel Margin="0,0,12,6"><TextBlock Text="Progettista, tipologia, indirizzo o nome"/><TextBox Width="280" Padding="6" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Ricerca documenti"/></StackPanel>
-            <CheckBox Content="Solo moduli riconosciuti" IsChecked="{Binding RecognizedOnly}" VerticalAlignment="Center" Margin="0,12,16,0"/>
-            <CheckBox Content="Tutti i PDF/DOCX (anche rinominati)" IsChecked="{Binding AllPdfs}" VerticalAlignment="Center" Margin="0,12,16,0"/>
+            <TextBlock Text="Solo analisi attuali con IPRiPI identificati" VerticalAlignment="Center" Margin="0,12,16,0"/>
             <Button Content="Cerca / aggiorna" Command="{Binding RefreshCommand}" Padding="16,8" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
         </WrapPanel>
         <DockPanel Grid.Row="2" Margin="0,0,0,12" LastChildFill="False">
