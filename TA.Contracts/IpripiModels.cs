@@ -26,7 +26,7 @@ public sealed record IpripiDocument(string Id, string Category, string FolderId,
             i.RuleCode.Length > 0 && i.Level is "L0" or "L1" or "L2" &&
             i.MissingData.Count == 0 && i.Evidence.Count > 0);
     public string Status => Saved == null ? "Candidato da analizzare" : !OriginalAvailable ? "Originale non censito — analisi conservata" :
-        !AnalysisCurrent ? "Documento modificato — da rianalizzare" : Saved.Analysis.Outcome + " — proposta da verificare";
+        !AnalysisCurrent ? "Documento modificato — da rianalizzare" : Saved.Analysis.Outcome + (Saved.SavedBy == LocalAnalysis.Author ? " — analisi automatica locale, da verificare" : " — proposta da verificare");
     public string Codes => Saved == null ? "" : string.Join(", ", Saved.Analysis.Interventions.Select(i => i.RuleCode).Where(c => c.Length > 0).Distinct());
     public string Designers => string.Join("; ", (Saved?.Analysis.Designers ?? []).Select(d => d.Name + " (" + d.Role + ")"));
     public string Typologies => string.Join("; ", (Saved?.Analysis.Interventions ?? []).Select(i => i.Description).Distinct());

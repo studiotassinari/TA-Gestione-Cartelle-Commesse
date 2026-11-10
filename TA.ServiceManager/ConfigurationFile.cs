@@ -19,6 +19,11 @@ public sealed class ConfigurationFile
     public string ArchivedJobsRoot { get; init; } = "";
     public string ArchiveFolder { get; init; } = "";
     public string JobTemplate { get; init; } = "";
+    // Analisi automatica locale e relativi limiti all'uso di risorse.
+    public bool LocalAnalysis { get; init; }
+    public int LocalAnalysisStartHour { get; init; } = 20;
+    public int LocalAnalysisEndHour { get; init; } = 7;
+    public int LocalAnalysisDocumentsPerHour { get; init; } = 30;
     // Incompleta finché mancano i gruppi: il servizio non si avvia e la finestra va proposta subito.
     public bool Complete => Groups.Length > 0 && Validate().Count == 0;
 
@@ -32,6 +37,8 @@ public sealed class ConfigurationFile
         foreach (var (label, path) in new[] { ("commesse", JobsRoot), ("gare", BidsRoot), ("archivio", ArchivedJobsRoot) })
             if (!path.StartsWith(@"\\", StringComparison.Ordinal)) problems.Add("La cartella " + label + " deve essere un percorso UNC (\\\\server\\condivisione\\...).");
         if (ArchiveFolder.Length == 0) problems.Add("Indicare la cartella dati del servizio.");
+        if (LocalAnalysisStartHour is < 0 or > 23 || LocalAnalysisEndHour is < 0 or > 23) problems.Add("Le ore dell'analisi automatica devono essere comprese tra 0 e 23.");
+        if (LocalAnalysisDocumentsPerHour is < 1 or > 120) problems.Add("L'analisi automatica ammette da 1 a 120 documenti l'ora.");
         return problems;
     }
     public static ConfigurationFile Load() => File.Exists(Path) ? Parse(File.ReadAllText(Path)) : new() { Domain = MachineDomain() };
@@ -40,11 +47,17 @@ public sealed class ConfigurationFile
         var server = JsonNode.Parse(json)?["Server"] as JsonObject ?? new JsonObject();
         string Text(string key) => server[key] is JsonValue value && value.TryGetValue<string>(out var text) ? text.Trim() : "";
         string[] List(string key) => server[key] is JsonArray array ? array.Select(item => item is JsonValue value && value.TryGetValue<string>(out var text) ? text.Trim() : "").Where(item => item.Length > 0).ToArray() : [];
-        int port = 5443;
-        if (server["Port"] is JsonValue number && !number.TryGetValue(out port) && !(number.TryGetValue<string>(out var written) && int.TryParse(written, out port))) port = 5443;
+        int Number(string key, int fallback)
+        {
+            if (server[key] is not JsonValue number) return fallback;
+            if (number.TryGetValue<int>(out var value)) return value;
+            return number.TryGetValue<string>(out var written) && int.TryParse(written, out var parsed) ? parsed : fallback;
+        }
         return new()
         {
-            Domain = Text("Domain"), CollaboratorsGroup = Text("CollaboratorsGroup"), ManagementUsers = List("ManagementUsers"), Port = port,
+            Domain = Text("Domain"), CollaboratorsGroup = Text("CollaboratorsGroup"), ManagementUsers = List("ManagementUsers"), Port = Number("Port", 5443),
+            LocalAnalysis = server["EnableLocalAnalysis"] is JsonValue flag && flag.TryGetValue<bool>(out var enabled) && enabled,
+            LocalAnalysisStartHour = Number("LocalAnalysisStartHour", 20), LocalAnalysisEndHour = Number("LocalAnalysisEndHour", 7), LocalAnalysisDocumentsPerHour = Number("LocalAnalysisDocumentsPerHour", 30),
             // Le configurazioni precedenti avevano un solo gruppo nella proprietà AllowedGroup.
             Groups = List("AllowedGroups").Append(Text("AllowedGroup")).Where(g => g.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
             JobsRoot = Text("JobsRoot"), BidsRoot = Text("BidsRoot"), ArchivedJobsRoot = Text("ArchivedJobsRoot"), ArchiveFolder = Text("ArchiveFolder"), JobTemplate = Text("JobTemplate")
@@ -64,6 +77,8 @@ public sealed class ConfigurationFile
         server["ManagementUsers"] = new JsonArray(ManagementUsers.Select(u => (JsonNode?)JsonValue.Create(u)).ToArray());
         server["Port"] = Port; server["JobsRoot"] = JobsRoot; server["BidsRoot"] = BidsRoot; server["ArchivedJobsRoot"] = ArchivedJobsRoot;
         server["ArchiveFolder"] = ArchiveFolder; server["JobTemplate"] = JobTemplate;
+        server["EnableLocalAnalysis"] = LocalAnalysis; server["LocalAnalysisStartHour"] = LocalAnalysisStartHour;
+        server["LocalAnalysisEndHour"] = LocalAnalysisEndHour; server["LocalAnalysisDocumentsPerHour"] = LocalAnalysisDocumentsPerHour;
         if (server["RefreshMinutes"] == null) server["RefreshMinutes"] = 60;
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
     }

@@ -44,7 +44,9 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
         AnalysisStatusReader.Geology(settings,catalogServices?.GetService<GeologyIndexer>()?.Progress),
         AnalysisStatusReader.Mur(settings,catalogServices?.GetService<IpripiIndexer>()?.Progress),
         catalogServices?.GetService<Documents.DocumentService>() is {} documents
-            ?[documents.GeologySchedule.Status("Geologia"),documents.MurSchedule.Status("MUR/IPRiPI")]:null);
+            ?[documents.GeologySchedule.Status("Geologia"),documents.MurSchedule.Status("MUR/IPRiPI")]:null,
+        // Modalità e ultimo esito dell'analisi automatica locale, se abilitata nella configurazione.
+        LocalAnalysisLimits.From(settings).Describe()+(catalogServices?.GetService<LocalAnalysisService>()?.StatusText is {Length:>0} local?" — "+local:""));
     public CategoryWorker Get(string category) => category.ToUpperInvariant() switch
     { "C" => workers['C'], "G" => workers['G'], "A" => workers['A'], _ => throw new ArgumentException("Categoria non valida") };
     public bool Refresh(string category) { _ = Get(category).RefreshIndexAsync(shutdown); return true; }

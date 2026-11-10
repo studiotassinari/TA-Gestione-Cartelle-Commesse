@@ -10,7 +10,7 @@ using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 
 // Solo inventario JSON durante la ricerca. I contenuti sono aperti soltanto dalle richieste di lettura/salvataggio.
-public sealed class IpripiService(ServerSettings settings, DocumentService documents)
+public sealed partial class IpripiService(ServerSettings settings, DocumentService documents)
 {
     private readonly IpripiEvidenceStore evidence = new();
     private sealed record ReadSnapshot(IpripiQuery Filter,string Version,List<IpripiDocument> Rows,List<string> Warnings,DateTime Created);
@@ -129,7 +129,7 @@ public sealed class IpripiService(ServerSettings settings, DocumentService docum
             .OrderByDescending(r => AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ThenBy(r=>r.Id,StringComparer.Ordinal).ToList();
         var version = Hash(JsonSerializer.Serialize(rows));
         var lastAnalysis = saved.Values.Select(r => (DateTime?)r.SavedUtc).Max();
-        warnings.Insert(0, "Analisi dei contenuti su richiesta ChatGPT, non in esecuzione automatica. Ultimo salvataggio: " +
+        warnings.Insert(0, (settings.EnableLocalAnalysis ? LocalAnalysisLimits.From(settings).Describe() + ". Ultimo salvataggio: " : "Analisi dei contenuti su richiesta ChatGPT, non in esecuzione automatica. Ultimo salvataggio: ") +
             (lastAnalysis?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "nessuno"));
         if (query.RecognizedOnly)
             warnings.Insert(0, "Solo MUR A.1/D.1 con IPRiPI identificati e analisi attuale. Candidati, esiti non pertinenti e analisi da verificare esclusi.");

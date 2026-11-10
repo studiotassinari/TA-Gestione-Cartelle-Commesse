@@ -71,7 +71,7 @@ public sealed partial class GeologyService
             if (!byId.TryGetValue(r.Id, out var saved)) return r;
             var a = saved.Analysis; bool current = r.SourceFingerprint.Length == 64 && a.SourceFingerprint == r.SourceFingerprint;
             var annotated = r with { AnalysisRevision = saved.Revision, AnalysisSavedUtc = saved.SavedUtc, AnalysisCurrent = current, DossierId = a.DossierId,
-                DossierTitle = a.DossierTitle, AnalysisStatus = !r.OriginalAvailable ? "Originale non presente nell’inventario — analisi conservata" : current ? "Analizzata da ChatGPT — da verificare" : "Documento modificato — analisi da aggiornare" };
+                DossierTitle = a.DossierTitle, AnalysisStatus = !r.OriginalAvailable ? "Originale non presente nell’inventario — analisi conservata" : current ? (saved.SavedBy == LocalAnalysis.Author ? "Classificata dall'analisi automatica locale — da verificare" : "Analizzata da ChatGPT — da verificare") : "Documento modificato — analisi da aggiornare" };
             // I dati automatici superati non diventano una nuova posizione certa. Le posizioni manuali sono applicate dopo.
             if (!current) return annotated;
             return annotated with { Title = a.Title, Kind = a.Kind, Author = a.Author, Municipality = a.Municipality, Address = a.Address,

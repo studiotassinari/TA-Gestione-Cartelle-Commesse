@@ -60,6 +60,8 @@ builder.Services.AddHostedService<TA.Server.Business.BusinessBackupService>();
 builder.Services.AddHostedService<DailyDatabaseBackupService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());
 builder.Services.AddHostedService<CatalogRefreshService>();
+builder.Services.AddSingleton<LocalAnalysisService>();
+builder.Services.AddHostedService(p => p.GetRequiredService<LocalAnalysisService>());
 builder.Services.AddHostedService<TcpService>();
 builder.Services.AddHostedService<LocalMcpService>();
 // Gli eventi filesystem non avviano scansioni fuori dalla scansione iniziale e giornaliera.

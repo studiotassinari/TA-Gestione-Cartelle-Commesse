@@ -25,12 +25,20 @@ public sealed class DocumentService(ServerSettings settings,ScanCoordinator scan
         var allowed=roots.FirstOrDefault(r=>full.StartsWith(Path.GetFullPath(r).TrimEnd('\\')+"\\",StringComparison.OrdinalIgnoreCase))??throw new UnauthorizedAccessException("Sorgente esclusa.");
         return await ExecuteWorkAsync(new(allowed,record.Path,read,list),token);
     }
+    // Analisi automatica: una sola lettura alla volta, a priorità ridotta, e mai insieme a una lettura su richiesta.
+    private readonly SemaphoreSlim automaticSlot=new(1);
+    public bool OnDemandReading=>slots.CurrentCount<2;
+    internal async Task<DocumentWorkReply> ExecuteAutomaticAsync(DocumentWork work,CancellationToken token)
+    {
+        if(OnDemandReading||!await automaticSlot.WaitAsync(0,token))throw new AnalysisDeferredException();
+        try{return await RunWorkerAsync(work,token,lowPriority:true);}finally{automaticSlot.Release();}
+    }
     internal async Task<DocumentWorkReply> ExecuteWorkAsync(DocumentWork work,CancellationToken token)
     {
         if(!await slots.WaitAsync(0,token))throw new IOException("Una lettura documentale è già in corso. Riprovare su richiesta, senza accodare scansioni.");
         try{return await RunWorkerAsync(work,token);}finally{slots.Release();}
     }
-    public static async Task<DocumentWorkReply> RunWorkerAsync(DocumentWork work,CancellationToken token)
+    public static async Task<DocumentWorkReply> RunWorkerAsync(DocumentWork work,CancellationToken token,bool lowPriority=false)
     {
         token.ThrowIfCancellationRequested();
         using var deadline=CancellationTokenSource.CreateLinkedTokenSource(token);deadline.CancelAfter(TimeSpan.FromSeconds(20));
@@ -42,6 +50,8 @@ public sealed class DocumentService(ServerSettings settings,ScanCoordinator scan
         else{start.FileName="dotnet";start.ArgumentList.Add(assembly);}
         start.ArgumentList.Add("--document-worker");
         using var process=Process.Start(start)??throw new IOException("Impossibile avviare lettura documento.");
+        // Le letture automatiche cedono il processore al resto del server; i limiti di 20 secondi e 512 MiB restano gli stessi.
+        if(lowPriority){try{process.PriorityClass=ProcessPriorityClass.BelowNormal;}catch(Exception ex) when(ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException){}}
         var output=ReadBounded(process.StandardOutput,2*1024*1024,deadline.Token);
         var errors=ReadBounded(process.StandardError,65536,deadline.Token);
         try
@@ -76,3 +86,5 @@ public sealed class DocumentService(ServerSettings settings,ScanCoordinator scan
     private static async Task<string> ReadBounded(StreamReader reader,int maximum,CancellationToken token)
     {var result=new StringBuilder();var buffer=new char[4096];int n;while((n=await reader.ReadAsync(buffer,token))>0){if(result.Length+n>maximum)throw new IOException("Risposta parser oltre limite.");result.Append(buffer,0,n);}return result.ToString();}
 }
+// Rinvio, non errore del documento: una lettura su richiesta ha la precedenza sull'analisi automatica.
+public sealed class AnalysisDeferredException():IOException("Lettura su richiesta in corso: analisi automatica rinviata.");
