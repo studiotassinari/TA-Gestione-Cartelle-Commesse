@@ -12,6 +12,7 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
     private readonly InventoryStore store = new(settings.InventoryFolder);
     public async Task RunAsync(IEnumerable<CategoryState> states, CancellationToken token, Action<ScanProgress>? reportProgress = null)
     {
+        // Evita di indicizzare l’archivio dell’applicazione dentro le stesse sorgenti analizzate.
         var roots = new[] { settings.JobsRoot, settings.BidsRoot, settings.ArchivedJobsRoot };
         var output = Path.GetFullPath(store.Root).TrimEnd('\\','/');
         if (roots.Any(r => output.Equals(Path.GetFullPath(r).TrimEnd('\\','/'), StringComparison.OrdinalIgnoreCase) ||
@@ -32,6 +33,8 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
             var progressGate = new object();
             var locations = new ConcurrentDictionary<string,ScanLocation>();
             int completed=0; bool warnings=plan.Issues.Count>0;
+            // Ordine di assegnazione dai progetti più recenti; con più worker l’ordine di fine può differire.
+            // Il parallelismo resta limitato per non saturare disco e condivisioni di rete.
             Parallel.ForEach(plan.Units.OrderByDescending(u=>AnalysisOrder.Year(u.Year,u.Code)).ThenByDescending(u=>AnalysisOrder.Number(u.Code)).ThenBy(u=>u.Id,StringComparer.Ordinal), new ParallelOptions { CancellationToken=token, MaxDegreeOfParallelism=Math.Clamp(settings.MaxConcurrentScans,1,4) }, unit =>
             {
                 token.ThrowIfCancellationRequested();
@@ -51,6 +54,8 @@ public sealed class AnalysisService(ServerSettings settings, ILogger<AnalysisSer
                     void SaveSignature() { if(signature!=null)store.SaveDocument("source-signature:"+unit.Id,signature); }
                     if(exclusionCurrent && oldManifest?.Complete==true && oldManifest.Unit==unit && signature!=null && inspection!.CheckedUtc>=oldManifest.CheckedUtc && store.Document("source-signature:"+unit.Id)==System.Text.Json.JsonSerializer.Serialize(signature))
                     { reports.Add(store.Touch(oldManifest,token)); return; }
+                    // Se la firma non basta, confronta i metadati fisici prima di riaprire gli archivi.
+                    // Solo un confronto completo permette di riutilizzare l’inventario precedente.
                     var probe = exclusionCurrent && oldManifest?.Complete==true ? FileInventoryReader.Read(unit.Path, excluded, token, path=>Report(path,"Verifica metadati"), readArchives:false) : null;
                     if (oldManifest?.Complete == true && probe?.Complete == true && store.PhysicalMatches(oldManifest, probe))
                     { reports.Add(store.Touch(oldManifest, token)); SaveSignature(); return; }

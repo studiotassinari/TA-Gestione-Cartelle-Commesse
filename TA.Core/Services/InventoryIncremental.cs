@@ -4,8 +4,11 @@ namespace TA_Gestione_Cartelle_Commesse.Services;
 public sealed partial class InventoryStore
 {
     public void RemoveConfirmed(string id)=>RemoveConfirmedMany([id],CancellationToken.None);
+    /// <summary>Elimina esclusivamente metadati dell’indice locale, mai documenti o cartelle sorgenti.</summary>
     public void RemoveConfirmedMany(IEnumerable<string> ids,CancellationToken token)
     {
+        // Piccole transazioni riducono il tempo di blocco del database durante pulizie estese.
+        // Un annullamento conserva i lotti già confermati e annulla quello ancora in transazione.
         foreach(var batch in ids.Distinct().Chunk(100))
         {
             token.ThrowIfCancellationRequested();
@@ -26,6 +29,7 @@ public sealed partial class InventoryStore
     // Confronta tutti i nomi fisici e i metadati: rileva anche rinomine e modifiche a dimensione invariata.
     public bool PhysicalMatches(InventoryManifest manifest,InventoryResult probe)
     {
+        // Una lettura parziale non dimostra che una cartella sia invariata.
         if(!manifest.Complete || !probe.Complete)return false;
         var current=probe.Entries.ToDictionary(Key,StringComparer.Ordinal);
         int count=0;
@@ -36,12 +40,14 @@ public sealed partial class InventoryStore
         }
         return count==current.Count;
     }
+    /// <summary>Aggiorna la data della verifica senza riscrivere tutte le voci di un inventario invariato.</summary>
     public InventoryManifest Touch(InventoryManifest previous,CancellationToken token)
     {
         lock(Gate)
         {
             token.ThrowIfCancellationRequested();
             var current=Find(previous.Unit.Id)??throw new IOException("Unità non disponibile");
+            // Controllo ottimistico: non sovrascrivere una generazione aggiornata da un altro lavoro.
             if(current.Generation!=previous.Generation)throw new IOException("Unità cambiata durante il controllo");
             var updated=current with{CheckedUtc=DateTime.UtcNow,Added=0,Removed=0,Changed=0,Baseline=false};
             using var db=Open();using var tx=db.BeginTransaction();Execute(db,tx,"UPDATE units SET manifest=$json WHERE id=$id",("$json",JsonSerializer.Serialize(updated)),("$id",updated.Unit.Id));

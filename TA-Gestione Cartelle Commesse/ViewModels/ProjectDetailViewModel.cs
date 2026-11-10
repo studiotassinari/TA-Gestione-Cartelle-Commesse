@@ -8,6 +8,7 @@ public sealed class ProjectDetailViewModel : Observable
     private readonly BusinessViewModel business;
     private readonly string id;
     public string Id=>id;
+    // La finestra è riutilizzata per più commesse: impedisce di cambiare contenuto perdendo modifiche.
     public bool CanLeave()
     {
         if(Busy){Status="Attendi il completamento dell'operazione prima di cambiare commessa.";Notify(nameof(Status));return false;}
@@ -25,6 +26,7 @@ public sealed class ProjectDetailViewModel : Observable
     public ProjectDetailViewModel(BusinessViewModel business,string id)
     {
         this.business=business;this.id=id;
+        // La scelta modifica il modello in editing; l’associazione diventa persistente solo con Salva.
         CustomerSelection.SelectionChanged+=customer=>{if(Project!=null)Project.CustomerId=customer.Id;};
         ManageCustomerCommand=new(()=>CustomerManagementRequested?.Invoke(),()=>CanEdit);
         RefreshCommand=new(async()=>await Refresh(),()=>!Busy);
@@ -53,6 +55,7 @@ public sealed class ProjectDetailViewModel : Observable
     public string OverviewTitle=>Details?.Project.Category switch{"G"=>"Gara e cliente","A"=>"Archivio e cliente",_=>"Commessa e cliente"};
     public string SaveLabel=>Details?.Project.Category switch{"G"=>"Salva gara","A"=>"Salva dati archivio",_=>"Salva commessa"};
     public bool Busy {get;private set;}
+    // Il binding abilita i comandi secondo i permessi restituiti dal server, che li verifica anche al salvataggio.
     public bool CanEdit=>!Busy&&Details?.CanManage==true;
     public bool CanEditPhase=>CanEdit&&Phase!=null;
     public bool CanEditActivity=>CanEdit&&Activity!=null;

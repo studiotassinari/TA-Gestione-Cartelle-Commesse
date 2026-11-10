@@ -7,6 +7,8 @@ namespace TA.Server;
 // Un approfondimento esplicito alla volta. Nessuna chiamata cloud o lettura automatica dei contenuti.
 public sealed class DeepInspectionService(ServerSettings settings,ScanCoordinator scans):IDisposable
 {
+    // Stato volatile della richiesta: gli ID dei lavori scadono al riavvio del servizio.
+    // Il riepilogo concluso è invece conservato separatamente nel database.
     private sealed class Job(string category,FolderRecord record,string terms)
     {
         public readonly string Id=Guid.NewGuid().ToString("N");
@@ -18,8 +20,12 @@ public sealed class DeepInspectionService(ServerSettings settings,ScanCoordinato
         public DateTime? Finished;
         public JsonElement? Result;
     }
+    // Protegge la lista e lo stato condiviso tra chiamate MCP e worker in background.
+    // La lettura dei file avviene fuori dal lock, per non bloccare stato e annullamento.
     private readonly object gate=new();
     private readonly List<Job> jobs=[];
+    /// <summary>Avvia, consulta o annulla un approfondimento esplicitamente richiesto.</summary>
+    /// <remarks>Il limite di un lavoro attivo vale per il servizio, non per singolo client.</remarks>
     public JsonElement Execute(string category,DeepInspectionQuery q)
     {
         if(category is not ("C" or "G" or "A")||q.Action is not ("avvia" or "stato" or "annulla")||q.Terms==null||q.Terms.Length>300||q.FolderId==null||q.FolderId.Length>128||q.JobId==null||q.JobId.Length>64||q.Offset<0||q.Offset>1000||q.Limit is <1 or >100)throw new ArgumentException("Richiesta di approfondimento non valida.");
@@ -29,10 +35,13 @@ public sealed class DeepInspectionService(ServerSettings settings,ScanCoordinato
             if(q.Action=="avvia")
             {
                 if(jobs.Any(j=>j.Finished==null))throw new IOException("Un approfondimento è già in corso: consultarne lo stato o annullarlo.");
+                // Accetta soltanto un elemento già censito: il chiamante non può fornire un percorso arbitrario.
                 var record=scans.Get(category).State.Snapshot?.Records.SingleOrDefault(r=>r.Id==q.FolderId)??throw new ArgumentException("Usare l'ID di una commessa restituita da cerca_cartelle.");
                 ValidateRoot(settings,category,record.Path);
                 while(jobs.Count>=8){jobs[0].Cancel.Dispose();jobs.RemoveAt(0);}
                 job=new(category,record,q.Terms);jobs.Add(job);
+                // Il lavoro sopravvive alla risposta di avvio; il chiamante ne consulta poi l’ID.
+                // Non è un ciclo automatico: termina, viene annullato oppure raggiunge il timeout.
                 _=Task.Run(()=>Run(job));
             }
             else
@@ -54,6 +63,7 @@ public sealed class DeepInspectionService(ServerSettings settings,ScanCoordinato
         {
             var result=Inspect(settings,job.Category,job.Record,job.Terms,job.Cancel.Token,p=>{lock(gate)job.Location=p;});
             job.Cancel.Token.ThrowIfCancellationRequested();
+            // Salva un riepilogo dedicato, senza sostituire l’inventario ordinario della commessa.
             new InventoryStore(settings.InventoryFolder).SaveDocument("approfondimento:"+job.Category+":"+job.Record.Id,result);
             lock(gate){job.Result=result;job.State="Completato";}
         }
@@ -61,18 +71,22 @@ public sealed class DeepInspectionService(ServerSettings settings,ScanCoordinato
         catch(Exception ex){lock(gate){job.State="Errore";job.Error=ex.Message;}}
         finally{lock(gate)job.Finished=DateTime.UtcNow;}
     }
+    /// <summary>Limita la lettura alle radici configurate e, per Archivio, al perimetro ammesso.</summary>
     public static void ValidateRoot(ServerSettings settings,string category,string path)
     {
         var root=category switch{"C"=>settings.JobsRoot,"G"=>settings.BidsRoot,"A"=>ArchiveScope.Root(settings.ArchivedJobsRoot),_=>throw new ArgumentException("Categoria non valida")};
         var relative=Path.GetRelativePath(root,path);
         if(Path.IsPathRooted(relative)||relative=="."||relative.Split(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar).Any(p=>p=="..")||category=="A"&&!ArchiveScope.Contains(root,path))throw new UnauthorizedAccessException("Cartella fuori dall'ambito consentito.");
     }
+    /// <summary>Cerca candidati nei nomi e nei metadati, senza dedurre dati dal contenuto dei documenti.</summary>
     public static JsonElement Inspect(ServerSettings settings,string category,FolderRecord record,string terms,CancellationToken token,Action<string>? progress=null)
     {
         ValidateRoot(settings,category,record.Path);
         var words=(string.IsNullOrWhiteSpace(terms)?"preventivo;offerta;contratto;incarico;geolog;geotec;MUR;IPRIPI;elenco":terms).Split([';',','],StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
         var inventory=FileInventoryReader.Read(record.Path,new HashSet<string>(StringComparer.OrdinalIgnoreCase),token,progress,maximum:100000);
         var candidates=inventory.Entries.Where(e=>e.Kind!="directory"&&words.Any(w=>e.RelativePath.Contains(w,StringComparison.OrdinalIgnoreCase))).ToArray();
+        // Il risultato trasportato è limitato a 1.000 candidati; Summary conserva il totale effettivo.
+        // Percorso del contenitore e voce interna rimangono distinti per la successiva lettura del documento.
         var rows=candidates.Take(1000).Select(e=>new{e.RelativePath,e.Bytes,e.ModifiedUtc,Container=e.Container,
             ReadRelativePath=category=="A"?"":e.Container??e.RelativePath,ArchiveEntry=e.Container==null?null:e.RelativePath,
             Match="Candidato dal nome, contenuto da verificare"});

@@ -16,6 +16,7 @@ public sealed class ArchiveWriter(string folder, char prefix, ILogger logger, st
         lock (gate)
         {
             if (snapshot.SavedUtc < latestRevision) return;
+            // Accorpa aggiornamenti ravvicinati: basta salvare la fotografia più recente ancora pendente.
             latestRevision = snapshot.SavedUtc; pending = (snapshot, token);
             if (!running) { running = true; task = Task.Run(Drain); }
         }
@@ -34,6 +35,7 @@ public sealed class ArchiveWriter(string folder, char prefix, ILogger logger, st
             try
             {
                 bool saved;
+                // Il database locale è usato quando configurato; il ramo condiviso è compatibilità legacy.
                 if(databaseFolder==null) saved=SharedArchiveService.Save(folder,item.Snapshot,item.Token);
                 else { item.Token.ThrowIfCancellationRequested();new InventoryStore(databaseFolder).SaveDocument("snapshot:"+prefix+":"+SharedArchiveService.Normalize(item.Snapshot.Root),item.Snapshot);saved=true; }
                 status = saved ? "Database aggiornato: " + DateTime.Now.ToString("dd/MM HH:mm:ss") + ". Metadati secondo la verifica di ciascuna cartella."
