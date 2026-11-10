@@ -10,14 +10,21 @@ public sealed partial class BusinessService
     private readonly Func<string[]>? collaborators;
     public BusinessService(ServerSettings settings,ScanCoordinator scans):this(new(settings.InventoryFolder),()=>
         new[]{"C","G","A"}.SelectMany(category=>(scans.Get(category).State.Snapshot?.Records??[])
-            .Select(row=>ProjectMetadata.FromFolder(row,category))).DistinctBy(p=>p.Id).ToArray(),CanonicalUser,new CollaboratorDirectory(settings.CollaboratorsGroup).Members){}
+            .Select(row=>ProjectMetadata.FromFolder(row,category))).DistinctBy(p=>p.Id).ToArray(),input=>CanonicalUser(input,settings),Members(settings)){}
     public BusinessService(BusinessStore store,Func<WorkProject[]> projects,Func<string,string> resolver,Func<string[]>? members=null){Store=store;available=projects;resolve=resolver;collaborators=members;}
-    private static string CanonicalUser(string input)
+    // Senza gruppo collaboratori configurato l'elenco non viene letto da Active Directory.
+    private static Func<string[]>? Members(ServerSettings settings)
+    {
+        if(string.IsNullOrWhiteSpace(settings.CollaboratorsGroup))return null;
+        return new CollaboratorDirectory(settings.Domain,settings.CollaboratorsGroup).Members;
+    }
+    // L'appartenenza al dominio è verificata sul SID, non sul nome: nessun dominio è scritto nel codice.
+    private static string CanonicalUser(string input,ServerSettings settings)
     {
         var sid=(SecurityIdentifier)new NTAccount(input).Translate(typeof(SecurityIdentifier));
-        var name=((NTAccount)sid.Translate(typeof(NTAccount))).Value;
-        if(!name.StartsWith("INGTASSINARI\\",StringComparison.OrdinalIgnoreCase))throw new ArgumentException("Collaboratore esterno al dominio.");
-        return name;
+        var expected=AccessGroups.DomainSid(settings);
+        if(sid.AccountDomainSid==null || expected!=null && !sid.AccountDomainSid.Equals(expected))throw new ArgumentException("Collaboratore esterno al dominio.");
+        return ((NTAccount)sid.Translate(typeof(NTAccount))).Value;
     }
     public WorkProject[] Projects()
     {
@@ -68,7 +75,7 @@ public sealed partial class BusinessService
             if(!manager&&!item.User.Equals(actor,StringComparison.OrdinalIgnoreCase))throw new UnauthorizedAccessException("Puoi modificare solo le tue ore.");
             Store.Delete("time",item.Id,c.Revision,actor);return true;
         }
-        if(!manager)throw new UnauthorizedAccessException("Operazione riservata ad Antonio e Giuseppe.");
+        if(!manager)throw new UnauthorizedAccessException("Operazione riservata ai responsabili autorizzati.");
         switch(c.Action)
         {
             case "SavePhase":return SavePhase(c.Phase??throw new ArgumentException("Fase mancante."),actor);
@@ -120,7 +127,7 @@ public sealed partial class BusinessService
         if(!manager&&!owner.Equals(actor,StringComparison.OrdinalIgnoreCase))throw new UnauthorizedAccessException("Puoi modificare solo le tue ore.");
         var p=GetProject(t.ProjectId);
         var today=DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow,"W. Europe Standard Time"));
-        if(p.HoursMode=="Blocked" || p.Until is {} end&&(end<today||t.Day>end))throw new UnauthorizedAccessException("Inserimento ore non autorizzato per questa commessa. Rivolgersi ad Antonio o Giuseppe.");
+        if(p.HoursMode=="Blocked" || p.Until is {} end&&(end<today||t.Day>end))throw new UnauthorizedAccessException("Inserimento ore non autorizzato per questa commessa. Rivolgersi a un responsabile.");
         if(t.Day>today || t.Day.Year<2000 || t.Minutes is <1 or >1440)throw new ArgumentException("Data futura o durata non valida.");
         var a=Store.Find<WorkActivity>("activity",t.ActivityId)??throw new ArgumentException("Selezionare un'attività.");
         if(a.ProjectId!=t.ProjectId || !a.Assignee.Equals(owner,StringComparison.OrdinalIgnoreCase))throw new ArgumentException("Attività non assegnata al titolare delle ore o appartenente ad altra commessa.");

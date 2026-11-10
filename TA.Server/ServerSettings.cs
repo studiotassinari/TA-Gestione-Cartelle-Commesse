@@ -36,8 +36,22 @@ public sealed class ServerSettings
     public bool EnableMcpIpripiWrites { get; set; }
     // Un gruppo esplicito evita di esporre tutti i metadati a qualunque account del dominio.
     public string JobTemplate { get; set; } = @"\\ingtassinari.it\data\lavori\2026\C26198 - CLIENTE - LUOGO - COSA";
+    // AllowedGroup resta per le configurazioni precedenti; i nuovi salvataggi usano AllowedGroups.
     public string AllowedGroup { get; set; } = "";
-    public string CollaboratorsGroup { get; set; } = "GG_TA_Commesse_Users";
+    public string[] AllowedGroups { get; set; } = [];
+    // Dominio Active Directory dell'installazione; vuoto = dominio a cui appartiene il server.
+    public string Domain { get; set; } = "";
+    // Vuoto = nessun gruppo collaboratori: accesso solo tramite i gruppi autorizzati.
+    public string CollaboratorsGroup { get; set; } = "";
+    // Account (utente@dominio o DOMINIO\utente) ammessi alla gestione straordinaria: servizio, registri, archiviazione ZIP, gestionale.
+    public string[] ManagementUsers { get; set; } = [];
+    public string[] AuthorizedGroups() => (AllowedGroups ?? Array.Empty<string>()).Append(AllowedGroup).Select(g => (g ?? "").Trim()).Where(g => g.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    // Analisi automatica locale dei candidati (testo e regole, nessun servizio esterno). Disattivata se non scelta in Configura.
+    public bool EnableLocalAnalysis { get; set; }
+    // Limiti all'uso di risorse: fascia oraria italiana (inizio = fine significa tutto il giorno) e documenti l'ora.
+    public int LocalAnalysisStartHour { get; set; } = 20;
+    public int LocalAnalysisEndHour { get; set; } = 7;
+    public int LocalAnalysisDocumentsPerHour { get; set; } = 30;
     // Compatibilità con configurazioni precedenti: la frequenza effettiva è oraria.
     public int RefreshMinutes { get; set; } = 60;
     // Porta TCP dedicata: i valori comunemente usati per HTTP sono esclusi.

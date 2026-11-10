@@ -22,15 +22,15 @@ internal static class ServiceDiagnostics
         text.AppendLine($"Diagnosi {DateTimeOffset.Now:O} - {Environment.MachineName}");
         text.AppendLine("Controlli eseguiti con l'account amministratore dell'utilita, non con l'account del servizio.");
         var config = Path.Combine(Data, "server-settings.json");
-        if (!File.Exists(config)) text.AppendLine("ERRORE: configurazione assente. Premere Configura e indicare il gruppo AD.");
+        if (!File.Exists(config)) text.AppendLine("ERRORE: configurazione assente. Premere Configura e indicare dominio, gruppi e utenti di gestione.");
         else try
         {
             using var document = JsonDocument.Parse(File.ReadAllText(config));
             var server = document.RootElement.GetProperty("Server");
-            foreach (var key in new[] { "AllowedGroup", "Port", "JobsRoot", "BidsRoot", "ArchivedJobsRoot", "ArchiveFolder" })
+            foreach (var key in new[] { "Domain", "AllowedGroups", "AllowedGroup", "CollaboratorsGroup", "ManagementUsers", "Port", "JobsRoot", "BidsRoot", "ArchivedJobsRoot", "ArchiveFolder" })
                 text.AppendLine(key + ": " + (server.TryGetProperty(key, out var value) ? value.ToString() : "MANCANTE"));
-            if (!server.TryGetProperty("AllowedGroup", out var group) || string.IsNullOrWhiteSpace(group.GetString()))
-                text.AppendLine("ERRORE: gruppo AD vuoto; il servizio non puo avviarsi.");
+            if (ConfigurationFile.Parse(document.RootElement.GetRawText()).Groups.Length == 0)
+                text.AppendLine("ERRORE: nessun gruppo autorizzato; il servizio non puo avviarsi.");
         }
         catch (Exception ex) { text.AppendLine("ERRORE configurazione: " + ex.Message); }
         foreach (var name in new[] { "Application", "System" })

@@ -1,4 +1,14 @@
-# TA-Gestione Cartelle Commesse — 2.31.1
+# TA-Gestione Cartelle Commesse — 2.32.0
+
+## Novità 2.32.0 — configurazione dell'installazione e analisi automatica locale
+
+Dominio, gruppi autorizzati, gruppo collaboratori e utenti ammessi alla gestione straordinaria non sono più scritti nel programma: si impostano dal **Gestore server > Configura** e restano nel file di configurazione del server ([dettagli](deployment/SERVER-CLIENT.md)). Il client chiede al server se l'account collegato è autorizzato. **Dopo l'aggiornamento del server aprire Configura, indicare gruppo collaboratori e utenti di gestione e riavviare il servizio**: fino ad allora la gestione straordinaria è disattivata.
+
+Nuova [analisi automatica locale](deployment/ANALISI-LOCALE.md) di MUR A.1/D.1 e relazioni geologiche, facoltativa e senza servizi esterni, con limiti all'uso di risorse: fascia oraria, documenti l'ora, una lettura alla volta a priorità ridotta, pausa durante scansioni e letture su richiesta. I risultati sono proposte da verificare e non sostituiscono le analisi salvate su richiesta. Nessun OCR: i documenti acquisiti come immagine restano da leggere a vista o con ChatGPT.
+
+Il client ricorda l'account di dominio alternativo e, a scelta, la password in Gestione credenziali di Windows; una password non più valida viene eliminata al primo rifiuto.
+
+[Scarica aggiornatore 2.32.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.32.0/TA-Commesse-Aggiornatore-2.32.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.32.0).
 
 ## Novità 2.31.1 — catalogo IPRiPI e archiviazione confermata
 
@@ -6,7 +16,6 @@ Il catalogo client IPRiPI mostra solo MUR A.1/D.1 con IPRiPI identificati e anal
 
 Aggiunta l'[archiviazione ZIP di lavori e gare](deployment/ARCHIVIAZIONE-ZIP.md), separata dalle analisi in sola lettura: preparazione, verifica e successiva eliminazione solo dopo nuova conferma. Solo Antonio/Giuseppe autenticati, nessuna esecuzione su cartelle reali durante i test. Aggiornare client e servizio alla 2.31.1 e avviare manualmente il nuovo pacchetto MCP; il processo espone 21 strumenti, senza comandi ZIP. ZIP e cancellazione sono disponibili esclusivamente nel client, menu Gestione o menu contestuale della commessa/gara; esecuzione sul server e conferma separata.
 
-[Scarica aggiornatore 2.31.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.31.1/TA-Commesse-Aggiornatore-2.31.1.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.31.1).
 
 Client WPF/MVVM .NET 10 e servizio Windows per la gestione delle commesse dello Studio Tassinari. Le sorgenti vengono analizzate **sempre e solo in lettura**: nomi, percorsi e metadati nelle scansioni automatiche; contenuti dei singoli documenti solo su richiesta esplicita tramite MCP, senza modificare gli originali. L’apertura esplicita dal client prepara solo la copia locale del documento selezionato, anche se interno a ZIP/7z.
 

@@ -43,7 +43,7 @@ public sealed class ManagerWindow : Window
         var splitter = new GridSplitter { Height = 6, HorizontalAlignment = HorizontalAlignment.Stretch }; Grid.SetRow(splitter, 1); logs.Children.Add(splitter);
         Grid.SetRow(communications, 2); logs.Children.Add(communications); root.Children.Add(logs);
         timer.Tick += async (_, _) => await Refresh();
-        Loaded += async (_, _) => { TA.Desktop.UpdateLauncher.Check("Server"); Note("Utilita pronta. Configurare account e gruppo prima dell'avvio."); await Refresh(); timer.Start(); };
+        Loaded += async (_, _) => { TA.Desktop.UpdateLauncher.Check("Server"); Note("Utilita pronta. Configurare account e gruppo prima dell'avvio."); await Refresh(); timer.Start(); await ProposeConfiguration(); };
         Closed += (_, _) => timer.Stop();
     }
     private void Add(Panel panel, string label, Func<Task> action)
@@ -112,11 +112,21 @@ public sealed class ManagerWindow : Window
     private Task Open(string path) { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); return Task.CompletedTask; }
     private Task LaunchConfiguration()
     {
-        var script = Path.Combine(ServerFolder, "Configure-Server.ps1");
-        if (!File.Exists(script)) throw new FileNotFoundException("Aprire l'utilita dalla cartella installata del server.", script);
-        var start = new ProcessStartInfo("powershell.exe") { UseShellExecute = false };
-        foreach (var argument in new[] { "-NoProfile", "-NoExit", "-ExecutionPolicy", "Bypass", "-File", script, "-OpenDomainFirewall" }) start.ArgumentList.Add(argument);
-        Process.Start(start); Note("Configurazione aperta: indicare il gruppo AD. La console mostra eventuali errori."); return Task.CompletedTask;
+        var dialog = new ConfigurationWindow(ServerFolder) { Owner = this };
+        Note(dialog.ShowDialog() == true
+            ? "Configurazione salvata: dominio, gruppi e utenti di gestione valgono dal prossimo avvio del servizio. La console mostra permessi e firewall."
+            : "Configurazione non modificata.");
+        return Task.CompletedTask;
+    }
+    // Prima installazione o configurazione precedente incompleta: la finestra viene proposta senza cercarla.
+    private async Task ProposeConfiguration()
+    {
+        ConfigurationFile current;
+        try { current = ConfigurationFile.Load(); } catch (Exception ex) { Note("Configurazione non leggibile: " + ex.Message); return; }
+        // Senza utenti di gestione il servizio funziona: basta l'avviso, la scelta può essere voluta.
+        if (current.Complete) { if (current.ManagementUsers.Length == 0) Note("Nessun utente di gestione straordinaria configurato: premere Configura per indicarli."); return; }
+        Note("Configurazione da completare: gruppi autorizzati e percorsi.");
+        await LaunchConfiguration();
     }
     private async Task Export()
     {

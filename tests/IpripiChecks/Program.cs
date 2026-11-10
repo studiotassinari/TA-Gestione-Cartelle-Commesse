@@ -36,6 +36,7 @@ internal static class Program
     }
     static void RunMain(string[] args)
     {
+        LocalAnalysisChecks.Run(Check);
         var root = Path.Combine(Path.GetTempPath(), "TA-IpripiChecks-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         // Lascia in temp solo fixture sintetiche in caso di errore, per la diagnosi.

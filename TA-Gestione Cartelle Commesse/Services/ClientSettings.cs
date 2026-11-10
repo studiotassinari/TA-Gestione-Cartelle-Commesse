@@ -2,8 +2,9 @@ using System.IO;
 using System.Text.Json;
 namespace TA_Gestione_Cartelle_Commesse.Services;
 
-// Contiene solo destinazione e porta; le credenziali provengono dalla sessione Windows corrente.
-public sealed record ClientSettings(string Host = "", int Port = 5443)
+// Destinazione, porta e scelta dell'account. Il nome dell'account alternativo è memorizzato qui;
+// la password, se richiesto, solo in Gestione credenziali di Windows (SavedCredential).
+public sealed record ClientSettings(string Host = "", int Port = 5443, bool UseCurrentAccount = true, string AccountName = "")
 {
     private static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Tassinari", "CommesseClient", "connection.json");
     public static ClientSettings Load()

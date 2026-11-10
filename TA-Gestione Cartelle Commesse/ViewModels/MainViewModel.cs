@@ -16,6 +16,8 @@ public sealed partial class MainViewModel : Observable
     private ServerConnection? connection;
     private bool reporting, initialized, connecting;
     private bool useCurrentAccount = true;
+    // Nome dell'account alternativo ricordato tra un avvio e l'altro; la password è in SavedCredential.
+    private string accountName = "";
     public bool UseCurrentAccount { get => useCurrentAccount; set { useCurrentAccount = value; Notify(); } }
     private CancellationTokenSource? pushCancellation;
     public string ServerHost { get => host; set { host = value; Notify(); } }
@@ -61,7 +63,7 @@ public sealed partial class MainViewModel : Observable
         DailyReportCommand = new(() => _ = CreateReport(true), () => connection != null && !reporting);
         ReportCommand = new(() => _ = CreateReport(), () => connection != null && !reporting);
 
-        try { var settings = ClientSettings.Load(); host = settings.Host; port = settings.Port.ToString(); }
+        try { var settings = ClientSettings.Load(); host = settings.Host; port = settings.Port.ToString(); useCurrentAccount = settings.UseCurrentAccount; accountName = settings.AccountName; }
         catch (Exception ex) { reportStatus = "Configurazione non leggibile: " + ex.Message; }
         statusTabIndex=string.IsNullOrWhiteSpace(host)?1:0;
     }
@@ -74,32 +76,65 @@ public sealed partial class MainViewModel : Observable
     {
         if (Uri.CheckHostName(host.Trim()) != UriHostNameType.Dns || !int.TryParse(port, out var number) || number is < 1024 or > 65535 or 8080 or 8443)
         { ReportStatus = "Indicare il nome DNS del server (senza http/https) e una porta TCP dedicata, per esempio 5443."; return; }
-        System.Net.NetworkCredential? credentials = null;
+        System.Net.NetworkCredential? credentials = null; bool storedCredential = false;
         if (!UseCurrentAccount)
         {
-            var dialog = new Views.DomainLoginDialog { Owner = System.Windows.Application.Current.MainWindow };
-            if (dialog.ShowDialog() != true) return;
-            credentials = dialog.Credential;
+            // Una password ricordata evita la finestra di accesso; se manca o non è leggibile si chiede di nuovo.
+            try { credentials = SavedCredential.Read(host); storedCredential = credentials != null; }
+            catch (System.ComponentModel.Win32Exception ex) { ClientLog.Write("Credenziale memorizzata non leggibile: " + ex.Message); }
+            if (credentials == null)
+            {
+                var dialog = new Views.DomainLoginDialog(accountName) { Owner = System.Windows.Application.Current.MainWindow };
+                if (dialog.ShowDialog() != true) return;
+                credentials = dialog.Credential; accountName = dialog.AccountName;
+                try { if (dialog.Remember && credentials != null) SavedCredential.Save(host, credentials); else SavedCredential.Delete(host); }
+                catch (System.ComponentModel.Win32Exception ex) { ReportStatus = "Impossibile ricordare la password: " + ex.Message; }
+            }
         }
         archiveWindow?.Close(); archiveSessions.Clear();
+        // I permessi appartengono alla connessione precedente: si ripartono da zero.
+        ApplyManagementAccess(false);
         CloseProjectWindows(); businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
         Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); NonconformityReportCommand.Refresh();
         CustomersCommand.Refresh(); ArchiveFolderCommand.Refresh();
-        try { new ClientSettings(host.Trim(), number).Save(); }
+        try { new ClientSettings(host.Trim(), number, UseCurrentAccount, accountName).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";
         try
         {
             await PollAsync();
+            // Password cambiata in AD: la credenziale ricordata viene eliminata subito, così non viene ritentata
+            // a ogni avvio fino al blocco dell'account. Il nome utente resta per il nuovo accesso.
+            if (storedCredential && (Commesse.LastConnectionError ?? Gare.LastConnectionError) is System.Security.Authentication.AuthenticationException)
+            {
+                try { SavedCredential.Delete(host); } catch (System.ComponentModel.Win32Exception) { }
+                ReportStatus = "La password ricordata per " + accountName + " non è più valida ed è stata eliminata: premere Connetti e inserirla di nuovo.";
+            }
             if (Commesse.LastConnectionError is not System.Security.Authentication.AuthenticationException and not ServerRejectedException && Gare.LastConnectionError is not System.Security.Authentication.AuthenticationException and not ServerRejectedException)
             {
+                await RefreshManagementAccessAsync(connection);
                 StartProgressPolling(connection);
                 pushCancellation = new CancellationTokenSource();
                 _ = WatchLoopAsync(connection, pushCancellation.Token);
             }
         }
         finally { connecting = false; ConnectCommand.Refresh(); }
+    }
+    // Chiede al server se l'account autenticato è tra gli utenti di gestione straordinaria configurati.
+    private async Task RefreshManagementAccessAsync(ServerConnection current)
+    {
+        bool allowed = false;
+        try { allowed = (await current.SendAsync<TA_Gestione_Cartelle_Commesse.Contracts.ServerPermissions>(new("Permissions"))).DomainAdministrator; }
+        catch (Exception ex) { ClientLog.Write("Permessi di gestione non disponibili", ex); }
+        if (ReferenceEquals(current, connection)) ApplyManagementAccess(allowed);
+    }
+    private void ApplyManagementAccess(bool allowed)
+    {
+        DomainAdministration.Set(allowed); Notify(nameof(CanManageServer)); ManageServerCommand.Refresh(); ArchiveFolderCommand.Refresh();
+        // Le righe già visibili rivalutano il comando del menu contestuale.
+        foreach (var category in new[] { Commesse, Gare, Archivio })
+            foreach (var row in category.Projects) row.ArchiveFolderCommand.Refresh();
     }
     // Dopo un errore non ripete credenziali errate: evita tentativi automatici fino al blocco dell'account AD.
     private async Task PollAsync()
@@ -175,7 +210,7 @@ public sealed partial class MainViewModel : Observable
     private void ShowServerManagement()
     {
         if (!CanManageServer) return;
-        if (!UseCurrentAccount) { ReportStatus = "La gestione del servizio richiede l'account Windows corrente di Antonio o Giuseppe."; return; }
+        if (!UseCurrentAccount) { ReportStatus = "La gestione del servizio richiede l'accesso con il proprio account Windows, non con un account alternativo."; return; }
         if (Uri.CheckHostName(host.Trim()) != UriHostNameType.Dns || !int.TryParse(port, out var number)) { ReportStatus = "Configurare prima il server."; return; }
         var panel = new Views.ServerManagementView(host.Trim(), new ServerConnection(host.Trim(), number));
         var window = new System.Windows.Window { Title = "Gestione server — " + host.Trim(), Width = 1200, Height = 800, Content = panel, Owner = System.Windows.Application.Current.MainWindow };

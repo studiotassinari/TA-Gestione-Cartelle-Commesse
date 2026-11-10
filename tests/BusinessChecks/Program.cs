@@ -27,7 +27,10 @@ try
     const string user = @"INGTASSINARI\collaboratore", other = @"INGTASSINARI\altro", manager = @"INGTASSINARI\antonio.tassinari";
     var today = DateOnly.FromDateTime(DateTime.Today);
     T Run<T>(BusinessCommand c, string actor = manager, bool admin = true) => (T)service.Execute(c, actor, admin);
-    Check(ManagementAccess.AllowsSid("S-1", x => x.StartsWith("antonio.") ? "S-1" : "S-2"), "Antonio escluso");
+    Check(!ManagementAccess.AllowsSid("S-1", x => "S-1"), "Gestione straordinaria ammessa senza utenti configurati");
+    ManagementAccess.Configure([" responsabile.uno@example.test ", "", "RESPONSABILE.UNO@example.test", @"ESEMPIO\responsabile.due"]);
+    Check(ManagementAccess.Accounts.Count == 2, "Utenti di gestione configurati non normalizzati");
+    Check(ManagementAccess.AllowsSid("S-1", x => x.StartsWith("responsabile.") ? "S-1" : "S-2"), "Responsabile configurato escluso");
     Check(!ManagementAccess.AllowsSid("S-admin", x => "S-1"), "Amministratore generico ammesso");
     Check(!ManagementAccess.AllowsSid(null, x => null), "SID nullo ammesso");
     Reject(() => Run<Customer>(new("SaveCustomer", Customer: new("", "Prova")), user, false));

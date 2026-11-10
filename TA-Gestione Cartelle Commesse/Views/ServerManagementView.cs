@@ -53,7 +53,7 @@ public sealed class ServerManagementView : UserControl, IDisposable
     }
     private static void RequireAdministrator()
     {
-        if (!DomainAdministration.IsEnabled) throw new UnauthorizedAccessException("Gestione riservata agli account Windows di Antonio e Giuseppe.");
+        if (!DomainAdministration.IsEnabled) throw new UnauthorizedAccessException("Gestione riservata ai responsabili autorizzati dal server.");
     }
     private async Task Refresh()
     {

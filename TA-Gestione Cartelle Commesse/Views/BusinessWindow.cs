@@ -118,7 +118,7 @@ public sealed class BusinessWindow : Window
     {
         if (vm.Snapshot is not { } s) return; var f = new BusinessForm(this, "Ore lavorate");
         var choices = s.Activities.Where(a => a.Assignee.Equals(t?.User ?? s.User, StringComparison.OrdinalIgnoreCase)).Select(a => new KeyValuePair<WorkActivity, string>(a, Code(a.ProjectId) + " — " + a.Title)).ToArray();
-        if (choices.Length == 0) { MessageBox.Show(this, "Nessuna attività assegnata nel periodo. Ampliare le date o rivolgersi ad Antonio/Giuseppe."); return; }
+        if (choices.Length == 0) { MessageBox.Show(this, "Nessuna attività assegnata nel periodo. Ampliare le date o rivolgersi a un responsabile."); return; }
         var activity = f.Choice("Attività assegnata", choices, choices.FirstOrDefault(a => a.Key.Id == t?.ActivityId), "Value");
         var day = f.Date("Giorno", t?.Day.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today); var hours = f.Text("Ore lavorate (es. 1,5)", ((t?.Minutes ?? 60) / 60m).ToString()); var description = f.Text("Lavoro svolto", t?.Description ?? "");
         if (f.ShowDialog() != true) return;

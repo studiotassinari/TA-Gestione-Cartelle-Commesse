@@ -12,9 +12,9 @@ public static class AdministrativeCommands
             "Ping" => Reply.Ok(request.CorrelationId ?? ""),
             "Permissions" => Reply.Ok(new ServerPermissions(domainAdmin)),
             "AdminAudit" when domainAdmin && request.RelativePath is "Start" or "Stop" or "Restart" => Reply.Ok(true),
-            "AdminAudit" => Reply.Fail("Operazione riservata agli responsabili autorizzati Antonio e Giuseppe o azione non valida."),
+            "AdminAudit" => Reply.Fail("Operazione riservata ai responsabili autorizzati o azione non valida."),
             "AdminLogs" when domainAdmin => Reply.Ok(readLogs()),
-            "AdminLogs" => Reply.Fail("Operazione riservata agli responsabili autorizzati Antonio e Giuseppe."),
+            "AdminLogs" => Reply.Fail("Operazione riservata ai responsabili autorizzati."),
             _ => null
         };
     }
