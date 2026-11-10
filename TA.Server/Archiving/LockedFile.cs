@@ -44,13 +44,19 @@ internal static class LockedFile
         {
             do
             {
-                if (stream.Name != "::$DATA") throw new IOException("Flusso alternativo non rappresentabile nello ZIP: " + path);
+                if (stream.Name != "::$DATA" && !SystemStream(stream)) throw new IOException("Flusso alternativo non rappresentabile nello ZIP: " + path);
             } while (FindNextStreamW(search, out stream));
             if (Marshal.GetLastWin32Error() != 38) throw Error(path);
         }
         finally { FindClose(search); }
     }
 
+    // Flussi che Windows aggiunge da solo e che non contengono dati del documento: la marcatura di provenienza
+    // dei file scaricati (pochi byte) e il segnaposto vuoto di Thumbs.db. Non entrano nello ZIP e non bloccano l'archiviazione;
+    // qualunque altro flusso alternativo continua a impedirla, perché andrebbe perso con l'eliminazione dell'originale.
+    private static bool SystemStream(StreamInfo stream) =>
+        stream.Name.Equals(":Zone.Identifier:$DATA", StringComparison.OrdinalIgnoreCase) && stream.Size <= 4096 ||
+        stream.Name.Equals(":encryptable:$DATA", StringComparison.OrdinalIgnoreCase) && stream.Size == 0;
     private static IOException Error(string path) => new(path + ": " + new Win32Exception(Marshal.GetLastWin32Error()).Message);
     [StructLayout(LayoutKind.Sequential)] private struct FileInfo
     {
