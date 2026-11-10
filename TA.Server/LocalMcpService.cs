@@ -7,7 +7,7 @@ using TA.Transport;
 namespace TA.Server;
 
 // Endpoint locale: ACL Windows, consultazioni e sola scrittura tipizzata del catalogo, se abilitata.
-public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, DeepInspectionService? deepInspection = null, Archiving.FolderArchiveService? folderArchive = null) : BackgroundService
+public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ILogger<LocalMcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, DeepInspectionService? deepInspection = null) : BackgroundService
 {
     public static PipeSecurity Security(SecurityIdentifier owner, SecurityIdentifier group, SecurityIdentifier? admins)
     {
@@ -61,19 +61,17 @@ public sealed class LocalMcpService(ServerSettings settings, ScanCoordinator sca
         {
             // Lettura necessaria prima di impersonare; nessuna azione viene ancora eseguita.
             request = await WireProtocol.ReadAsync<Request>(pipe, timeout.Token);
-            bool allowed = false, canArchive = false;
+            bool allowed = false;
             pipe.RunAsClient(() =>
             {
                 using var identity = WindowsIdentity.GetCurrent(true) ?? throw new UnauthorizedAccessException("Identità Windows assente.");
-                user = identity.Name; canArchive = ManagementAccess.Allows(identity);
+                user = identity.Name;
                 var principal = new WindowsPrincipal(identity);
                 allowed = principal.IsInRole(group) || (admins != null && principal.IsInRole(admins));
             });
             if (!allowed) throw new UnauthorizedAccessException("Account non autorizzato al canale MCP locale.");
             LocalCatalogPolicy.Validate(request);
-            var reply = Archiving.FolderArchiveService.Handles(request.Operation)
-                ? Reply.Ok((folderArchive ?? throw new IOException("Archiviazione non disponibile.")).Execute(request,user,canArchive))
-                : await Dispatch(request, timeout.Token, user);
+            var reply = await Dispatch(request, timeout.Token, user);
             await LocalPipeProtocol.WriteReplyAsync(pipe, reply, timeout.Token);
             CommunicationLog.Write(Environment.MachineName, "pipe-locale", user, request.Operation, "Risposta inviata", "MCP su richiesta; strumento="+request.McpTool+"; client="+request.ClientVersion, request.CorrelationId);
         }

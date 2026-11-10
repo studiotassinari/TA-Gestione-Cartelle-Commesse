@@ -26,7 +26,9 @@ public sealed class FolderArchiveService(ServerSettings settings, ScanCoordinato
     public FolderArchiveStatus Execute(Request request, string user, bool authorized)
     {
         // authorized proviene esclusivamente dal SID del token Windows autenticato.
-        if (!authorized) throw new UnauthorizedAccessException("Archiviazione riservata ad Antonio e Giuseppe. L'account del tunnel deve essere autorizzato.");
+        // Il tunnel non dispone di operazioni ZIP, neppure con un account amministratore.
+        if (!string.IsNullOrEmpty(request.McpTool)) throw new UnauthorizedAccessException("Operazioni ZIP disponibili esclusivamente dall'interfaccia client, non dal tunnel MCP.");
+        if (!authorized) throw new UnauthorizedAccessException("Archiviazione riservata ad Antonio e Giuseppe nell'interfaccia client.");
         if (request.Version != 2 || !Handles(request.Operation)) throw new ArgumentException("Comando ZIP non valido.");
         _ = Root(request.Category);
         var q = request.FolderArchive ?? throw new ArgumentException("Richiesta ZIP mancante.");

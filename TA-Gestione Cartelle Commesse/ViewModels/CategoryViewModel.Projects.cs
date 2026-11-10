@@ -14,7 +14,7 @@ public sealed partial class CategoryViewModel
         get => Projects.FirstOrDefault(p => p.Id == Selected?.Id);
         set => Selected = value?.Folder;
     }
-    public event Action<WorkProjectViewModel>? ProjectRequested, CustomerRequested;
+    public event Action<WorkProjectViewModel>? ProjectRequested, CustomerRequested, ArchiveRequested;
     public void ApplyProjectCatalog(ProjectCatalog value)
     {
         value=value with{Projects=value.Projects.Where(p=>p.Category==prefix.ToString()).ToArray()};
@@ -72,6 +72,7 @@ public sealed partial class CategoryViewModel
         foreach (var (folder, model) in candidates.Take(50))
         {
             var row = new WorkProjectViewModel(model, customers, folder);
+            row.ArchiveRequested += p => ArchiveRequested?.Invoke(p);
             row.EditRequested += p => ProjectRequested?.Invoke(p);
             row.CustomerRequested += p => CustomerRequested?.Invoke(p);
             row.FolderRequested += p => { Selected = p.Folder; OpenFolderCommand.Execute(null); };

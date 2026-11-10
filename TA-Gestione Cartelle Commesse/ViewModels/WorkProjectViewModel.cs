@@ -10,11 +10,13 @@ public sealed class WorkProjectViewModel : Observable,IDisposable
     {
         Model=model;this.customers=customers??new();Folder=folder;
         customerId=model.CustomerId;subject=model.Subject;location=model.Location;status=model.Status;BindCustomer();
+        ArchiveFolderCommand=new(()=>ArchiveRequested?.Invoke(this),()=>Folder!=null && Model.Category is "C" or "G" && Services.DomainAdministration.IsEnabled);
         EditCommand=new(()=>EditRequested?.Invoke(this));
         OpenCustomerCommand=new(()=>CustomerRequested?.Invoke(this),()=>Customer!=null);
         OpenFolderCommand=new(()=>FolderRequested?.Invoke(this),()=>Folder!=null);
     }
-    public event Action<WorkProjectViewModel>? EditRequested,CustomerRequested,FolderRequested;
+    public event Action<WorkProjectViewModel>? EditRequested,CustomerRequested,FolderRequested,ArchiveRequested;
+    public Command ArchiveFolderCommand {get;}
     public Command EditCommand {get;}
     public Command OpenCustomerCommand {get;}
     public Command OpenFolderCommand {get;}

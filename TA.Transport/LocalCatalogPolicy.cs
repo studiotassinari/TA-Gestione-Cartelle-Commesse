@@ -6,9 +6,6 @@ public static class LocalCatalogPolicy
     public static void Validate(Request request)
     {
         var expected = request.Operation switch {
-            "PrepareFolderZip" => "prepara_zip_cartella",
-            "FolderZipStatus" => "stato_zip_cartella",
-            "DeleteZippedFolder" => "elimina_cartella_zippata",
             "Ipripi" => "cerca_mur_ipripi",
             "IpripiRules" => "regole_ipripi",
             "ReadIpripi" => "leggi_mur_ipripi",

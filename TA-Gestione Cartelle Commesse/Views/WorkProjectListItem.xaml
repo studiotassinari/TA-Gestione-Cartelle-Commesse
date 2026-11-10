@@ -4,6 +4,7 @@
  <UserControl.ContextMenu>
   <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
    <MenuItem Header="Mostra in Esplora file" Command="{Binding OpenFolderCommand}"/>
+   <MenuItem Header="Archivia cartella in ZIP…" Command="{Binding ArchiveFolderCommand}"/>
    <MenuItem Header="Apri dettaglio" Command="{Binding EditCommand}"/>
    <MenuItem Header="Scheda cliente" Command="{Binding OpenCustomerCommand}"/>
   </ContextMenu>

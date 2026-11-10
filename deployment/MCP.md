@@ -87,8 +87,8 @@ Le prove usano dati fittizi: nessuna connessione al servizio aziendale per avvio
 ## Approfondimento esplicito di una commessa (2.30.0)
 
 Dopo inizia_consultazione e cerca_cartelle, usare approfondisci_commessa(category, id, documentiCercati="preventivo;contratto"). La risposta contiene Id del lavoro; azione="stato" e lavoroId consentono la consultazione su richiesta, azione="annulla" interrompe il lavoro. Non rinnova la sessione e non avvia scansioni cloud. ReadRelativePath e ArchiveEntry dei risultati servono per leggi_documento. Le informazioni dal nome non sono conferme di committente o accettazione del preventivo. Gli archivi della categoria A sono limitati a _lavori e al primo livello fisico.
-# Versione 2.31.0: archiviazione e catalogo IPRiPI
+# Versione 2.31.1: ZIP esclusivamente nel client
 
-Il nuovo processo espone **24 strumenti**: aggiunge `prepara_zip_cartella`, `stato_zip_cartella` ed `elimina_cartella_zippata`. Quest'ultimo è distruttivo e richiede una nuova conferma dopo lo ZIP verificato, oltre all'identità Windows autorizzata. [Procedura e limiti](ARCHIVIAZIONE-ZIP.md). Le analisi rimangono in sola lettura degli originali.
+Il processo espone 21 strumenti. Nessuna operazione ZIP è disponibile al tunnel, neppure per Antonio o Giuseppe. Il servizio respinge le richieste dei precedenti strumenti ZIP. Dopo l'avvio manuale del nuovo pacchetto aggiornare gli strumenti del plugin.
 
-`cerca_mur_ipripi` mostra per impostazione predefinita solo MUR A.1/D.1 con IPRiPI identificati e analisi attuale. Per lavorare sui candidati usare esplicitamente `recognizedOnly=false`; il risultato non va presentato come catalogo confermato. `stato_analisi` distingue ora anche documenti ammessi e analisi escluse/incerte. Aggiornare il servizio e il pacchetto MCP, riavviare manualmente il tunnel e aggiornare gli strumenti del plugin dopo la distribuzione.
+Il catalogo MUR resta limitato ai moduli A.1/D.1 con IPRiPI identificati; recognizedOnly=false consente la ricerca esplicita dei candidati.

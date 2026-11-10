@@ -89,7 +89,8 @@ internal static class FolderArchiveChecks
         foreach (var pair in new[] { ("PrepareFolderZip", "prepara_zip_cartella"), ("FolderZipStatus", "stato_zip_cartella"), ("DeleteZippedFolder", "elimina_cartella_zippata") })
         {
             var q = new Request(pair.Item1, McpTool: pair.Item2, CorrelationId: Guid.NewGuid().ToString("N"));
-            LocalCatalogPolicy.Validate(q);
+            Denied<UnauthorizedAccessException>(() => LocalCatalogPolicy.Validate(q));
+            Denied<UnauthorizedAccessException>(() => service.Execute(q, "Antonio", true));
             Denied<UnauthorizedAccessException>(() => LocalCatalogPolicy.Validate(q with { McpTool = "cerca_cartelle" }));
             Denied<UnauthorizedAccessException>(() => LocalReadOnlyPolicy.Validate(q));
         }

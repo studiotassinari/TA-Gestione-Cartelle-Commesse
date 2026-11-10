@@ -10,7 +10,7 @@ public sealed partial class MainViewModel : Observable
     public CategoryViewModel Commesse { get; } = new("Commesse", 'C');
     public CategoryViewModel Gare { get; } = new("Gare", 'G'); public CategoryViewModel Archivio { get; } = new("Archivio", 'A');
     private int activeTabIndex;
-    public int ActiveTabIndex { get => activeTabIndex; set { activeTabIndex = value; Notify(); Notify(nameof(ActiveCategory)); } }
+    public int ActiveTabIndex { get => activeTabIndex; set { activeTabIndex = value; Notify(); Notify(nameof(ActiveCategory)); ArchiveFolderCommand?.Refresh(); } }
     public CategoryViewModel ActiveCategory => ActiveTabIndex == 2 ? Archivio : ActiveTabIndex == 1 ? Gare : Commesse;
     private string host = "", port = "5443", reportStatus = "Configurare nome DNS del server e porta TCP dedicata.";
     private ServerConnection? connection;
@@ -38,6 +38,9 @@ public sealed partial class MainViewModel : Observable
     public Command NonconformityReportCommand {get;}
     public MainViewModel()
     {
+        ArchiveFolderCommand = new(() => ShowFolderArchive(ActiveCategory.SelectedProject), () => connection != null && CanManageServer && ActiveCategory.SelectedProject?.Model.Category is "C" or "G");
+        foreach (var category in new[] { Commesse, Gare, Archivio }) category.PropertyChanged += (_, _) => ArchiveFolderCommand.Refresh();
+        Commesse.ArchiveRequested += ShowFolderArchive; Gare.ArchiveRequested += ShowFolderArchive;
         BusinessCommand = new(ShowBusiness, () => connection != null);
         CustomersCommand = new(() => ShowCustomers(""), () => connection != null);
         Commesse.ProjectRequested += ShowProject;
@@ -78,10 +81,11 @@ public sealed partial class MainViewModel : Observable
             if (dialog.ShowDialog() != true) return;
             credentials = dialog.Credential;
         }
+        archiveWindow?.Close(); archiveSessions.Clear();
         CloseProjectWindows(); businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
         Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); NonconformityReportCommand.Refresh();
-        CustomersCommand.Refresh();
+        CustomersCommand.Refresh(); ArchiveFolderCommand.Refresh();
         try { new ClientSettings(host.Trim(), number).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";

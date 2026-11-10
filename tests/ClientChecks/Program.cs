@@ -23,6 +23,7 @@ internal static partial class Program
         Check(ClientPaths.ForExplorer(@"\\ingtassinari.it\database\file") == @"\\ingtassinari.it\database\file", "Condivisioni diverse restano inalterate");
         Check(ClientPaths.ForExplorer(@"Z:\lavori") == @"Z:\lavori", "Percorsi gia mappati invariati");
         var app = new Application();
+        CheckFolderArchiveClient();
         CheckProjectList(app);
         foreach (var prefix in new[] { 'C', 'G', 'A' })
         {

@@ -166,7 +166,8 @@
                 <MenuItem Header="Clienti e commesse associate…" Command="{Binding CustomersCommand}"/>
                 <MenuItem Header="Pianificazione, attività e ore…" Command="{Binding BusinessCommand}"/>
                 <Separator/>
-                <MenuItem Header="Apri cartella selezionata" Command="{Binding ActiveCategory.OpenFolderCommand}"/>
+                <MenuItem Header="Archivia cartella in ZIP…" Command="{Binding ArchiveFolderCommand}"/>
+          <MenuItem Header="Apri cartella selezionata" Command="{Binding ActiveCategory.OpenFolderCommand}"/>
             </MenuItem>
             <MenuItem Header="_Analisi e report">
                 <MenuItem Header="Relazioni geologiche e geotecniche…" Command="{Binding GeologyCommand}"/>
