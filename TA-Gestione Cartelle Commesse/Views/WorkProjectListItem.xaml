@@ -7,6 +7,7 @@
    <MenuItem Header="Archivia cartella in ZIP…" Command="{Binding ArchiveFolderCommand}"/>
    <MenuItem Header="Apri dettaglio" Command="{Binding EditCommand}"/>
    <MenuItem Header="Scheda cliente" Command="{Binding OpenCustomerCommand}"/>
+   <MenuItem Header="Curriculum: lavori collegati…" Command="{Binding CurriculumCommand}"/>
   </ContextMenu>
  </UserControl.ContextMenu>
  <Grid Height="34" Margin="10,0" ToolTip="{Binding Folder.Path}">

@@ -45,6 +45,8 @@ public sealed partial class MainViewModel : Observable
         foreach (var category in new[] { Commesse, Gare, Archivio }) category.PropertyChanged += (_, _) => ArchiveFolderCommand.Refresh();
         Commesse.ArchiveRequested += ShowFolderArchive; Gare.ArchiveRequested += ShowFolderArchive;
         BusinessCommand = new(ShowBusiness, () => connection != null);
+        CurriculumCommand = new(() => ShowCurriculum(), () => connection != null);
+        foreach (var category in new[] { Commesse, Gare, Archivio }) category.CurriculumRequested += project => ShowCurriculum(project);
         CustomersCommand = new(() => ShowCustomers(""), () => connection != null);
         Commesse.ProjectRequested += ShowProject;
         Commesse.CustomerRequested += p => ShowCustomers(p.CustomerId);
@@ -97,9 +99,9 @@ public sealed partial class MainViewModel : Observable
         archiveWindow?.Close(); archiveSessions.Clear();
         // I permessi appartengono alla connessione precedente: si ripartono da zero.
         ApplyManagementAccess(false);
-        CloseProjectWindows(); businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
+        CloseProjectWindows(); businessWindow?.Close(); curriculumWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); NonconformityReportCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); CurriculumCommand.Refresh(); NonconformityReportCommand.Refresh();
         CustomersCommand.Refresh(); ArchiveFolderCommand.Refresh();
         try { new ClientSettings(host.Trim(), number, UseCurrentAccount, accountName).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
@@ -198,7 +200,7 @@ public sealed partial class MainViewModel : Observable
             }
         }
     }
-    public void Stop() { CloseProjectWindows(); businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
+    public void Stop() { CloseProjectWindows(); businessWindow?.Close(); curriculumWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
 
 
     private Views.NonconformityReportWindow? nonconformityWindow;

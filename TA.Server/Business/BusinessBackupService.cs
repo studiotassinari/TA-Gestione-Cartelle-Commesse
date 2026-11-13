@@ -28,7 +28,10 @@ public sealed class BusinessBackupService(BusinessService business,ServerSetting
             store.Backup(local);File.Copy(local,temp,false);
             using(var a=File.OpenRead(local))using(var b=File.OpenRead(temp))
                 if(!SHA256.HashData(a).SequenceEqual(SHA256.HashData(b)))throw new IOException("Copia di rete non verificata.");
-            File.Move(temp,target,true);lastRevision=revision;lastDay=day;
+            File.Move(temp,target,true);
+            // Le fotografie del curriculum sono file accanto al database: nel backup si aggiungono quelle nuove.
+            CurriculumService.MirrorPhotos(CurriculumService.PhotoFolder(configuration),Path.Combine(targetFolder,"curriculum-foto"));
+            lastRevision=revision;lastDay=day;
             store.BackupStatus="Backup gestionale verificato: "+TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow,"W. Europe Standard Time").ToString("dd/MM/yyyy HH:mm");
             foreach(var file in BackupRetentionPolicy.Obsolete(Directory.EnumerateFiles(targetFolder,"gestionale-*.sqlite").Where(p=>System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(p),"^gestionale-[0-9]{8}\\.sqlite$")),configuration.BackupRetention,DateTime.UtcNow,false))
                 if((File.GetAttributes(file)&FileAttributes.ReparsePoint)==0)File.Delete(file);

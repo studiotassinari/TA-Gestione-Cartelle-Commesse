@@ -11,7 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 // Ogni comando richiede cifratura, firma, autenticazione Windows mutua e appartenenza al gruppo configurato.
-public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, Business.BusinessService? business = null, DeepInspectionService? deepInspection = null, Archiving.FolderArchiveService? folderArchive = null) : BackgroundService
+public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, Business.BusinessService? business = null, DeepInspectionService? deepInspection = null, Archiving.FolderArchiveService? folderArchive = null, Business.CurriculumService? curriculum = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -104,6 +104,8 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
                         ? Reply.Ok((folderArchive ?? throw new IOException("Archiviazione non disponibile.")).Execute(request,user,ManagementAccess.Allows(identity)))
                         : request.Operation=="Business" && request.Version==2
                         ? Reply.Ok((business??throw new IOException("Gestionale non disponibile.")).Execute(request.Business??throw new ArgumentException("Comando mancante."),user,ManagementAccess.Allows(identity)))
+                        : request.Operation=="Curriculum" && request.Version==2
+                        ? Reply.Ok((curriculum??throw new IOException("Curriculum non disponibile.")).Execute(request.Curriculum??throw new ArgumentException("Comando mancante."),user))
                         : AdministrativeCommands.Handle(request, ManagementAccess.Allows(identity), () => new(
                         CommunicationLog.Tail(Path.Combine(CommunicationLog.DirectoryPath, "service.log")),
                         CommunicationLog.Tail(CommunicationLog.FilePath))) ?? await Dispatch(request,ct,user).WaitAsync(ct);

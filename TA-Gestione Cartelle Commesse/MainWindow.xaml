@@ -171,6 +171,7 @@
                 <MenuItem Header="Nuova gara…" Command="{Binding CreateBidCommand}"/>
                 <MenuItem Header="Clienti e commesse associate…" Command="{Binding CustomersCommand}"/>
                 <MenuItem Header="Pianificazione, attività e ore…" Command="{Binding BusinessCommand}"/>
+                <MenuItem Header="Curriculum dello studio…" Command="{Binding CurriculumCommand}"/>
                 <Separator/>
                 <MenuItem Header="Archivia cartella in ZIP…" Command="{Binding ArchiveFolderCommand}"/>
           <MenuItem Header="Apri cartella selezionata" Command="{Binding ActiveCategory.OpenFolderCommand}"/>

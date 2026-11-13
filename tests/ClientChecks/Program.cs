@@ -59,6 +59,8 @@ internal static partial class Program
         Directory.CreateDirectory("artifacts/checks"); using var file = File.Create("artifacts/checks/log-controls.png");
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); encoder.Save(file);
         Check(true, "Due controlli WPF dei log renderizzati");
+        // Per ultima: la finestra del curriculum resta aperta in memoria fino alla chiusura dell'applicazione di prova.
+        CheckCurriculum();
         app.Shutdown();
     }
 }

@@ -58,6 +58,7 @@ builder.Services.AddSingleton<TA.Server.Documents.DocumentService>();
 builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddSingleton<TA.Server.Business.BusinessService>();
+builder.Services.AddSingleton<TA.Server.Business.CurriculumService>();
 builder.Services.AddHostedService<TA.Server.Business.BusinessBackupService>();
 builder.Services.AddHostedService<DailyDatabaseBackupService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());

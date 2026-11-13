@@ -15,7 +15,8 @@ public sealed partial class CategoryViewModel
         get => Projects.FirstOrDefault(p => p.Id == Selected?.Id);
         set => Selected = value?.Folder;
     }
-    public event Action<WorkProjectViewModel>? ProjectRequested, CustomerRequested, ArchiveRequested;
+    public event Action<WorkProjectViewModel>? ProjectRequested, CustomerRequested, ArchiveRequested, CurriculumRequested;
+    public bool HasCode(string code) => all.Any(r => string.Equals(r.Code, code, StringComparison.OrdinalIgnoreCase));
     // Ordinamento dell'elenco: predefinito per anno e numero, dalle più recenti. Vale su tutte le voci, prima del limite di 50.
     public string SortColumn { get; private set; } = "Code";
     public bool SortDescending { get; private set; } = true;
@@ -115,6 +116,7 @@ public sealed partial class CategoryViewModel
             row.ArchiveRequested += p => ArchiveRequested?.Invoke(p);
             row.EditRequested += p => ProjectRequested?.Invoke(p);
             row.CustomerRequested += p => CustomerRequested?.Invoke(p);
+            row.CurriculumRequested += p => CurriculumRequested?.Invoke(p);
             row.FolderRequested += p => { Selected = p.Folder; OpenFolderCommand.Execute(null); };
             Projects.Add(row); Records.Add(folder);
         }

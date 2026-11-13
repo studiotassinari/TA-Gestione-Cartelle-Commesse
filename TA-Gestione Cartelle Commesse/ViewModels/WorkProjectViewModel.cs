@@ -14,8 +14,10 @@ public sealed class WorkProjectViewModel : Observable,IDisposable
         EditCommand=new(()=>EditRequested?.Invoke(this));
         OpenCustomerCommand=new(()=>CustomerRequested?.Invoke(this),()=>Customer!=null);
         OpenFolderCommand=new(()=>FolderRequested?.Invoke(this),()=>Folder!=null);
+        CurriculumCommand=new(()=>CurriculumRequested?.Invoke(this));
     }
-    public event Action<WorkProjectViewModel>? EditRequested,CustomerRequested,FolderRequested,ArchiveRequested;
+    public event Action<WorkProjectViewModel>? EditRequested,CustomerRequested,FolderRequested,ArchiveRequested,CurriculumRequested;
+    public Command CurriculumCommand {get;}
     public Command ArchiveFolderCommand {get;}
     public Command EditCommand {get;}
     public Command OpenCustomerCommand {get;}
