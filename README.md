@@ -1,4 +1,12 @@
-# TA-Gestione Cartelle Commesse — 2.32.0
+# TA-Gestione Cartelle Commesse — 2.32.1
+
+## Novità 2.32.1 — correzioni e ricerca del committente
+
+Corretta la creazione di una nuova commessa: dopo il salvataggio della configurazione con la 2.32.0 la cartella modello risultava vuota e l'anteprima segnalava un percorso vuoto. Un campo lasciato vuoto in **Configura** ora mantiene il modello predefinito del servizio.
+
+Nella finestra **Nuova commessa** il committente si cerca scrivendo: nome, partita IVA o codice fiscale, senza distinzione di maiuscole e accenti. L'[archiviazione ZIP](deployment/ARCHIVIAZIONE-ZIP.md) non viene più bloccata da `Thumbs.db` e dalla marcatura dei file scaricati. Dopo **Verifica e salva** il Gestore server propone il riavvio del servizio.
+
+[Scarica aggiornatore 2.32.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.32.1/TA-Commesse-Aggiornatore-2.32.1.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.32.1).
 
 ## Novità 2.32.0 — configurazione dell'installazione e analisi automatica locale
 
@@ -7,8 +15,6 @@ Dominio, gruppi autorizzati, gruppo collaboratori e utenti ammessi alla gestione
 Nuova [analisi automatica locale](deployment/ANALISI-LOCALE.md) di MUR A.1/D.1 e relazioni geologiche, facoltativa e senza servizi esterni, con limiti all'uso di risorse: fascia oraria, documenti l'ora, una lettura alla volta a priorità ridotta, pausa durante scansioni e letture su richiesta. I risultati sono proposte da verificare e non sostituiscono le analisi salvate su richiesta. Nessun OCR: i documenti acquisiti come immagine restano da leggere a vista o con ChatGPT.
 
 Il client ricorda l'account di dominio alternativo e, a scelta, la password in Gestione credenziali di Windows; una password non più valida viene eliminata al primo rifiuto.
-
-[Scarica aggiornatore 2.32.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.32.0/TA-Commesse-Aggiornatore-2.32.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.32.0).
 
 ## Novità 2.31.1 — catalogo IPRiPI e archiviazione confermata
 
