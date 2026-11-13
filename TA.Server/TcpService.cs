@@ -11,7 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 // Ogni comando richiede cifratura, firma, autenticazione Windows mutua e appartenenza al gruppo configurato.
-public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, Business.BusinessService? business = null, DeepInspectionService? deepInspection = null, Archiving.FolderArchiveService? folderArchive = null) : BackgroundService
+public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, Business.BusinessService? business = null, DeepInspectionService? deepInspection = null, Archiving.FolderArchiveService? folderArchive = null, Business.CurriculumService? curriculum = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -104,6 +104,8 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
                         ? Reply.Ok((folderArchive ?? throw new IOException("Archiviazione non disponibile.")).Execute(request,user,ManagementAccess.Allows(identity)))
                         : request.Operation=="Business" && request.Version==2
                         ? Reply.Ok((business??throw new IOException("Gestionale non disponibile.")).Execute(request.Business??throw new ArgumentException("Comando mancante."),user,ManagementAccess.Allows(identity)))
+                        : request.Operation=="Curriculum" && request.Version==2
+                        ? Reply.Ok((curriculum??throw new IOException("Curriculum non disponibile.")).Execute(request.Curriculum??throw new ArgumentException("Comando mancante."),user))
                         : AdministrativeCommands.Handle(request, ManagementAccess.Allows(identity), () => new(
                         CommunicationLog.Tail(Path.Combine(CommunicationLog.DirectoryPath, "service.log")),
                         CommunicationLog.Tail(CommunicationLog.FilePath))) ?? await Dispatch(request,ct,user).WaitAsync(ct);
@@ -137,14 +139,14 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
             case "ListDocuments": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,null,request.Documents,token)).Listing);
             case "Info": return Reply.Ok(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "Sconosciuta");
             case "TemplatePreview":
-                if (request.Category != "C") return Reply.Fail("Il modello e disponibile solo per le commesse.");
-                return Reply.Ok(templates.Preview(request.Creation ?? throw new ArgumentException("Dati commessa mancanti.")));
+                if (request.Category is not ("C" or "G")) return Reply.Fail("La creazione da modello e disponibile solo per commesse e gare.");
+                return Reply.Ok(templates.Preview(request.Creation ?? throw new ArgumentException("Dati mancanti."), request.Category));
             case "CreateJob":
-                if (request.Category != "C") return Reply.Fail("Il modello e disponibile solo per le commesse.");
-                var created = templates.Create(request.Creation ?? throw new ArgumentException("Dati commessa mancanti."));
-                logger.LogInformation("Commessa creata da modello: {Path}", created);
-                scans.Get("C").NotifyChange();
-                scans.Refresh("C");
+                if (request.Category is not ("C" or "G")) return Reply.Fail("La creazione da modello e disponibile solo per commesse e gare.");
+                var created = templates.Create(request.Creation ?? throw new ArgumentException("Dati mancanti."), request.Category);
+                logger.LogInformation("{Kind} creata da modello: {Path}", request.Category == "G" ? "Gara" : "Commessa", created);
+                scans.Get(request.Category).NotifyChange();
+                scans.Refresh(request.Category);
                 return Reply.Ok(created);
             case "State":
                 var state = scans.Get(request.Category).State;

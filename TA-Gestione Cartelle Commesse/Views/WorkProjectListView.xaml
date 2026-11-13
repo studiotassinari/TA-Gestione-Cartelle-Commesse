@@ -4,20 +4,26 @@
  <DockPanel>
   <TextBlock DockPanel.Dock="Top" Text="{Binding ListCaption}" Foreground="#53717B" Margin="2,0,0,6" FontSize="12"/>
   <Border DockPanel.Dock="Top" Background="#192845" Padding="11,0" Margin="0,0,17,0">
-   <Grid Height="30">
-    <Grid.Resources><Style TargetType="TextBlock">
+   <Grid x:Name="Header" Height="30">
+    <Grid.Resources><Style TargetType="Button">
      <Setter Property="Foreground" Value="White"/><Setter Property="FontSize" Value="11"/>
-     <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="VerticalAlignment" Value="Center"/>
+     <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="VerticalAlignment" Value="Stretch"/>
+     <Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Cursor" Value="Hand"/>
+     <Setter Property="Margin" Value="0"/><Setter Property="Padding" Value="0"/>
+     <Setter Property="ToolTip" Value="Ordina per questa colonna; un secondo clic inverte l'ordine"/>
+     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+      <Border Background="Transparent"><ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left"/></Border>
+     </ControlTemplate></Setter.Value></Setter>
     </Style></Grid.Resources>
     <Grid.ColumnDefinitions>
-     <ColumnDefinition Width="88"/><ColumnDefinition Width="48"/><ColumnDefinition Width="48"/>
+     <ColumnDefinition Width="88"/><ColumnDefinition Width="56"/><ColumnDefinition Width="52"/>
      <ColumnDefinition Width="2*"/><ColumnDefinition Width="3*"/>
-     <ColumnDefinition Width="110"/><ColumnDefinition Width="140"/><ColumnDefinition Width="100"/><ColumnDefinition Width="30"/>
+     <ColumnDefinition Width="110"/><ColumnDefinition Width="140"/><ColumnDefinition Width="124"/><ColumnDefinition Width="100"/><ColumnDefinition Width="30"/>
     </Grid.ColumnDefinitions>
-    <TextBlock Text="Codice"/><TextBlock Grid.Column="1" Text="Anno"/><TextBlock Grid.Column="2" Text="N."/>
-    <TextBlock Grid.Column="3" Text="Cliente"/><TextBlock Grid.Column="4" Text="Argomento"/>
-    <TextBlock Grid.Column="5" Text="Dimensione"/><TextBlock Grid.Column="6" Text="Ultima attività"/>
-    <TextBlock Grid.Column="7" Text="Stato"/>
+    <Button Tag="Code" Content="Codice" Click="Sort"/><Button Grid.Column="1" Tag="Year" Content="Anno" Click="Sort"/><Button Grid.Column="2" Tag="Number" Content="N." Click="Sort"/>
+    <Button Grid.Column="3" Tag="Client" Content="Cliente" Click="Sort"/><Button Grid.Column="4" Tag="Subject" Content="Argomento" Click="Sort"/>
+    <Button Grid.Column="5" Tag="Size" Content="Dimensione" Click="Sort"/><Button Grid.Column="6" Tag="Activity" Content="Ultima attività" Click="Sort"/>
+    <Button Grid.Column="7" Tag="Quote" Content="Preventivo" Click="Sort"/><Button Grid.Column="8" Tag="State" Content="Stato" Click="Sort"/>
    </Grid>
   </Border>
   <ListBox ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject, Mode=TwoWay}"

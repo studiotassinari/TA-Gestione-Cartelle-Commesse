@@ -35,6 +35,12 @@ public sealed class ServerSettings
     public bool EnableMcpGeologyWrites { get; set; }
     public bool EnableMcpIpripiWrites { get; set; }
     // Un gruppo esplicito evita di esporre tutti i metadati a qualunque account del dominio.
+    // Modello per le nuove gare; vuoto = viene creata solo la cartella principale, senza sottocartelle.
+    public string BidTemplate { get; set; } = "";
+    // Modello Word (.docx o .dotx) con intestazione e stili dello studio, usato dall'esportazione del curriculum; vuoto = impaginazione neutra.
+    public string CurriculumTemplate { get; set; } = "";
+    // Cartella con logo, copertina, icone e stile per l'esportazione del curriculum: letta soltanto, mai pubblicata con il programma.
+    public string CurriculumGraphics { get; set; } = "";
     public string JobTemplate { get; set; } = @"\\ingtassinari.it\data\lavori\2026\C26198 - CLIENTE - LUOGO - COSA";
     // AllowedGroup resta per le configurazioni precedenti; i nuovi salvataggi usano AllowedGroups.
     public string AllowedGroup { get; set; } = "";

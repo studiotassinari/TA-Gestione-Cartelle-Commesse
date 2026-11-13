@@ -1,4 +1,22 @@
-# TA-Gestione Cartelle Commesse — 2.32.0
+# TA-Gestione Cartelle Commesse — 2.33.0
+
+## Novità 2.33.0 — curriculum dello studio
+
+Nuovo modulo **Gestione > Curriculum dello studio…**: i lavori svolti si inseriscono a mano con committente, luogo, periodo, prestazioni, importi, macro categorie di prestazioni, categorie delle opere, fotografie e parole chiave, e si collegano per codice a commesse, gare e voci d'archivio (dal tasto destro su una riga si aprono i lavori collegati). Tutti gli utenti autorizzati possono aggiornarlo; i dati stanno nell'archivio del gestionale e rientrano nel backup.
+
+**Esporta in Word…** produce schede complete, schede sintetiche oppure l'elenco per gare con i totali per ID opere, con copertina, simbolo a quadranti delle macro categorie e grafica dello studio. Dettagli in [deployment/CURRICULUM.md](deployment/CURRICULUM.md).
+
+[Scarica aggiornatore 2.33.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.33.0/TA-Commesse-Aggiornatore-2.33.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.33.0).
+
+### Correzioni e ricerca del committente (previste come 2.32.1, pubblicate con la 2.33.0)
+
+Corretta la creazione di una nuova commessa: dopo il salvataggio della configurazione con la 2.32.0 la cartella modello risultava vuota e l'anteprima segnalava un percorso vuoto. Un campo lasciato vuoto in **Configura** ora mantiene il modello predefinito del servizio.
+
+Il pulsante **+ Nuova commessa** è ora nella scheda Commesse e la scheda Gare ha **+ Nuova gara**, con la stessa procedura (anteprima, poi conferma) e il codice successivo già proposto. Il modello delle gare si indica nel Gestore server > Configura; se manca, viene creata solo la cartella principale.
+
+Nella finestra **Nuova commessa** il committente si cerca scrivendo: nome, partita IVA o codice fiscale, senza distinzione di maiuscole e accenti. L'[archiviazione ZIP](deployment/ARCHIVIAZIONE-ZIP.md) non viene più bloccata da `Thumbs.db` e dalla marcatura dei file scaricati. Dopo **Verifica e salva** il Gestore server propone il riavvio del servizio.
+
+Elenco di commesse, gare e archivio: nuova colonna **Preventivo** con colori (verde presente, giallo da verificare, rosso non trovato, grigio non ancora verificato; l'esito deriva dai soli nomi dei file nella cartella amministrazione). Un clic sull'intestazione di una colonna ordina l'elenco, un secondo clic inverte l'ordine. L'elenco iniziale mostra le ultime 50 voci per anno e numero e la ricerca considera anche anno e numero, con più parole insieme (per esempio `2024 114`).
 
 ## Novità 2.32.0 — configurazione dell'installazione e analisi automatica locale
 
@@ -7,8 +25,6 @@ Dominio, gruppi autorizzati, gruppo collaboratori e utenti ammessi alla gestione
 Nuova [analisi automatica locale](deployment/ANALISI-LOCALE.md) di MUR A.1/D.1 e relazioni geologiche, facoltativa e senza servizi esterni, con limiti all'uso di risorse: fascia oraria, documenti l'ora, una lettura alla volta a priorità ridotta, pausa durante scansioni e letture su richiesta. I risultati sono proposte da verificare e non sostituiscono le analisi salvate su richiesta. Nessun OCR: i documenti acquisiti come immagine restano da leggere a vista o con ChatGPT.
 
 Il client ricorda l'account di dominio alternativo e, a scelta, la password in Gestione credenziali di Windows; una password non più valida viene eliminata al primo rifiuto.
-
-[Scarica aggiornatore 2.32.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.32.0/TA-Commesse-Aggiornatore-2.32.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.32.0).
 
 ## Novità 2.31.1 — catalogo IPRiPI e archiviazione confermata
 

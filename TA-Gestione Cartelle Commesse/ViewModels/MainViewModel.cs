@@ -31,6 +31,7 @@ public sealed partial class MainViewModel : Observable
     public Command CheckCommunicationCommand { get; }
     public Command ChangesCommand { get; }
     public Command CreateJobCommand { get; }
+    public Command CreateBidCommand { get; }
     public Command UpdateCommand { get; }
     public Command AboutCommand { get; }
     public Command ConnectCommand { get; }
@@ -44,6 +45,8 @@ public sealed partial class MainViewModel : Observable
         foreach (var category in new[] { Commesse, Gare, Archivio }) category.PropertyChanged += (_, _) => ArchiveFolderCommand.Refresh();
         Commesse.ArchiveRequested += ShowFolderArchive; Gare.ArchiveRequested += ShowFolderArchive;
         BusinessCommand = new(ShowBusiness, () => connection != null);
+        CurriculumCommand = new(() => ShowCurriculum(), () => connection != null);
+        foreach (var category in new[] { Commesse, Gare, Archivio }) category.CurriculumRequested += project => ShowCurriculum(project);
         CustomersCommand = new(() => ShowCustomers(""), () => connection != null);
         Commesse.ProjectRequested += ShowProject;
         Commesse.CustomerRequested += p => ShowCustomers(p.CustomerId);
@@ -55,7 +58,9 @@ public sealed partial class MainViewModel : Observable
         ShowScanCommand=new(()=>StatusTabIndex=0); ShowConnectionCommand=new(()=>StatusTabIndex=1);
         NonconformityReportCommand=new(ShowNonconformityReport,()=>connection!=null);
         ManageServerCommand = new(ShowServerManagement, () => CanManageServer); CheckCommunicationCommand = new(() => _ = CheckCommunicationAsync()); ChangesCommand = new(ShowChanges);
-        CreateJobCommand = new(CreateJob, () => connection != null);
+        CreateJobCommand = new(() => Create(Commesse), () => connection != null);
+        CreateBidCommand = new(() => Create(Gare), () => connection != null);
+        Commesse.CreateRequested += Create; Gare.CreateRequested += Create;
         UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
         AboutCommand = new(() => _ = ShowAboutAsync());
         ConnectCommand = new(() => _ = ConnectAsync(), () => !connecting);
@@ -94,9 +99,9 @@ public sealed partial class MainViewModel : Observable
         archiveWindow?.Close(); archiveSessions.Clear();
         // I permessi appartengono alla connessione precedente: si ripartono da zero.
         ApplyManagementAccess(false);
-        CloseProjectWindows(); businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
+        CloseProjectWindows(); businessWindow?.Close(); curriculumWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); NonconformityReportCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); CurriculumCommand.Refresh(); NonconformityReportCommand.Refresh();
         CustomersCommand.Refresh(); ArchiveFolderCommand.Refresh();
         try { new ClientSettings(host.Trim(), number, UseCurrentAccount, accountName).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
@@ -195,7 +200,7 @@ public sealed partial class MainViewModel : Observable
             }
         }
     }
-    public void Stop() { CloseProjectWindows(); businessWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
+    public void Stop() { CloseProjectWindows(); businessWindow?.Close(); curriculumWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); StopProgressPolling(); ClientLog.Write("Chiusura client."); pushCancellation?.Cancel(); }
 
 
     private Views.NonconformityReportWindow? nonconformityWindow;
@@ -242,12 +247,12 @@ public sealed partial class MainViewModel : Observable
         new System.Windows.Window { Title = "Modifiche ricevute - ultime 200 per categoria nella sessione", Width = 1000, Height = 520,
             Owner = System.Windows.Application.Current.MainWindow, Content = tabs, WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner }.Show();
     }
-    private void CreateJob()
+    private void Create(CategoryViewModel category)
     {
-        if (connection == null) return;
-        var dialog = new Views.CreateJobDialog(connection) { Owner = System.Windows.Application.Current.MainWindow };
+        if (connection == null || !category.CanCreate) return;
+        var dialog = new Views.CreateJobDialog(connection, category.CategoryCode, category.HighestNumber(DateTime.Today.ToString("yy"))) { Owner = System.Windows.Application.Current.MainWindow };
         if (dialog.ShowDialog() == true)
-            ReportStatus = "Commessa creata: " + dialog.CreatedPath + ". L'elenco si aggiornera al termine della verifica server.";
+            ReportStatus = (category.CategoryCode == "G" ? "Gara creata: " : "Commessa creata: ") + dialog.CreatedPath + ". L'elenco si aggiornera al termine della verifica server.";
     }
     private async Task ShowAboutAsync()
     {

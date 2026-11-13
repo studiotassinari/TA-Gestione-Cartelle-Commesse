@@ -7,15 +7,18 @@ namespace TA.Server;
 public sealed class TemplateCreationService(ServerSettings settings)
 {
     private readonly object gate = new();
-    public TemplatePreview Preview(CreateJobRequest request)
+    // Categoria C = commesse, G = gare: stessa procedura, con radice e modello propri.
+    public TemplatePreview Preview(CreateJobRequest request, string category = "C")
     {
+        if (category is not ("C" or "G")) throw new ArgumentException("La creazione da modello vale solo per commesse e gare.");
+        bool bid = category == "G";
         var code = (request.Code ?? "").Trim().ToUpperInvariant();
-        if (!Regex.IsMatch(code, "^C[0-9]{5}$")) throw new ArgumentException("Codice atteso: CXXYYY, ad esempio C26199.");
+        if (!Regex.IsMatch(code, "^" + category + "[0-9]{5}$")) throw new ArgumentException($"Codice atteso: {category}XXYYY, ad esempio {category}26199.");
         var client = Segment(request.Client, "Cliente");
         var place = string.IsNullOrWhiteSpace(request.Place) ? "" : Segment(request.Place, "Luogo");
         var subject = Segment(request.Subject, "Argomento");
         var year = "20" + code.Substring(1, 2);
-        var root = Path.GetFullPath(settings.JobsRoot);
+        var root = Path.GetFullPath(bid ? settings.BidsRoot : settings.JobsRoot);
         var yearRoot = Path.Combine(root, year);
         CheckAncestors(root); CheckAncestors(yearRoot);
         if (Directory.EnumerateDirectories(yearRoot).Any(p => Path.GetFileName(p).StartsWith(code, StringComparison.OrdinalIgnoreCase)))
@@ -23,9 +26,13 @@ public sealed class TemplateCreationService(ServerSettings settings)
         var name = code + " - " + client + (place.Length > 0 ? " - " + place : "") + " - " + subject;
         if (name.Length > 200) throw new ArgumentException("Nome cartella troppo lungo (massimo 200 caratteri).");
         var destination = Path.Combine(yearRoot, name);
-        var template = Path.GetFullPath(settings.JobTemplate);
-        CheckAncestors(template);
         var directories = new List<string>();
+        // Gare senza modello configurato: solo la cartella principale. Lo stamp distingue comunque l'anteprima.
+        if (bid && string.IsNullOrWhiteSpace(settings.BidTemplate))
+            return new(destination, "", [], Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("\n"))));
+        if (!bid && string.IsNullOrWhiteSpace(settings.JobTemplate)) throw new IOException("Cartella modello non configurata: indicarla nel Gestore server, pulsante Configura, e riavviare il servizio.");
+        var template = Path.GetFullPath(bid ? settings.BidTemplate : settings.JobTemplate);
+        CheckAncestors(template);
         var pending = new Stack<(string Path, int Depth)>(); pending.Push((template, 0));
         while (pending.TryPop(out var item))
         {
@@ -43,14 +50,14 @@ public sealed class TemplateCreationService(ServerSettings settings)
         var stamp = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(template + "\n" + string.Join("\n", ordered))));
         return new(destination, template, ordered, stamp);
     }
-    public string Create(CreateJobRequest request)
+    public string Create(CreateJobRequest request, string category = "C")
     {
         lock (gate)
         {
             // Lock condiviso tra istanze del server: riusa la cartella archivio gia abilitata in scrittura.
             CheckAncestors(settings.ArchiveFolder);
             using var lease = new FileStream(Path.Combine(settings.ArchiveFolder, ".create-job.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-            var plan = Preview(request);
+            var plan = Preview(request, category);
             if (request.TemplateStamp != plan.Stamp) throw new IOException("Il modello e cambiato o manca l'anteprima. Aprire nuovamente la creazione.");
             var year = Path.GetDirectoryName(plan.Destination)!;
             var staging = Path.Combine(year, ".TA-new-" + Guid.NewGuid().ToString("N"));

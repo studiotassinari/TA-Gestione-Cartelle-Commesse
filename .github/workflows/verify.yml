@@ -21,7 +21,7 @@ jobs:
         run: |
           dotnet build 'TA-Gestione Cartelle Commesse.slnx' -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Compilazione fallita' }
-          foreach ($test in @('SqliteChecks','InventoryChecks','FileSearchChecks','HourlyChecks','NightlyChecks','LiveIndexChecks','ReliabilityChecks','DirectoryProgressChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks','IpripiChecks','BusinessChecks','UpdaterChecks','ClientChecks')) {
+          foreach ($test in @('SqliteChecks','InventoryChecks','FileSearchChecks','HourlyChecks','NightlyChecks','LiveIndexChecks','ReliabilityChecks','DirectoryProgressChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks','IpripiChecks','BusinessChecks','UpdaterChecks','ClientChecks','TemplateChecks')) {
             dotnet run --project "tests/$test" -c Release
             if ($LASTEXITCODE -ne 0) { throw "Verifica fallita: $test" }
           }

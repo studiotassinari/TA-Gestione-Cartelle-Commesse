@@ -107,7 +107,12 @@
                     <TextBox Text="{Binding RootPath, Mode=OneWay}" IsReadOnly="True" ToolTip="Cartella radice"/>
                 </DockPanel>
                 <DockPanel Grid.Row="1" Margin="0,0,0,12">
-                    <TextBlock Text="Cerca codice, cliente o argomento" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Button DockPanel.Dock="Left" Content="{Binding CreateLabel}" Command="{Binding CreateCommand}" Margin="0,0,14,0" ToolTip="Crea la cartella dal modello, con anteprima prima della conferma">
+                        <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers><DataTrigger Binding="{Binding CanCreate}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
+                        </Style></Button.Style>
+                    </Button>
+                    <TextBlock Text="Cerca codice, anno, numero, cliente o argomento" VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"/>
                 </DockPanel>
                 <Grid Grid.Row="2">
@@ -149,7 +154,7 @@
                     </DataGrid>
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                                   Visibility="{Binding IsProjectCategory, Converter={StaticResource BoolVisibility}}">
-                        <views:WorkProjectListView MinWidth="1050"/>
+                        <views:WorkProjectListView MinWidth="1180"/>
                     </ScrollViewer>
                     <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"/>
                     <GroupBox Grid.Column="2" Header="Gerarchia cartelle">
@@ -163,8 +168,10 @@
         <Menu DockPanel.Dock="Top" Margin="0,0,0,14" Padding="4" Background="White">
             <MenuItem Header="_Gestione">
                 <MenuItem Header="Nuova commessa da modello…" Command="{Binding CreateJobCommand}"/>
+                <MenuItem Header="Nuova gara…" Command="{Binding CreateBidCommand}"/>
                 <MenuItem Header="Clienti e commesse associate…" Command="{Binding CustomersCommand}"/>
                 <MenuItem Header="Pianificazione, attività e ore…" Command="{Binding BusinessCommand}"/>
+                <MenuItem Header="Curriculum dello studio…" Command="{Binding CurriculumCommand}"/>
                 <Separator/>
                 <MenuItem Header="Archivia cartella in ZIP…" Command="{Binding ArchiveFolderCommand}"/>
           <MenuItem Header="Apri cartella selezionata" Command="{Binding ActiveCategory.OpenFolderCommand}"/>

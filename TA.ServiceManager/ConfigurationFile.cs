@@ -19,6 +19,9 @@ public sealed class ConfigurationFile
     public string ArchivedJobsRoot { get; init; } = "";
     public string ArchiveFolder { get; init; } = "";
     public string JobTemplate { get; init; } = "";
+    public string BidTemplate { get; init; } = "";
+    public string CurriculumTemplate { get; init; } = "";
+    public string CurriculumGraphics { get; init; } = "";
     // Analisi automatica locale e relativi limiti all'uso di risorse.
     public bool LocalAnalysis { get; init; }
     public int LocalAnalysisStartHour { get; init; } = 20;
@@ -37,6 +40,7 @@ public sealed class ConfigurationFile
         foreach (var (label, path) in new[] { ("commesse", JobsRoot), ("gare", BidsRoot), ("archivio", ArchivedJobsRoot) })
             if (!path.StartsWith(@"\\", StringComparison.Ordinal)) problems.Add("La cartella " + label + " deve essere un percorso UNC (\\\\server\\condivisione\\...).");
         if (ArchiveFolder.Length == 0) problems.Add("Indicare la cartella dati del servizio.");
+        if (CurriculumTemplate.Length > 0 && System.IO.Path.GetExtension(CurriculumTemplate).ToLowerInvariant() is not (".docx" or ".dotx")) problems.Add("Il modello Word del curriculum deve essere un file .docx o .dotx.");
         if (LocalAnalysisStartHour is < 0 or > 23 || LocalAnalysisEndHour is < 0 or > 23) problems.Add("Le ore dell'analisi automatica devono essere comprese tra 0 e 23.");
         if (LocalAnalysisDocumentsPerHour is < 1 or > 120) problems.Add("L'analisi automatica ammette da 1 a 120 documenti l'ora.");
         return problems;
@@ -60,7 +64,7 @@ public sealed class ConfigurationFile
             LocalAnalysisStartHour = Number("LocalAnalysisStartHour", 20), LocalAnalysisEndHour = Number("LocalAnalysisEndHour", 7), LocalAnalysisDocumentsPerHour = Number("LocalAnalysisDocumentsPerHour", 30),
             // Le configurazioni precedenti avevano un solo gruppo nella proprietà AllowedGroup.
             Groups = List("AllowedGroups").Append(Text("AllowedGroup")).Where(g => g.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-            JobsRoot = Text("JobsRoot"), BidsRoot = Text("BidsRoot"), ArchivedJobsRoot = Text("ArchivedJobsRoot"), ArchiveFolder = Text("ArchiveFolder"), JobTemplate = Text("JobTemplate")
+            JobsRoot = Text("JobsRoot"), BidsRoot = Text("BidsRoot"), ArchivedJobsRoot = Text("ArchivedJobsRoot"), ArchiveFolder = Text("ArchiveFolder"), JobTemplate = Text("JobTemplate"), BidTemplate = Text("BidTemplate"), CurriculumTemplate = Text("CurriculumTemplate"), CurriculumGraphics = Text("CurriculumGraphics")
         };
     }
     // Aggiorna solo le proprietà gestite; tutto il resto del documento resta com'era.
@@ -76,7 +80,12 @@ public sealed class ConfigurationFile
         server["CollaboratorsGroup"] = CollaboratorsGroup;
         server["ManagementUsers"] = new JsonArray(ManagementUsers.Select(u => (JsonNode?)JsonValue.Create(u)).ToArray());
         server["Port"] = Port; server["JobsRoot"] = JobsRoot; server["BidsRoot"] = BidsRoot; server["ArchivedJobsRoot"] = ArchivedJobsRoot;
-        server["ArchiveFolder"] = ArchiveFolder; server["JobTemplate"] = JobTemplate;
+        server["ArchiveFolder"] = ArchiveFolder;
+        // Campo vuoto = modello predefinito del servizio: una proprietà vuota nel file lo annullerebbe.
+        if (JobTemplate.Length > 0) server["JobTemplate"] = JobTemplate; else server.Remove("JobTemplate");
+        if (BidTemplate.Length > 0) server["BidTemplate"] = BidTemplate; else server.Remove("BidTemplate");
+        if (CurriculumTemplate.Length > 0) server["CurriculumTemplate"] = CurriculumTemplate; else server.Remove("CurriculumTemplate");
+        if (CurriculumGraphics.Length > 0) server["CurriculumGraphics"] = CurriculumGraphics; else server.Remove("CurriculumGraphics");
         server["EnableLocalAnalysis"] = LocalAnalysis; server["LocalAnalysisStartHour"] = LocalAnalysisStartHour;
         server["LocalAnalysisEndHour"] = LocalAnalysisEndHour; server["LocalAnalysisDocumentsPerHour"] = LocalAnalysisDocumentsPerHour;
         if (server["RefreshMinutes"] == null) server["RefreshMinutes"] = 60;

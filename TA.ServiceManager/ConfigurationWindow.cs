@@ -11,7 +11,7 @@ namespace TA.ServiceManager;
 public sealed class ConfigurationWindow : Window
 {
     private readonly TextBox domain = Line(), groups = Lines(), collaborators = Line(), managers = Lines(), port = Line(),
-        jobs = Line(), bids = Line(), archived = Line(), data = Line(), template = Line(), analysisStart = Line(), analysisEnd = Line(), analysisRate = Line();
+        jobs = Line(), bids = Line(), archived = Line(), data = Line(), template = Line(), bidTemplate = Line(), curriculumTemplate = Line(), curriculumGraphics = Line(), analysisStart = Line(), analysisEnd = Line(), analysisRate = Line();
     private readonly CheckBox analysis = new() { Content = "Analizza automaticamente i documenti candidati su questo server (senza ChatGPT e senza servizi esterni)", Margin = new Thickness(0, 12, 0, 8) };
     private readonly CheckBox firewall = new() { Content = "Apri la porta nel firewall di Windows (solo profilo di dominio e sottorete locale)", IsChecked = true, Margin = new Thickness(0, 4, 0, 8) };
     private readonly TextBlock error = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Firebrick, Margin = new Thickness(0, 8, 0, 8) };
@@ -25,7 +25,7 @@ public sealed class ConfigurationWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var panel = new StackPanel { Margin = new Thickness(22) };
         panel.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12),
-            Text = "Questi dati identificano l'installazione e vengono salvati solo su questo server, in " + ConfigurationFile.Path + ". Le modifiche valgono dal successivo avvio del servizio." });
+            Text = "Questi dati identificano l'installazione e vengono salvati solo su questo server, in " + ConfigurationFile.Path + ". Le modifiche valgono dal successivo avvio del servizio: dopo il salvataggio viene proposto il riavvio." });
         Add(panel, "Dominio Active Directory (per esempio azienda.example; vuoto = dominio di questo server)", domain);
         Add(panel, "Gruppi autorizzati a usare il programma — uno per riga, obbligatorio", groups);
         Add(panel, "Gruppo collaboratori per attività e ore — facoltativo", collaborators);
@@ -35,7 +35,10 @@ public sealed class ConfigurationWindow : Window
         Add(panel, "Cartella delle gare (percorso UNC)", bids);
         Add(panel, "Cartella dell'archivio (percorso UNC)", archived);
         Add(panel, "Cartella dati del servizio", data);
-        Add(panel, "Cartella modello per le nuove commesse — facoltativa", template);
+        Add(panel, "Cartella modello per le nuove commesse (vuoto = modello predefinito del servizio)", template);
+        Add(panel, "Cartella modello per le nuove gare (vuoto = viene creata solo la cartella principale)", bidTemplate);
+        Add(panel, "Modello Word per l'esportazione del curriculum, con intestazione e stili dello studio (.docx o .dotx; facoltativo)", curriculumTemplate);
+        Add(panel, "Cartella della grafica del curriculum: logo.png, logo-chiaro.png, copertina.jpg, strutture.png, architettura.png, impianti.png, consulenza.png, stile.json (vuoto = grafica fornita con il servizio)", curriculumGraphics);
         panel.Children.Add(analysis);
         panel.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
             Text = "Limiti all'uso di risorse: un documento alla volta a priorità ridotta, al massimo 20 secondi e 512 MB per documento, in pausa durante le scansioni e le letture su richiesta. Qui sotto la fascia oraria e il numero di documenti l'ora." });
@@ -61,7 +64,7 @@ public sealed class ConfigurationWindow : Window
         domain.Text = value.Domain; groups.Text = string.Join(Environment.NewLine, value.Groups); collaborators.Text = value.CollaboratorsGroup;
         managers.Text = string.Join(Environment.NewLine, value.ManagementUsers); port.Text = value.Port.ToString();
         analysis.IsChecked = value.LocalAnalysis; analysisStart.Text = value.LocalAnalysisStartHour.ToString(); analysisEnd.Text = value.LocalAnalysisEndHour.ToString(); analysisRate.Text = value.LocalAnalysisDocumentsPerHour.ToString();
-        jobs.Text = value.JobsRoot; bids.Text = value.BidsRoot; archived.Text = value.ArchivedJobsRoot; data.Text = value.ArchiveFolder; template.Text = value.JobTemplate;
+        jobs.Text = value.JobsRoot; bids.Text = value.BidsRoot; archived.Text = value.ArchivedJobsRoot; data.Text = value.ArchiveFolder; template.Text = value.JobTemplate; bidTemplate.Text = value.BidTemplate; curriculumTemplate.Text = value.CurriculumTemplate; curriculumGraphics.Text = value.CurriculumGraphics;
     }
     private void Save()
     {
@@ -73,7 +76,7 @@ public sealed class ConfigurationWindow : Window
             LocalAnalysis = analysis.IsChecked == true, LocalAnalysisStartHour = Whole(analysisStart), LocalAnalysisEndHour = Whole(analysisEnd), LocalAnalysisDocumentsPerHour = Whole(analysisRate),
             Domain = domain.Text.Trim(), Groups = ConfigurationFile.Split(groups.Text), CollaboratorsGroup = collaborators.Text.Trim(),
             ManagementUsers = ConfigurationFile.Split(managers.Text), Port = int.TryParse(port.Text.Trim(), out var number) ? number : 0,
-            JobsRoot = jobs.Text.Trim(), BidsRoot = bids.Text.Trim(), ArchivedJobsRoot = archived.Text.Trim(), ArchiveFolder = data.Text.Trim(), JobTemplate = template.Text.Trim()
+            JobsRoot = jobs.Text.Trim(), BidsRoot = bids.Text.Trim(), ArchivedJobsRoot = archived.Text.Trim(), ArchiveFolder = data.Text.Trim(), JobTemplate = template.Text.Trim(), BidTemplate = bidTemplate.Text.Trim(), CurriculumTemplate = curriculumTemplate.Text.Trim(), CurriculumGraphics = curriculumGraphics.Text.Trim()
         };
         var problems = value.Validate();
         // Verifica l'esistenza dei nomi senza concedere o cambiare permessi nel dominio.

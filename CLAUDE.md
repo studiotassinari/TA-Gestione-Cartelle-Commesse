@@ -21,7 +21,7 @@ Soluzione `TA-Gestione Cartelle Commesse.slnx`, .NET 10, solo Windows (`net10.0-
 - Scansioni automatiche solo su nomi, percorsi e metadati. Contenuti letti solo su richiesta esplicita (MCP o apertura dal client) oppure dall'analisi automatica locale, se abilitata in Configura: un documento alla volta, entro i limiti di `LocalAnalysisLimits`, senza servizi esterni e senza sostituire analisi salvate su richiesta.
 - Nessuna analisi cloud autonoma, nessuna API a pagamento, nessuna modifica ad Active Directory.
 - Candidati, dati parziali e posizioni non accertate vanno sempre indicati come tali, mai come risultati certi.
-- Mai nel repository: documenti reali, cataloghi reali, coordinate riservate, chiavi del tunnel, credenziali. I casi di prova sono sintetici o anonimizzati.
+- Mai nel repository: documenti reali, cataloghi reali, coordinate riservate, chiavi del tunnel, credenziali. I casi di prova sono sintetici o anonimizzati. Unica eccezione, decisa dai titolari: la grafica dello studio per il curriculum in `TA.Server/Assets/CurriculumGrafica` (logo, copertina, icone, `stile.json`); i file dei caratteri non vanno mai aggiunti.
 - I permessi si decidono sul server (token Windows), mai da campi della richiesta.
 - Nessun dominio, gruppo, utente o nome di persona nel codice e nei messaggi: provengono da `server-settings.json` (Gestore server > Configura). Nei testi usare «responsabili autorizzati».
 

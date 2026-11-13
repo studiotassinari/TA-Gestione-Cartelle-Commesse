@@ -57,6 +57,14 @@ internal static class FolderArchiveChecks
         File.WriteAllText(Path.Combine(source, "originale.txt") + ":dati", "flusso alternativo");
         Denied<IOException>(() => VerifiedFolderZip.Prepare(root, source, default));
         Check(Directory.Exists(source), "Flusso alternativo non perduto in uno ZIP incompleto");
+        source = Folder("C26006 - Provenienza");
+        File.WriteAllText(Path.Combine(source, "originale.txt") + ":Zone.Identifier", "[ZoneTransfer]\r\nZoneId=3");
+        File.WriteAllText(Path.Combine(source, "Thumbs.db"), "anteprime"); File.WriteAllText(Path.Combine(source, "Thumbs.db") + ":encryptable", "");
+        Check(File.Exists(VerifiedFolderZip.Prepare(root, source, default).Zip), "Marcatura di provenienza e segnaposto di Thumbs.db non bloccano l'archiviazione");
+        source = Folder("C26007 - Flusso anomalo");
+        File.WriteAllText(Path.Combine(source, "Thumbs.db"), "anteprime"); File.WriteAllText(Path.Combine(source, "Thumbs.db") + ":encryptable", "dati");
+        Denied<IOException>(() => VerifiedFolderZip.Prepare(root, source, default));
+        Check(!File.Exists(source + ".zip") && Directory.Exists(source), "Un flusso di sistema con dati inattesi blocca ancora l'archiviazione");
         Denied<UnauthorizedAccessException>(() => VerifiedFolderZip.ValidatePath(root, root));
         Denied<UnauthorizedAccessException>(() => VerifiedFolderZip.ValidatePath(root, Path.GetTempPath()));
 
