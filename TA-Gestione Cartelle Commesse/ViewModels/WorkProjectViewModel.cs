@@ -38,6 +38,19 @@ public sealed class WorkProjectViewModel : Observable,IDisposable
     public string StateLabel=>Status switch{"Open"=>"Aperta","Closed"=>"Chiusa","Invoiced"=>"Fatturata",_=>"Stato non impostato"};
     public string LastActivityText=>Model.LastActivityUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")??"Data non ancora disponibile";
     public string SizeText=>Folder?.SizeText??"";
+    // Preventivo: esito dai nomi dei file, mostrato con un colore nell'elenco.
+    public int QuoteLevel=>QuoteIndicator.Level(Folder?.Inspection?.QuoteStatus);
+    public string QuoteLabel=>QuoteIndicator.Label(Folder?.Inspection?.QuoteStatus);
+    public string QuoteDetail
+    {
+        get
+        {
+            var inspection=Folder?.Inspection;
+            if(inspection==null)return "Preventivo non ancora verificato: in attesa della scansione.";
+            var files=inspection.QuoteFiles.Count>0?Environment.NewLine+string.Join(Environment.NewLine,inspection.QuoteFiles.Take(10)):"";
+            return inspection.QuoteStatus+" — controllo basato solo sui nomi dei file nella cartella amministrazione, da verificare."+files;
+        }
+    }
     public WorkProject ToModel()=>Model with{CustomerId=CustomerId,Subject=Subject,Location=Location,Status=Status};
     public void UpdateCustomer(Customer value){customers.Upsert(value);BindCustomer();}
     private void BindCustomer()

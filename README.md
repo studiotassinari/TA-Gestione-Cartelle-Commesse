@@ -6,6 +6,8 @@ Corretta la creazione di una nuova commessa: dopo il salvataggio della configura
 
 Nella finestra **Nuova commessa** il committente si cerca scrivendo: nome, partita IVA o codice fiscale, senza distinzione di maiuscole e accenti. L'[archiviazione ZIP](deployment/ARCHIVIAZIONE-ZIP.md) non viene più bloccata da `Thumbs.db` e dalla marcatura dei file scaricati. Dopo **Verifica e salva** il Gestore server propone il riavvio del servizio.
 
+Elenco di commesse, gare e archivio: nuova colonna **Preventivo** con colori (verde presente, giallo da verificare, rosso non trovato, grigio non ancora verificato; l'esito deriva dai soli nomi dei file nella cartella amministrazione). Un clic sull'intestazione di una colonna ordina l'elenco, un secondo clic inverte l'ordine. L'elenco iniziale mostra le ultime 50 voci per anno e numero e la ricerca considera anche anno e numero, con più parole insieme (per esempio `2024 114`).
+
 [Scarica aggiornatore 2.32.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.32.1/TA-Commesse-Aggiornatore-2.32.1.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.32.1).
 
 ## Novità 2.32.0 — configurazione dell'installazione e analisi automatica locale

@@ -149,7 +149,7 @@
                     </DataGrid>
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                                   Visibility="{Binding IsProjectCategory, Converter={StaticResource BoolVisibility}}">
-                        <views:WorkProjectListView MinWidth="1050"/>
+                        <views:WorkProjectListView MinWidth="1180"/>
                     </ScrollViewer>
                     <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"/>
                     <GroupBox Grid.Column="2" Header="Gerarchia cartelle">

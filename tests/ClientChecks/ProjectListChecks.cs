@@ -17,9 +17,18 @@ internal static partial class Program
         {Inspection=new FolderInspection{LastFileWriteUtc=now.AddDays(-i),CheckedUtc=now,TotalBytes=i*1024,Complete=true}}).ToList();
         var category=new CategoryViewModel("Commesse",'C');
         category.ApplyState(new('C',@"C:\test",false,"","",new ArchiveSnapshot{Records=rows,SavedUtc=now}));
-        Check(category.Projects.Count==50&&category.Projects[0].Code=="C26001"&&!category.Projects.Any(p=>p.Code=="C26060"),"Ultime 50 per attività, non per codice o data scansione");
-        category.Filter="C26060"; Check(category.Projects.Count==1,"Ricerca anche fuori dalle prime 50");
+        Check(category.Projects.Count==50&&category.Projects[0].Code=="C26060"&&!category.Projects.Any(p=>p.Code=="C26001")&&category.ListCaption.Contains("anno e numero"),"Ultime 50 per anno e numero, dalle più recenti");
+        category.Filter="C26001"; Check(category.Projects.Count==1,"Ricerca anche fuori dalle prime 50");
+        category.Filter="2026 007"; Check(category.Projects.Single().Code=="C26007","Ricerca per anno e numero");
         category.Filter="";
+        category.SortBy("Activity"); Check(category.Projects[0].Code=="C26001"&&category.SortDescending&&category.ListCaption.Contains("ultima attività"),"Ordinamento per ultima attività dal clic sulla colonna");
+        category.SortBy("Activity"); Check(category.Projects[0].Code=="C26060"&&!category.SortDescending,"Secondo clic sulla stessa colonna inverte l'ordine");
+        category.SortBy("Number"); Check(category.Projects[0].Code=="C26060"&&category.SortDescending,"Ordinamento per numero");
+        category.SortBy("Code");
+        using(var quoted=new WorkProjectViewModel(new WorkProject("q","C26001","Prova"),null,rows[0] with{Inspection=new FolderInspection{QuoteStatus="Presente (da nome file)",QuoteFiles=["amministrazione/preventivo di prova.pdf"]}}))
+            Check(quoted.QuoteLevel==0&&quoted.QuoteLabel=="Presente"&&quoted.QuoteDetail.Contains("preventivo di prova"),"Preventivo presente segnalato nella riga");
+        Check(QuoteIndicator.Level("Da verificare (nome ambiguo)")==1&&QuoteIndicator.Level("Non trovato nei nomi")==2&&QuoteIndicator.Level("Cartella amministrazione non trovata")==2&&QuoteIndicator.Level(null)==3,"Livelli di segnalazione del preventivo");
+        Check(category.Projects[0].QuoteLevel==3&&category.Projects[0].QuoteLabel=="Non verificato","Preventivo non ancora verificato distinto dagli altri esiti");
         var customer=new Customer("c1","Comune dimostrativo",Address:"Rimini");
         var models=rows.Select(r=>new WorkProject(r.Id,r.Code,r.Subject,CustomerId:"c1",Year:2026,Number:int.Parse(r.Number),Subject:r.Subject,LastActivityUtc:r.Inspection!.LastFileWriteUtc)).ToArray();
         models[59]=models[59] with{LastActivityUtc=now.AddHours(1)};

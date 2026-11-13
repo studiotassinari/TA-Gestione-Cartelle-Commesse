@@ -20,9 +20,9 @@
    </Style>
   </Grid.Resources>
   <Grid.ColumnDefinitions>
-   <ColumnDefinition Width="88"/><ColumnDefinition Width="48"/><ColumnDefinition Width="48"/>
+   <ColumnDefinition Width="88"/><ColumnDefinition Width="56"/><ColumnDefinition Width="52"/>
    <ColumnDefinition Width="2*"/><ColumnDefinition Width="3*"/>
-   <ColumnDefinition Width="110"/><ColumnDefinition Width="140"/><ColumnDefinition Width="100"/><ColumnDefinition Width="30"/>
+   <ColumnDefinition Width="110"/><ColumnDefinition Width="140"/><ColumnDefinition Width="124"/><ColumnDefinition Width="100"/><ColumnDefinition Width="30"/>
   </Grid.ColumnDefinitions>
   <TextBlock Text="{Binding Code}" Foreground="#135F6E" FontWeight="SemiBold"/>
   <TextBlock Grid.Column="1" Text="{Binding Year}"/>
@@ -31,8 +31,32 @@
   <TextBlock Grid.Column="4" Text="{Binding Subject}" ToolTip="{Binding Subject}"/>
   <TextBlock Grid.Column="5" Text="{Binding SizeText}" ToolTip="{Binding SizeText}"/>
   <TextBlock Grid.Column="6" Text="{Binding LastActivityText}" ToolTip="{Binding LastActivityText}" Foreground="#53717B"/>
-  <TextBlock Grid.Column="7" Text="{Binding StateLabel}" ToolTip="{Binding StateLabel}" Foreground="#53717B"/>
-  <Button Grid.Column="8" Command="{Binding EditCommand}" ToolTip="Apri dettaglio"
+  <Border Grid.Column="7" CornerRadius="9" Padding="8,2" Margin="0,0,12,0" HorizontalAlignment="Left" VerticalAlignment="Center" ToolTip="{Binding QuoteDetail}">
+   <Border.Style>
+    <Style TargetType="Border">
+     <Setter Property="Background" Value="#EEF2F3"/>
+     <Style.Triggers>
+      <DataTrigger Binding="{Binding QuoteLevel}" Value="0"><Setter Property="Background" Value="#DDF3E4"/></DataTrigger>
+      <DataTrigger Binding="{Binding QuoteLevel}" Value="1"><Setter Property="Background" Value="#FFEFC7"/></DataTrigger>
+      <DataTrigger Binding="{Binding QuoteLevel}" Value="2"><Setter Property="Background" Value="#FBDFDF"/></DataTrigger>
+     </Style.Triggers>
+    </Style>
+   </Border.Style>
+   <TextBlock Text="{Binding QuoteLabel}" Margin="0" FontSize="11" FontWeight="SemiBold">
+    <TextBlock.Style>
+     <Style TargetType="TextBlock">
+      <Setter Property="Foreground" Value="#53717B"/>
+      <Style.Triggers>
+       <DataTrigger Binding="{Binding QuoteLevel}" Value="0"><Setter Property="Foreground" Value="#1B6B3F"/></DataTrigger>
+       <DataTrigger Binding="{Binding QuoteLevel}" Value="1"><Setter Property="Foreground" Value="#7A5200"/></DataTrigger>
+       <DataTrigger Binding="{Binding QuoteLevel}" Value="2"><Setter Property="Foreground" Value="#9C2B2B"/></DataTrigger>
+      </Style.Triggers>
+     </Style>
+    </TextBlock.Style>
+   </TextBlock>
+  </Border>
+  <TextBlock Grid.Column="8" Text="{Binding StateLabel}" ToolTip="{Binding StateLabel}" Foreground="#53717B"/>
+  <Button Grid.Column="9" Command="{Binding EditCommand}" ToolTip="Apri dettaglio"
    Padding="5,3" Margin="0" VerticalAlignment="Center" AutomationProperties.Name="Apri dettaglio">
    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70F;" Foreground="White" Margin="0" FontSize="12"/>
   </Button>

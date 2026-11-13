@@ -272,6 +272,7 @@ jobs:
           $notes = @'
           Versione 2.32.1: corretta la creazione di una nuova commessa, che dopo il salvataggio della configurazione 2.32.0 segnalava un percorso vuoto per la cartella modello.
           Nuova commessa: casella di ricerca del committente per nome, partita IVA o codice fiscale.
+          Elenco di commesse, gare e archivio: colonna Preventivo con colori (presente, da verificare, non trovato, non verificato), ordinamento con un clic sull'intestazione di ogni colonna, ultime 50 per anno e numero, ricerca anche per anno e numero.
           Archiviazione ZIP non piu bloccata da Thumbs.db e dalla marcatura dei file scaricati; ogni altro flusso alternativo continua a bloccarla.
           Dopo Verifica e salva il Gestore server propone il riavvio del servizio. Nessuna nuova configurazione richiesta: aggiornare prima il server, poi i client.
           Installatori iniziali, updater e pacchetti Client/Server/MCP con SHA256. Pacchetti non firmati digitalmente. Tunnel MCP invariato: 21 comandi, avvio manuale.

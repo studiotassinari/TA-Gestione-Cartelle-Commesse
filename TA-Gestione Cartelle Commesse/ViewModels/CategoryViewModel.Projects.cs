@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using TA_Gestione_Cartelle_Commesse.Contracts;
+using TA_Gestione_Cartelle_Commesse.Models;
 namespace TA_Gestione_Cartelle_Commesse.ViewModels;
 
 public sealed partial class CategoryViewModel
@@ -15,6 +16,23 @@ public sealed partial class CategoryViewModel
         set => Selected = value?.Folder;
     }
     public event Action<WorkProjectViewModel>? ProjectRequested, CustomerRequested, ArchiveRequested;
+    // Ordinamento dell'elenco: predefinito per anno e numero, dalle più recenti. Vale su tutte le voci, prima del limite di 50.
+    public string SortColumn { get; private set; } = "Code";
+    public bool SortDescending { get; private set; } = true;
+    public event Action? SortChanged;
+    private static readonly Dictionary<string, string> SortNames = new()
+    {
+        ["Code"] = "anno e numero", ["Year"] = "anno", ["Number"] = "numero", ["Client"] = "cliente", ["Subject"] = "argomento",
+        ["Size"] = "dimensione", ["Activity"] = "ultima attività", ["Quote"] = "preventivo", ["State"] = "stato"
+    };
+    // Stessa colonna: inverte il verso. Nuova colonna: testi dalla A alla Z, numeri e date dal valore più alto.
+    public void SortBy(string column)
+    {
+        if (!SortNames.ContainsKey(column)) return;
+        if (column == SortColumn) SortDescending = !SortDescending;
+        else { SortColumn = column; SortDescending = column is "Code" or "Year" or "Number" or "Size" or "Activity"; }
+        ApplyFilter(); SortChanged?.Invoke();
+    }
     public void ApplyProjectCatalog(ProjectCatalog value)
     {
         value=value with{Projects=value.Projects.Where(p=>p.Category==prefix.ToString()).ToArray()};
@@ -51,7 +69,7 @@ public sealed partial class CategoryViewModel
     {
         var selectedId = Selected?.Id;
         var byId = catalog?.Projects.ToDictionary(p => p.Id) ?? [];
-        var candidates = all.Select(folder =>
+        var pairs = all.Select(folder =>
         {
             if (!byId.TryGetValue(folder.Id, out var model))
             {
@@ -62,10 +80,32 @@ public sealed partial class CategoryViewModel
                     LastActivityUtc: folder.Inspection?.LastFileWriteUtc ?? folder.ArchiveModifiedUtc,Category:prefix.ToString());
             }
             return (folder, model);
-        }).Where(p => (p.model.Code + " " + p.model.Subject + " " + p.model.SourceCustomerName + " " +
-            customers.Find(p.model.CustomerId)?.Name).Contains(Filter, StringComparison.OrdinalIgnoreCase))
-          .OrderByDescending(p => p.model.LastActivityUtc).ThenByDescending(p => p.model.Year)
-          .ThenByDescending(p => p.model.Number).ThenBy(p => p.model.Id).ToList();
+        });
+        // Ogni parola scritta deve comparire in codice, anno, numero, argomento o cliente.
+        var words = Filter.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var filtered = pairs.Where(p =>
+        {
+            var target = p.model.Code + " " + p.model.Year + " " + p.model.Number.ToString("D3") + " " + p.model.Number + " " + p.model.Subject + " " +
+                p.model.SourceCustomerName + " " + customers.Find(p.model.CustomerId)?.Name;
+            return words.All(word => target.Contains(word, StringComparison.OrdinalIgnoreCase));
+        }).ToList();
+        IOrderedEnumerable<(FolderRecord folder, WorkProject model)> Order<TKey>(Func<(FolderRecord folder, WorkProject model), TKey> key, IComparer<TKey>? comparer = null) =>
+            SortDescending ? filtered.OrderByDescending(key, comparer) : filtered.OrderBy(key, comparer);
+        var text = StringComparer.CurrentCultureIgnoreCase;
+        var ordered = SortColumn switch
+        {
+            "Year" => Order(p => (long)p.model.Year),
+            "Number" => Order(p => (long)p.model.Number),
+            "Client" => Order(p => customers.Find(p.model.CustomerId)?.Name ?? p.model.SourceCustomerName ?? "", text),
+            "Subject" => Order(p => p.model.Subject ?? "", text),
+            "Size" => Order(p => p.folder.ArchiveBytes ?? p.folder.Inspection?.TotalBytes ?? -1L),
+            "Activity" => Order(p => p.model.LastActivityUtc ?? DateTime.MinValue),
+            "Quote" => Order(p => (long)QuoteIndicator.Level(p.folder.Inspection?.QuoteStatus)),
+            "State" => Order(p => p.model.Status ?? "", text),
+            _ => Order(p => p.model.Year * 100000L + p.model.Number)
+        };
+        // A parità di valore: anno e numero, dalle più recenti.
+        var candidates = ordered.ThenByDescending(p => p.model.Year).ThenByDescending(p => p.model.Number).ThenBy(p => p.model.Id, StringComparer.Ordinal).ToList();
         Selected = null;
         foreach (var row in Projects) row.Dispose();
         Projects.Clear(); Records.Clear();
@@ -80,7 +120,7 @@ public sealed partial class CategoryViewModel
         }
         Selected = Records.FirstOrDefault(r => r.Id == selectedId);
         var label=prefix=='C'?"commesse":prefix=='G'?"gare":"voci in archivio";
-        ListCaption = $"{Projects.Count} di {candidates.Count} {label} · ultima attività nota, più recenti prima";
+        ListCaption = $"{Projects.Count} di {candidates.Count} {label} · ordine per {SortNames[SortColumn]}, {(SortDescending ? "decrescente" : "crescente")} · clic sull'intestazione di una colonna per cambiarlo";
         Notify(nameof(ListCaption)); Notify(nameof(SelectedProject));
     }
 }
