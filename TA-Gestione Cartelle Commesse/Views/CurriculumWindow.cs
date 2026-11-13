@@ -24,6 +24,7 @@ public sealed class CurriculumWindow : Window
     private readonly DatePicker start = new() { Margin = new Thickness(0, 4, 0, 10) }, end = new() { Margin = new Thickness(0, 4, 0, 10) };
     private readonly ListBox projectResults = new() { DisplayMemberPath = "Label", Height = 90, Margin = new Thickness(0, 0, 0, 6) };
     private readonly WrapPanel photos = new();
+    private readonly CheckBox[] sectors = CurriculumSectors.All.Select(name => new CheckBox { Content = name, Margin = new Thickness(0, 4, 18, 10) }).ToArray();
     private readonly Button save = new() { Content = "Salva" }, remove = new() { Content = "Elimina lavoro" }, addPhoto = new() { Content = "Aggiungi fotografie…" }, export = new() { Content = "Esporta in Word…" }, show = new() { Content = "Mostra la commessa nell'elenco" };
     private readonly Dictionary<string, TextBox> captions = new();
     private CurriculumSnapshot snapshot = new([], [], false);
@@ -61,9 +62,11 @@ public sealed class CurriculumWindow : Window
         var startPanel = new StackPanel(); startPanel.Children.Add(new TextBlock { Text = "Inizio" }); startPanel.Children.Add(start);
         var endPanel = new StackPanel(); endPanel.Children.Add(new TextBlock { Text = "Fine" }); endPanel.Children.Add(end); Grid.SetColumn(endPanel, 2);
         dates.Children.Add(startPanel); dates.Children.Add(endPanel); form.Children.Add(dates);
+        var sectorPanel = new WrapPanel(); foreach (var box in sectors) sectorPanel.Children.Add(box);
+        Add("Macro categorie di prestazioni: nell'esportazione accendono il simbolo a quadranti", sectorPanel);
         Add("Prestazioni svolte (progettazione, direzione lavori, collaudo…)", services); Add("Ruolo dello studio (incaricato, mandatario, mandante, consulente…)", role);
         Add("Importo dei lavori (€)", works); Add("Importo del servizio (€)", fee);
-        Add("Categorie delle opere — una per riga: ID opere; importo; descrizione (esempio: S.03; 250.000,00; Strutture in cemento armato)", categories);
+        Add("Categorie delle opere — una per riga: ID opere; importo; descrizione; grado (esempio: S.03; 250.000,00; Strutture in cemento armato; 0,95)", categories);
         Add("Riferimenti del committente (RUP, referente, estremi dell'incarico o del certificato)", reference);
         Add("Descrizione", description); Add("Parole chiave per la ricerca, separate da virgola", keywords);
         Add("Commesse, gare o voci d'archivio collegate — codici separati da virgola (esempio: C24031, G23012)", codes);
@@ -82,6 +85,7 @@ public sealed class CurriculumWindow : Window
         DockPanel.SetDock(top, Dock.Top); DockPanel.SetDock(status, Dock.Bottom); root.Children.Add(top); root.Children.Add(status); root.Children.Add(content); Content = root;
 
         foreach (var box in new[] { title, customer, place, services, role, works, fee, categories, reference, description, keywords, codes }) box.TextChanged += (_, _) => { if (!loading) dirty = true; };
+        foreach (var box in sectors) { box.Checked += (_, _) => { if (!loading) dirty = true; }; box.Unchecked += (_, _) => { if (!loading) dirty = true; }; }
         start.SelectedDateChanged += (_, _) => { if (!loading) dirty = true; }; end.SelectedDateChanged += (_, _) => { if (!loading) dirty = true; };
         codes.TextChanged += (_, _) => ShowLinks();
         search.TextChanged += (_, _) => Filter();
@@ -126,7 +130,7 @@ public sealed class CurriculumWindow : Window
         var selected = snapshot.Works.FirstOrDefault(w => w.Id == current.Id && current.Id.Length > 0);
         if (selected != null) Edit(selected); else if (current.Id.Length > 0) Edit(new CurriculumWork("", ""));
         ShowProjects();
-        status.Text = $"{snapshot.Works.Length} lavori nel curriculum. " + (snapshot.TemplateConfigured ? "Esportazione Word con il modello dello studio." : "Modello Word dello studio non configurato sul server: l'esportazione usa un'impaginazione neutra.");
+        status.Text = $"{snapshot.Works.Length} lavori nel curriculum. " + (snapshot.GraphicsConfigured ? "Esportazione Word con la grafica dello studio." : "Grafica dello studio non configurata sul server: l'esportazione Word esce senza logo e con caratteri predefiniti.");
     }
     private void Filter()
     {
@@ -149,6 +153,7 @@ public sealed class CurriculumWindow : Window
             title.Text = work.Title; customer.Text = work.Customer; place.Text = work.Place; services.Text = work.Services; role.Text = work.Role;
             start.SelectedDate = work.Start?.ToDateTime(TimeOnly.MinValue); end.SelectedDate = work.End?.ToDateTime(TimeOnly.MinValue);
             works.Text = CurriculumText.Amount(work.WorksAmount); fee.Text = CurriculumText.Amount(work.FeeAmount); categories.Text = CurriculumText.Categories(work.Categories);
+            foreach (var box in sectors) box.IsChecked = (work.Sectors ?? []).Contains((string)box.Content, StringComparer.OrdinalIgnoreCase);
             reference.Text = work.Reference; description.Text = work.Description; keywords.Text = string.Join(", ", work.Keywords ?? []); codes.Text = string.Join(", ", work.ProjectCodes ?? []);
             bool saved = work.Id.Length > 0;
             remove.IsEnabled = saved; addPhoto.IsEnabled = saved;
@@ -181,6 +186,7 @@ public sealed class CurriculumWindow : Window
         Title = title.Text, Customer = customer.Text, Place = place.Text, Services = services.Text, Role = role.Text, Reference = reference.Text, Description = description.Text,
         Start = start.SelectedDate is { } a ? (DateOnly?)DateOnly.FromDateTime(a) : null, End = end.SelectedDate is { } b ? (DateOnly?)DateOnly.FromDateTime(b) : null,
         WorksAmount = CurriculumText.Amount(works.Text, "Importo dei lavori"), FeeAmount = CurriculumText.Amount(fee.Text, "Importo del servizio"),
+        Sectors = sectors.Where(box => box.IsChecked == true).Select(box => (string)box.Content).ToArray(),
         Categories = CurriculumText.Categories(categories.Text), Keywords = CurriculumText.List(keywords.Text), ProjectCodes = CurriculumText.List(codes.Text).Select(c => c.ToUpperInvariant()).ToArray(),
         Photos = (current.Photos ?? []).Select(p => captions.TryGetValue(p.Id, out var box) ? p with { Caption = box.Text.Trim() } : p).ToArray()
     };
@@ -239,19 +245,53 @@ public sealed class CurriculumWindow : Window
             catch (Exception ex) { picture.ToolTip = "Anteprima non disponibile: " + ex.Message; }
         }
     }
+    public sealed record ExportChoice(CurriculumExportOptions Options, bool Template);
+    // Scelta del formato e dei contenuti: lo stesso elenco di lavori può uscire come schede, sintesi o tabella per i requisiti di gara.
+    private ExportChoice? AskExport()
+    {
+        var format = new ComboBox { Margin = new Thickness(0, 4, 0, 10) };
+        format.Items.Add("Schede complete — una o più pagine per lavoro"); format.Items.Add("Schede sintetiche — più lavori per pagina"); format.Items.Add("Elenco per gare — tabella orizzontale con i totali per ID opere");
+        if (snapshot.TemplateConfigured) format.Items.Add("Modello Word dello studio — testo semplice nel modello configurato");
+        format.SelectedIndex = 0;
+        TextBox heading = Box(), subtitle = Box(); heading.Text = "Lavori svolti";
+        CheckBox Flag(string text, bool on = true) => new() { Content = text, IsChecked = on, Margin = new Thickness(0, 0, 0, 6) };
+        CheckBox cover = Flag("Copertina"), pictures = Flag("Fotografie"), fees = Flag("Importo del servizio"), references = Flag("Riferimenti del committente"), words = Flag("Parole chiave", false);
+        var confirm = new Button { Content = "Esporta", IsDefault = true }; var cancel = new Button { Content = "Annulla", IsCancel = true };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
+        buttons.Children.Add(cancel); buttons.Children.Add(confirm);
+        var panel = new StackPanel { Margin = new Thickness(18) };
+        foreach (var element in new UIElement[] { new TextBlock { Text = "Formato" }, format, new TextBlock { Text = "Titolo di copertina" }, heading,
+            new TextBlock { Text = "Sottotitolo (esempio: Selezione per la procedura…)" }, subtitle, cover, pictures, fees, references, words, buttons }) panel.Children.Add(element);
+        var dialog = new Window
+        {
+            Title = "Esporta il curriculum in Word", Owner = this, Width = 560, SizeToContent = SizeToContent.Height, ResizeMode = ResizeMode.NoResize,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner, Content = panel, Resources = Resources, Background = Background, Foreground = Foreground, FontFamily = FontFamily
+        };
+        confirm.Click += (_, _) => dialog.DialogResult = true;
+        if (dialog.ShowDialog() != true) return null;
+        bool template = format.SelectedIndex == 3;
+        string code = format.SelectedIndex switch { 1 => "Short", 2 => "List", _ => "Complete" };
+        return new ExportChoice(new CurriculumExportOptions(code, cover.IsChecked == true, heading.Text.Trim().Length > 0 ? heading.Text.Trim() : "Lavori svolti", subtitle.Text.Trim(),
+            pictures.IsChecked == true, fees.IsChecked == true, references.IsChecked == true, words.IsChecked == true), template);
+    }
     private async Task ExportAsync()
     {
         var selection = list.Items.OfType<Row>().Select(r => r.Work).ToArray();
         if (selection.Length == 0) { status.Text = "Nessun lavoro da esportare: modificare la ricerca."; return; }
+        if (AskExport() is not { } choice) return;
+        var options = choice.Options;
         var dialog = new Microsoft.Win32.SaveFileDialog { Title = "Esporta il curriculum in Word", Filter = "Documento Word (*.docx)|*.docx", FileName = "Curriculum " + DateTime.Today.ToString("yyyy-MM-dd") + ".docx" };
         if (dialog.ShowDialog(this) != true) return;
         status.Text = $"Esportazione di {selection.Length} lavori…";
-        byte[]? template = snapshot.TemplateConfigured ? await gateway.Send<byte[]>(new("Template")) : null;
+        byte[]? template = choice.Template ? await gateway.Send<byte[]>(new("Template")) : null;
+        var kit = CurriculumGraphicsKit.Create(!choice.Template && snapshot.GraphicsConfigured ? await gateway.Send<CurriculumGraphics>(new("Graphics")) : null);
+        // Si scaricano solo le fotografie che il formato scelto mette in pagina.
+        int wanted = choice.Template ? int.MaxValue : !options.Photos || options.Format == "List" ? 0 : options.Format == "Short" ? 1 : options.MaxPhotos;
         var pictures = new Dictionary<string, IReadOnlyList<CurriculumExportPhoto>>();
         foreach (var work in selection)
         {
             var items = new List<CurriculumExportPhoto>();
-            foreach (var photo in work.Photos ?? [])
+            foreach (var photo in (work.Photos ?? []).Take(wanted))
             {
                 var bytes = await gateway.Send<byte[]>(new("Photo", Id: work.Id, PhotoId: photo.Id));
                 var decoded = Decode(bytes, 0);
@@ -260,7 +300,11 @@ public sealed class CurriculumWindow : Window
             pictures[work.Id] = items;
         }
         var path = dialog.FileName;
-        await Task.Run(() => CurriculumWordExport.Write(path, selection, work => pictures[work.Id], template));
+        await Task.Run(() =>
+        {
+            if (choice.Template) CurriculumWordExport.Write(path, selection, work => pictures[work.Id], template);
+            else CurriculumLayout.Write(path, selection, work => pictures[work.Id], kit, options);
+        });
         status.Text = $"Esportati {selection.Length} lavori (quelli mostrati dalla ricerca) in {path}";
     }
     private static BitmapSource Decode(byte[] bytes, int width)

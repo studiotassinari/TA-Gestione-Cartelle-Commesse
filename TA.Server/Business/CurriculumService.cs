@@ -8,11 +8,14 @@ public sealed class CurriculumService
 {
     public const int MaxPhotoBytes = 8 * 1024 * 1024, MaxPhotos = 30;
     private const string Kind = "curriculum";
-    private readonly BusinessStore store; private readonly Func<WorkProject[]> projects; private readonly string photoFolder; private readonly Func<string> template;
+    private readonly BusinessStore store; private readonly Func<WorkProject[]> projects; private readonly string photoFolder; private readonly Func<string> template, graphics;
     public CurriculumService(BusinessService business, ServerSettings settings)
-        : this(business.Store, business.Projects, PhotoFolder(settings), () => settings.CurriculumTemplate) { }
-    public CurriculumService(BusinessStore store, Func<WorkProject[]> projects, string photoFolder, Func<string>? template = null)
-    { this.store = store; this.projects = projects; this.photoFolder = Path.GetFullPath(photoFolder); this.template = template ?? (() => ""); }
+        : this(business.Store, business.Projects, PhotoFolder(settings), () => settings.CurriculumTemplate, () => settings.CurriculumGraphics) { }
+    public CurriculumService(BusinessStore store, Func<WorkProject[]> projects, string photoFolder, Func<string>? template = null, Func<string>? graphics = null)
+    { this.store = store; this.projects = projects; this.photoFolder = Path.GetFullPath(photoFolder); this.template = template ?? (() => ""); this.graphics = graphics ?? (() => ""); }
+    // Nomi fissi: il servizio non legge altro dalla cartella della grafica.
+    public static readonly string[] GraphicNames = ["stile.json", "logo.png", "logo-chiaro.png", "copertina.jpg", "copertina.png", "strutture.png", "architettura.png", "impianti.png", "consulenza.png"];
+    public const int MaxGraphicBytes = 2 * 1024 * 1024;
     public static string PhotoFolder(ServerSettings settings) => Path.Combine(settings.InventoryFolder, "curriculum-foto");
 
     // Tutti gli utenti autorizzati al programma possono consultare e aggiornare il curriculum; ogni modifica resta nel registro con l'autore.
@@ -28,7 +31,7 @@ public sealed class CurriculumService
             case "Snapshot":
                 return new CurriculumSnapshot(store.All<CurriculumWork>(Kind).OrderByDescending(w => w.End ?? w.Start ?? DateOnly.MinValue).ThenBy(w => w.Title, StringComparer.CurrentCultureIgnoreCase).ToArray(),
                     projects().Select(p => new CurriculumProject(p.Id, p.Code, p.Category, p.Code + " — " + string.Join(" — ", new[] { p.SourceCustomerName, p.Subject }.Where(s => !string.IsNullOrWhiteSpace(s))))).ToArray(),
-                    TemplatePath() != null);
+                    TemplatePath() != null, GraphicsFolder() != null);
             case "Save":
             {
                 var input = Validate(c.Work ?? throw new ArgumentException("Lavoro mancante."));
@@ -89,6 +92,21 @@ public sealed class CurriculumService
                 using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 var bytes = new byte[stream.Length]; stream.ReadExactly(bytes); return bytes;
             }
+            case "Graphics":
+            {
+                var folder = GraphicsFolder() ?? throw new IOException("Cartella della grafica del curriculum non configurata o non trovata: indicarla nel Gestore server, pulsante Configura.");
+                var files = new List<CurriculumGraphicFile>();
+                foreach (var name in GraphicNames)
+                {
+                    var file = new FileInfo(Path.Combine(folder, name));
+                    if (!file.Exists) continue;
+                    if (file.Length > MaxGraphicBytes) throw new IOException("File della grafica più grande di 2 MB: " + name);
+                    // Sola lettura condivisa: il materiale resta modificabile da chi lo cura.
+                    using var stream = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    var bytes = new byte[stream.Length]; stream.ReadExactly(bytes); files.Add(new CurriculumGraphicFile(name, bytes));
+                }
+                return new CurriculumGraphics(files.ToArray());
+            }
             default: throw new ArgumentException("Comando curriculum non valido.");
         }
     }
@@ -96,6 +114,11 @@ public sealed class CurriculumService
     {
         var path = (template() ?? "").Trim();
         return path.Length > 0 && Path.GetExtension(path).ToLowerInvariant() is ".docx" or ".dotx" ? path : null;
+    }
+    private string? GraphicsFolder()
+    {
+        var path = (graphics() ?? "").Trim();
+        return path.Length > 0 && Directory.Exists(path) ? path : null;
     }
     private CurriculumWork Store(CurriculumWork work, int expected, string actor)
     {
@@ -117,17 +140,21 @@ public sealed class CurriculumService
         var title = Limit(w.Title, 300, "Titolo"); if (title.Length == 0) throw new ArgumentException("Indicare il titolo del lavoro.");
         if (w.Start is { } start && w.End is { } end && end < start) throw new ArgumentException("La data di fine precede la data di inizio.");
         if (w.WorksAmount < 0 || w.FeeAmount < 0) throw new ArgumentException("Gli importi non possono essere negativi.");
-        var categories = (w.Categories ?? []).Select(c => new CurriculumCategory(Limit(c.Code, 20, "Categoria").ToUpperInvariant(), c.Amount, Limit(c.Description, 300, "Descrizione della categoria"))).ToArray();
+        var categories = (w.Categories ?? []).Select(c => new CurriculumCategory(Limit(c.Code, 20, "Categoria").ToUpperInvariant(), c.Amount, Limit(c.Description, 300, "Descrizione della categoria"), Limit(c.Grade, 20, "Grado della categoria"))).ToArray();
         if (categories.Length > 30 || categories.Any(c => c.Code.Length == 0 || c.Amount < 0)) throw new ArgumentException("Categorie delle opere non valide: codice obbligatorio, importo non negativo, al massimo 30 righe.");
         var keywords = (w.Keywords ?? []).Select(k => Limit(k, 60, "Parola chiave")).Where(k => k.Length > 0).Distinct(StringComparer.CurrentCultureIgnoreCase).ToArray();
         if (keywords.Length > 40) throw new ArgumentException("Al massimo 40 parole chiave.");
         var codes = (w.ProjectCodes ?? []).Select(code => (code ?? "").Trim().ToUpperInvariant()).Where(code => code.Length > 0).Distinct().ToArray();
         if (codes.Length > 100 || codes.Any(code => !Regex.IsMatch(code, "^[CG][0-9]{5}$"))) throw new ArgumentException("Codici delle commesse collegate non validi: usare la forma C26001 o G26001.");
+        // Le macro categorie arrivano in qualunque forma e ordine: restano solo quelle previste, nell'ordine del simbolo.
+        var asked = (w.Sectors ?? []).Select(s => (s ?? "").Trim()).Where(s => s.Length > 0).ToArray();
+        if (asked.Any(s => !CurriculumSectors.All.Contains(s, StringComparer.OrdinalIgnoreCase))) throw new ArgumentException("Macro categoria non prevista: usare " + string.Join(", ", CurriculumSectors.All) + ".");
+        var sectors = CurriculumSectors.All.Where(s => asked.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
         return w with
         {
             Id = (w.Id ?? "").Trim(), Title = title, Customer = Limit(w.Customer, 300, "Committente"), Place = Limit(w.Place, 300, "Luogo"), Description = Limit(w.Description, 8000, "Descrizione"),
             Services = Limit(w.Services, 2000, "Prestazioni"), Role = Limit(w.Role, 300, "Ruolo"), Reference = Limit(w.Reference, 1000, "Riferimenti"),
-            Categories = categories, Keywords = keywords, ProjectCodes = codes
+            Categories = categories, Keywords = keywords, ProjectCodes = codes, Sectors = sectors
         };
     }
     // Copia nel backup le fotografie non ancora presenti; non elimina nulla dal backup.

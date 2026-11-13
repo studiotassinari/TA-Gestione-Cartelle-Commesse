@@ -53,12 +53,29 @@ internal static class CurriculumChecks
         Check(Do<CurriculumSnapshot>(new("Snapshot")).TemplateConfigured && Do<byte[]>(new("Template")).Length == 4, "Modello Word configurato non restituito");
         configured = Path.Combine(folder, "modello.exe"); Check(!Do<CurriculumSnapshot>(new("Snapshot")).TemplateConfigured, "File non Word accettato come modello");
 
+        // Macro categorie: solo quelle previste, sempre nell'ordine del simbolo a quadranti.
+        var flagged = Do<CurriculumWork>(new("Save", Work: latest with { Sectors = [" impianti ", "Strutture", "strutture"], Categories = [new("s.03", 900000m, "Strutture", " 0,95 ")] }));
+        Check(flagged.Sectors!.SequenceEqual(new[] { "Strutture", "Impianti" }) && flagged.Categories!.Single().Grade == "0,95" && flagged.Photos!.Length == 1, "Macro categorie o grado della categoria non normalizzati");
+        Reject(() => Do<CurriculumWork>(new("Save", Work: flagged with { Sectors = ["Urbanistica"] })), "Macro categoria non prevista accettata");
+        latest = flagged;
+        // Grafica dello studio: dalla cartella configurata escono solo i file con i nomi previsti.
+        var graphicFolder = Path.Combine(folder, "grafica"); string graphicsPath = "";
+        var styled = new CurriculumService(new BusinessStore(Path.Combine(folder, "dati-grafica")), () => projects, Path.Combine(folder, "foto-grafica"), null, () => graphicsPath);
+        Reject(() => styled.Execute(new("Graphics"), "utente.uno"), "Grafica non configurata restituita");
+        Directory.CreateDirectory(graphicFolder); File.WriteAllBytes(Path.Combine(graphicFolder, "logo.png"), new byte[] { 1, 2, 3 }); File.WriteAllText(Path.Combine(graphicFolder, "stile.json"), "{}"); File.WriteAllText(Path.Combine(graphicFolder, "riservato.txt"), "non deve uscire");
+        graphicsPath = graphicFolder;
+        var graphicFiles = ((CurriculumGraphics)styled.Execute(new("Graphics"), "utente.uno")).Files;
+        Check(((CurriculumSnapshot)styled.Execute(new("Snapshot"), "utente.uno")).GraphicsConfigured && graphicFiles.Select(f => f.Name).OrderBy(n => n).SequenceEqual(new[] { "logo.png", "stile.json" }) && graphicFiles.Single(f => f.Name == "logo.png").Data.Length == 3, "Grafica del curriculum non limitata ai file previsti");
+        File.WriteAllBytes(Path.Combine(graphicFolder, "copertina.jpg"), new byte[CurriculumService.MaxGraphicBytes + 1]);
+        Reject(() => styled.Execute(new("Graphics"), "utente.uno"), "File della grafica troppo grande accettato");
+        graphicsPath = Path.Combine(folder, "assente"); Check(!((CurriculumSnapshot)styled.Execute(new("Snapshot"), "utente.uno")).GraphicsConfigured, "Cartella della grafica assente considerata configurata");
+
         var removed = Do<CurriculumWork>(new("DeletePhoto", Id: latest.Id, Revision: latest.Revision, PhotoId: photo.Id));
         Check(removed.Photos!.Length == 0 && !File.Exists(Path.Combine(photoFolder, latest.Id, photo.Id + ".jpg")), "Fotografia non rimossa");
         Reject(() => Do<bool>(new("Delete", Id: removed.Id, Revision: 1)), "Eliminazione su revisione superata");
         Check(Do<bool>(new("Delete", Id: removed.Id, Revision: removed.Revision)) && Do<CurriculumSnapshot>(new("Snapshot")).Works.Length == 0, "Lavoro non eliminato");
         Reject(() => service.Execute(new("Snapshot"), " "), "Utente senza identità ammesso");
         Reject(() => Do<object>(new("Altro")), "Comando sconosciuto accettato");
-        Console.WriteLine("CurriculumChecks: lavori, collegamenti per codice, fotografie, modello Word e backup verificati.");
+        Console.WriteLine("CurriculumChecks: lavori, collegamenti per codice, macro categorie, fotografie, grafica, modello Word e backup verificati.");
     }
 }

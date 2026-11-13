@@ -23,7 +23,7 @@ public static class CurriculumText
         return works.Where(w =>
         {
             var target = Plain(string.Join(" ", new[] { w.Title, w.Customer, w.Place, w.Description, w.Services, w.Role, w.Reference, Period(w) }
-                .Concat(w.Keywords ?? []).Concat(w.ProjectCodes ?? []).Concat((w.Categories ?? []).Select(c => c.Code + " " + c.Description))
+                .Concat(w.Keywords ?? []).Concat(w.ProjectCodes ?? []).Concat(w.Sectors ?? []).Concat((w.Categories ?? []).Select(c => c.Code + " " + c.Description))
                 .Concat((w.Photos ?? []).Select(p => p.Caption))));
             return words.All(word => target.Contains(word));
         }).ToArray();
@@ -44,13 +44,13 @@ public static class CurriculumText
         if (text.Length == 0) return null;
         return decimal.TryParse(text, NumberStyles.Number, Italian, out var value) && value >= 0 ? value : throw new FormatException(label + ": importo non valido (esempio 250.000,00).");
     }
-    // Una categoria per riga: «codice; importo; descrizione», per esempio «S.03; 250.000,00; Strutture in cemento armato».
+    // Una categoria per riga: «codice; importo; descrizione; grado», per esempio «S.03; 250.000,00; Strutture in cemento armato; 0,95». Descrizione e grado sono facoltativi.
     public static string Categories(CurriculumCategory[]? categories) =>
-        string.Join(Environment.NewLine, (categories ?? []).Select(c => c.Code + "; " + Amount(c.Amount) + (c.Description.Length > 0 ? "; " + c.Description : "")));
+        string.Join(Environment.NewLine, (categories ?? []).Select(c => c.Code + "; " + Amount(c.Amount) + (c.Description.Length > 0 || c.Grade is { Length: > 0 } ? "; " + c.Description : "") + (c.Grade is { Length: > 0 } ? "; " + c.Grade : "")));
     public static CurriculumCategory[] Categories(string text) => text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(line =>
     {
-        var parts = line.Split(';', 3, StringSplitOptions.TrimEntries);
+        var parts = line.Split(';', 4, StringSplitOptions.TrimEntries);
         if (parts[0].Length == 0) throw new FormatException("Categoria senza codice: " + line);
-        return new CurriculumCategory(parts[0], parts.Length > 1 ? Amount(parts[1], "Categoria " + parts[0]) ?? 0 : 0, parts.Length > 2 ? parts[2] : "");
+        return new CurriculumCategory(parts[0], parts.Length > 1 ? Amount(parts[1], "Categoria " + parts[0]) ?? 0 : 0, parts.Length > 2 ? parts[2] : "", parts.Length > 3 ? parts[3] : "");
     }).ToArray();
 }
