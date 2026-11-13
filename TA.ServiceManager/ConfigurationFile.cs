@@ -76,7 +76,9 @@ public sealed class ConfigurationFile
         server["CollaboratorsGroup"] = CollaboratorsGroup;
         server["ManagementUsers"] = new JsonArray(ManagementUsers.Select(u => (JsonNode?)JsonValue.Create(u)).ToArray());
         server["Port"] = Port; server["JobsRoot"] = JobsRoot; server["BidsRoot"] = BidsRoot; server["ArchivedJobsRoot"] = ArchivedJobsRoot;
-        server["ArchiveFolder"] = ArchiveFolder; server["JobTemplate"] = JobTemplate;
+        server["ArchiveFolder"] = ArchiveFolder;
+        // Campo vuoto = modello predefinito del servizio: una proprietà vuota nel file lo annullerebbe.
+        if (JobTemplate.Length > 0) server["JobTemplate"] = JobTemplate; else server.Remove("JobTemplate");
         server["EnableLocalAnalysis"] = LocalAnalysis; server["LocalAnalysisStartHour"] = LocalAnalysisStartHour;
         server["LocalAnalysisEndHour"] = LocalAnalysisEndHour; server["LocalAnalysisDocumentsPerHour"] = LocalAnalysisDocumentsPerHour;
         if (server["RefreshMinutes"] == null) server["RefreshMinutes"] = 60;

@@ -24,6 +24,7 @@ internal static partial class Program
         Check(ClientPaths.ForExplorer(@"Z:\lavori") == @"Z:\lavori", "Percorsi gia mappati invariati");
         var app = new Application();
         CheckFolderArchiveClient();
+        CheckCustomerSearch();
         CheckProjectList(app);
         foreach (var prefix in new[] { 'C', 'G', 'A' })
         {

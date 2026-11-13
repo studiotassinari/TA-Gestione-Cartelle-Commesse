@@ -28,6 +28,10 @@ internal static class ConfigurationChecks
             "Dominio, gruppi e utenti di gestione riletti come salvati");
         check(new ConfigurationFile().Validate().Count > 0 && ConfigurationFile.Parse(updated.Merge(null)).Complete && ConfigurationFile.Parse(updated.Merge("non json")).Complete,
             "Prima configurazione: file assente o illeggibile sostituito da una configurazione completa");
+        using (var without = JsonDocument.Parse(updated.Merge("""{"Server":{"JobTemplate":""}}""")))
+            check(!without.RootElement.GetProperty("Server").TryGetProperty("JobTemplate", out _), "Cartella modello vuota non salvata: resta valido il modello predefinito del servizio");
+        using (var kept = JsonDocument.Parse(new ConfigurationFile { Groups = updated.Groups, JobTemplate = @"\\server.example\dati\modello" }.Merge(null)))
+            check(kept.RootElement.GetProperty("Server").GetProperty("JobTemplate").GetString() == @"\\server.example\dati\modello", "Cartella modello indicata salvata");
         check(!reread.LocalAnalysis && reread.LocalAnalysisStartHour == 20 && reread.LocalAnalysisEndHour == 7 && reread.LocalAnalysisDocumentsPerHour == 30,
             "Analisi automatica locale disattivata se non scelta, con limiti prudenti predefiniti");
         var automatic = ConfigurationFile.Parse(new ConfigurationFile { Groups = updated.Groups, JobsRoot = updated.JobsRoot, BidsRoot = updated.BidsRoot, ArchivedJobsRoot = updated.ArchivedJobsRoot, ArchiveFolder = "x",

@@ -16,6 +16,8 @@ var settingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFol
 builder.Configuration.AddJsonFile(settingsFile, optional: true, reloadOnChange: false).AddEnvironmentVariables("TA_");
 var settings = builder.Configuration.GetSection("Server").Get<ServerSettings>() ?? new();
 settings.ArchivedJobsRoot = ArchiveScope.Root(settings.ArchivedJobsRoot);
+// Una proprietà vuota nel file (salvata dalla finestra Configura della 2.32.0) non deve annullare il modello predefinito.
+if (string.IsNullOrWhiteSpace(settings.JobTemplate)) settings.JobTemplate = new ServerSettings().JobTemplate;
 if (settings.AuthorizedGroups().Length == 0
     || settings.Port is < 1024 or > 65535 or 8080 or 8443
     || new[] { settings.JobsRoot, settings.BidsRoot, settings.ArchivedJobsRoot }.Any(p => !p.StartsWith(@"\\"))

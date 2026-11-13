@@ -35,7 +35,7 @@ public sealed class ConfigurationWindow : Window
         Add(panel, "Cartella delle gare (percorso UNC)", bids);
         Add(panel, "Cartella dell'archivio (percorso UNC)", archived);
         Add(panel, "Cartella dati del servizio", data);
-        Add(panel, "Cartella modello per le nuove commesse — facoltativa", template);
+        Add(panel, "Cartella modello per le nuove commesse (vuoto = modello predefinito del servizio)", template);
         panel.Children.Add(analysis);
         panel.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
             Text = "Limiti all'uso di risorse: un documento alla volta a priorità ridotta, al massimo 20 secondi e 512 MB per documento, in pausa durante le scansioni e le letture su richiesta. Qui sotto la fascia oraria e il numero di documenti l'ora." });

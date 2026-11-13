@@ -23,6 +23,7 @@ public sealed class TemplateCreationService(ServerSettings settings)
         var name = code + " - " + client + (place.Length > 0 ? " - " + place : "") + " - " + subject;
         if (name.Length > 200) throw new ArgumentException("Nome cartella troppo lungo (massimo 200 caratteri).");
         var destination = Path.Combine(yearRoot, name);
+        if (string.IsNullOrWhiteSpace(settings.JobTemplate)) throw new IOException("Cartella modello non configurata: indicarla nel Gestore server, pulsante Configura, e riavviare il servizio.");
         var template = Path.GetFullPath(settings.JobTemplate);
         CheckAncestors(template);
         var directories = new List<string>();

@@ -21,19 +21,36 @@ public sealed class CreateJobDialog : Window
             var box = new TextBox { Text = initial, Margin = new Thickness(0, 4, 0, 12) }; panel.Children.Add(box); return box;
         }
         var code = Field("Codice CXXYYY", "C" + DateTime.Now.ToString("yy"));
-        panel.Children.Add(new TextBlock { Text = "Scegli dal catalogo clienti (facoltativo)" });
-        var customer = new ComboBox { DisplayMemberPath = "Name", IsTextSearchEnabled = true, MinHeight = 32, Margin = new Thickness(0, 4, 0, 12) }; panel.Children.Add(customer);
+        panel.Children.Add(new TextBlock { Text = "Cerca il committente nel catalogo clienti (facoltativo): nome, partita IVA o codice fiscale" });
+        var search = new TextBox { Margin = new Thickness(0, 4, 0, 4) }; panel.Children.Add(search);
+        var customer = new ListBox { DisplayMemberPath = "Name", Height = 120, Margin = new Thickness(0, 0, 0, 8) }; panel.Children.Add(customer);
+        Customer[] catalog = [];
         var customerStatus = new TextBlock { Text = "Caricamento anagrafiche…", TextWrapping = TextWrapping.Wrap }; panel.Children.Add(customerStatus);
         var client = Field("Denominazione da usare nella cartella"); var place = Field("Luogo (facoltativo)"); var subject = Field("Argomento / cosa");
         customer.SelectionChanged += (_, _) => { if (customer.SelectedItem is Customer selected) client.Text = selected.Name; };
+        const string customerHelp = "La denominazione resta modificabile. L'associazione gestionale si imposta nella scheda Commesse e autorizzazioni.";
+        void ShowCustomers()
+        {
+            var found = MatchCustomers(catalog, search.Text);
+            customer.ItemsSource = found;
+            if (catalog.Length > 0) customerStatus.Text = (search.Text.Trim().Length == 0 ? $"{catalog.Length} committenti in catalogo. " : found.Length == 0 ? "Nessun committente trovato: puoi scrivere la denominazione a mano. " : $"{found.Length} di {catalog.Length} committenti. ") + customerHelp;
+        }
+        search.TextChanged += (_, _) => ShowCustomers();
+        // Invio sceglie il primo risultato; freccia giù porta nell'elenco.
+        search.PreviewKeyDown += (_, args) =>
+        {
+            if (customer.Items.Count == 0) return;
+            if (args.Key == System.Windows.Input.Key.Enter) { customer.SelectedIndex = 0; args.Handled = true; }
+            else if (args.Key == System.Windows.Input.Key.Down) { if (customer.SelectedIndex < 0) customer.SelectedIndex = 0; customer.Focus(); args.Handled = true; }
+        };
         Loaded += async (_, _) =>
         {
             try
             {
                 var today = DateOnly.FromDateTime(DateTime.Today);
                 var data = await server.SendAsync<BusinessSnapshot>(new("Business", Business: new("Snapshot", new(today, today))));
-                customer.ItemsSource = data.Customers.OrderBy(c => c.Name).ToArray();
-                customerStatus.Text = "La denominazione resta modificabile. L'associazione gestionale si imposta nella scheda Commesse e autorizzazioni.";
+                catalog = data.Customers.OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
+                customerStatus.Text = customerHelp; ShowCustomers();
                 var prefix = "C" + DateTime.Today.ToString("yy");
                 var next = data.Projects.Where(p => p.Code.StartsWith(prefix) && p.Code.Length == 6).Select(p => int.TryParse(p.Code[3..], out var n) ? n : 0).DefaultIfEmpty().Max() + 1;
                 if (next <= 999 && code.Text == prefix) code.Text = prefix + next.ToString("D3");
@@ -49,7 +66,7 @@ public sealed class CreateJobDialog : Window
         var cancel = new Button { Content = "Chiudi", IsCancel = true, Padding = new Thickness(12, 6, 12, 6), Margin = new Thickness(5) };
         buttons.Children.Add(preview); buttons.Children.Add(create); buttons.Children.Add(cancel); panel.Children.Add(buttons);
         CreateJobRequest? reviewed = null; bool working = false;
-        void Busy(bool value) { working = value; customer.IsEnabled = !value; preview.IsEnabled = !value; cancel.IsEnabled = !value; foreach (var field in new[] { code, client, place, subject }) field.IsEnabled = !value; }
+        void Busy(bool value) { working = value; customer.IsEnabled = !value; search.IsEnabled = !value; preview.IsEnabled = !value; cancel.IsEnabled = !value; foreach (var field in new[] { code, client, place, subject }) field.IsEnabled = !value; }
         foreach (var field in new[] { code, client, place, subject }) field.TextChanged += (_, _) => { reviewed = null; create.IsEnabled = false; };
         Closing += (_, args) => { if (working) args.Cancel = true; };
         preview.Click += async (_, _) =>
@@ -94,4 +111,13 @@ public sealed class CreateJobDialog : Window
             finally { Busy(false); }
         };
     }
+    // Ricerca senza distinzione di maiuscole e accenti: ogni parola scritta deve comparire in nome, partita IVA o codice fiscale.
+    public static Customer[] MatchCustomers(IReadOnlyCollection<Customer> customers, string text)
+    {
+        var words = Plain(text).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0) return customers.ToArray();
+        return customers.Where(c => { var target = Plain(c.Name + " " + c.Vat + " " + c.TaxCode); return words.All(word => target.Contains(word)); }).ToArray();
+    }
+    private static string Plain(string value) => string.Concat((value ?? "").Normalize(System.Text.NormalizationForm.FormD)
+        .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)).ToUpperInvariant();
 }
