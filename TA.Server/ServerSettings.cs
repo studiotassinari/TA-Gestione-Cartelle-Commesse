@@ -35,6 +35,8 @@ public sealed class ServerSettings
     public bool EnableMcpGeologyWrites { get; set; }
     public bool EnableMcpIpripiWrites { get; set; }
     // Un gruppo esplicito evita di esporre tutti i metadati a qualunque account del dominio.
+    // Modello per le nuove gare; vuoto = viene creata solo la cartella principale, senza sottocartelle.
+    public string BidTemplate { get; set; } = "";
     public string JobTemplate { get; set; } = @"\\ingtassinari.it\data\lavori\2026\C26198 - CLIENTE - LUOGO - COSA";
     // AllowedGroup resta per le configurazioni precedenti; i nuovi salvataggi usano AllowedGroups.
     public string AllowedGroup { get; set; } = "";

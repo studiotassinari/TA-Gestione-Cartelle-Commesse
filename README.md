@@ -4,6 +4,8 @@
 
 Corretta la creazione di una nuova commessa: dopo il salvataggio della configurazione con la 2.32.0 la cartella modello risultava vuota e l'anteprima segnalava un percorso vuoto. Un campo lasciato vuoto in **Configura** ora mantiene il modello predefinito del servizio.
 
+Il pulsante **+ Nuova commessa** è ora nella scheda Commesse e la scheda Gare ha **+ Nuova gara**, con la stessa procedura (anteprima, poi conferma) e il codice successivo già proposto. Il modello delle gare si indica nel Gestore server > Configura; se manca, viene creata solo la cartella principale.
+
 Nella finestra **Nuova commessa** il committente si cerca scrivendo: nome, partita IVA o codice fiscale, senza distinzione di maiuscole e accenti. L'[archiviazione ZIP](deployment/ARCHIVIAZIONE-ZIP.md) non viene più bloccata da `Thumbs.db` e dalla marcatura dei file scaricati. Dopo **Verifica e salva** il Gestore server propone il riavvio del servizio.
 
 Elenco di commesse, gare e archivio: nuova colonna **Preventivo** con colori (verde presente, giallo da verificare, rosso non trovato, grigio non ancora verificato; l'esito deriva dai soli nomi dei file nella cartella amministrazione). Un clic sull'intestazione di una colonna ordina l'elenco, un secondo clic inverte l'ordine. L'elenco iniziale mostra le ultime 50 voci per anno e numero e la ricerca considera anche anno e numero, con più parole insieme (per esempio `2024 114`).

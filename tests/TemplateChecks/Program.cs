@@ -41,6 +41,22 @@ try
     var results = await Task.WhenAll(Enumerable.Range(0, 2).Select(_ => Task.Run(() => { try { service.Create(next with { TemplateStamp = current.Stamp }); return true; } catch (IOException) { return false; } })));
     Check(results.Count(x => x) == 1 && Directory.GetDirectories(Path.Combine(jobs, "2026"), "C26002*").Length == 1, "Richieste concorrenti non duplicano il codice");
     Check(Directory.GetDirectories(Path.Combine(jobs, "2026"), ".TA-new-*").Length == 0, "Nessuna struttura temporanea residua nei casi verificati");
+    // Gare: stessa procedura, con radice propria; senza modello configurato viene creata solo la cartella principale.
+    var bids = Directory.CreateDirectory(Path.Combine(root, "gare")).FullName; Directory.CreateDirectory(Path.Combine(bids, "2026"));
+    var bidService = new TemplateCreationService(new() { JobsRoot = jobs, BidsRoot = bids, ArchiveFolder = archive, JobTemplate = model });
+    var bid = new CreateJobRequest("G26001", "Ente", "", "Gara di prova");
+    var bidPlan = bidService.Preview(bid, "G");
+    Check(bidPlan.Template == "" && bidPlan.Directories.Length == 0 && bidPlan.Destination == Path.Combine(bids, "2026", "G26001 - Ente - Gara di prova"), "Gara senza modello: anteprima della sola cartella principale nella radice delle gare");
+    Expect<IOException>(() => bidService.Create(bid, "G"), "Gara senza anteprima rifiutata");
+    var bidPath = bidService.Create(bid with { TemplateStamp = bidPlan.Stamp }, "G");
+    Check(Directory.Exists(bidPath) && Directory.GetFileSystemEntries(bidPath).Length == 0, "Gara creata vuota, senza toccare le commesse");
+    Expect<IOException>(() => bidService.Preview(bid with { Client = "Altro" }, "G"), "Codice gara duplicato rifiutato");
+    Expect<ArgumentException>(() => bidService.Preview(bid with { Code = "C26009" }, "G"), "Codice commessa rifiutato nella creazione di una gara");
+    Expect<ArgumentException>(() => bidService.Preview(bid, "A"), "Creazione da modello non ammessa per l'archivio");
+    var bidModel = Directory.CreateDirectory(Path.Combine(root, "modello-gare")).FullName; Directory.CreateDirectory(Path.Combine(bidModel, "01_DOCUMENTI DI GARA"));
+    var withModel = new TemplateCreationService(new() { JobsRoot = jobs, BidsRoot = bids, ArchiveFolder = archive, JobTemplate = model, BidTemplate = bidModel });
+    var second = new CreateJobRequest("G26002", "Ente", "Luogo", "Seconda gara"); var secondPlan = withModel.Preview(second, "G");
+    Check(secondPlan.Directories.Single() == "01_DOCUMENTI DI GARA" && Directory.Exists(Path.Combine(withModel.Create(second with { TemplateStamp = secondPlan.Stamp }, "G"), "01_DOCUMENTI DI GARA")), "Gara con modello proprio: sottocartelle del modello delle gare");
 }
 finally
 {

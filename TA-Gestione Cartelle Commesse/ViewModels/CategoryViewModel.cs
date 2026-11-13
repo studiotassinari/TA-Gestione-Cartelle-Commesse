@@ -44,9 +44,18 @@ public sealed partial class CategoryViewModel : Observable
     public Command RefreshCommand { get; }
     public Command CancelCommand { get; }
     public Command OpenFolderCommand { get; }
+    // Creazione da modello direttamente dalla scheda: solo commesse e gare.
+    public Command CreateCommand { get; }
+    public event Action<CategoryViewModel>? CreateRequested;
+    public bool CanCreate => prefix is 'C' or 'G';
+    public string CategoryCode => prefix.ToString();
+    public string CreateLabel => prefix == 'G' ? "+ Nuova gara" : "+ Nuova commessa";
+    // Numero più alto già presente per l'anno indicato (due cifre), per proporre il codice successivo.
+    public int HighestNumber(string year) => all.Where(r => r.Year == year).Select(r => int.TryParse(r.Number, out var n) ? n : 0).DefaultIfEmpty().Max();
     public CategoryViewModel(string title, char category)
     {
         Title = title; prefix = category;
+        CreateCommand = new(() => CreateRequested?.Invoke(this), () => connected && CanCreate);
         RefreshCommand = new(() => _ = SendCommand("Refresh"), () => connected && !busy);
         CancelCommand = new(() => _ = SendCommand("Cancel"), () => connected && busy);
         OpenFolderCommand = new(OpenFolder, () => Selected != null);
@@ -111,7 +120,7 @@ public sealed partial class CategoryViewModel : Observable
         { ConnectionFailed = false; connected = false; LastConnectionError = null; Status = "Archivio richiede server 2.7.0 o successivo."; }
         catch (Exception ex) { Status = "Comando non riuscito: " + ex.Message; }
     }
-    private void UpdateCommands() { Notify(nameof(IsIdle)); RefreshCommand.Refresh(); CancelCommand.Refresh(); }
+    private void UpdateCommands() { Notify(nameof(IsIdle)); RefreshCommand.Refresh(); CancelCommand.Refresh(); CreateCommand.Refresh(); }
     private void ApplyFilter()
     {
         if (IsProjectCategory) { ApplyProjectFilter(); return; }

@@ -31,6 +31,7 @@ public sealed partial class MainViewModel : Observable
     public Command CheckCommunicationCommand { get; }
     public Command ChangesCommand { get; }
     public Command CreateJobCommand { get; }
+    public Command CreateBidCommand { get; }
     public Command UpdateCommand { get; }
     public Command AboutCommand { get; }
     public Command ConnectCommand { get; }
@@ -55,7 +56,9 @@ public sealed partial class MainViewModel : Observable
         ShowScanCommand=new(()=>StatusTabIndex=0); ShowConnectionCommand=new(()=>StatusTabIndex=1);
         NonconformityReportCommand=new(ShowNonconformityReport,()=>connection!=null);
         ManageServerCommand = new(ShowServerManagement, () => CanManageServer); CheckCommunicationCommand = new(() => _ = CheckCommunicationAsync()); ChangesCommand = new(ShowChanges);
-        CreateJobCommand = new(CreateJob, () => connection != null);
+        CreateJobCommand = new(() => Create(Commesse), () => connection != null);
+        CreateBidCommand = new(() => Create(Gare), () => connection != null);
+        Commesse.CreateRequested += Create; Gare.CreateRequested += Create;
         UpdateCommand = new(() => TA.Desktop.UpdateLauncher.Check("Client", true));
         AboutCommand = new(() => _ = ShowAboutAsync());
         ConnectCommand = new(() => _ = ConnectAsync(), () => !connecting);
@@ -242,12 +245,12 @@ public sealed partial class MainViewModel : Observable
         new System.Windows.Window { Title = "Modifiche ricevute - ultime 200 per categoria nella sessione", Width = 1000, Height = 520,
             Owner = System.Windows.Application.Current.MainWindow, Content = tabs, WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner }.Show();
     }
-    private void CreateJob()
+    private void Create(CategoryViewModel category)
     {
-        if (connection == null) return;
-        var dialog = new Views.CreateJobDialog(connection) { Owner = System.Windows.Application.Current.MainWindow };
+        if (connection == null || !category.CanCreate) return;
+        var dialog = new Views.CreateJobDialog(connection, category.CategoryCode, category.HighestNumber(DateTime.Today.ToString("yy"))) { Owner = System.Windows.Application.Current.MainWindow };
         if (dialog.ShowDialog() == true)
-            ReportStatus = "Commessa creata: " + dialog.CreatedPath + ". L'elenco si aggiornera al termine della verifica server.";
+            ReportStatus = (category.CategoryCode == "G" ? "Gara creata: " : "Commessa creata: ") + dialog.CreatedPath + ". L'elenco si aggiornera al termine della verifica server.";
     }
     private async Task ShowAboutAsync()
     {

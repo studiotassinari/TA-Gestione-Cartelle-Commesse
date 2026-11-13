@@ -19,6 +19,7 @@ public sealed class ConfigurationFile
     public string ArchivedJobsRoot { get; init; } = "";
     public string ArchiveFolder { get; init; } = "";
     public string JobTemplate { get; init; } = "";
+    public string BidTemplate { get; init; } = "";
     // Analisi automatica locale e relativi limiti all'uso di risorse.
     public bool LocalAnalysis { get; init; }
     public int LocalAnalysisStartHour { get; init; } = 20;
@@ -60,7 +61,7 @@ public sealed class ConfigurationFile
             LocalAnalysisStartHour = Number("LocalAnalysisStartHour", 20), LocalAnalysisEndHour = Number("LocalAnalysisEndHour", 7), LocalAnalysisDocumentsPerHour = Number("LocalAnalysisDocumentsPerHour", 30),
             // Le configurazioni precedenti avevano un solo gruppo nella proprietà AllowedGroup.
             Groups = List("AllowedGroups").Append(Text("AllowedGroup")).Where(g => g.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-            JobsRoot = Text("JobsRoot"), BidsRoot = Text("BidsRoot"), ArchivedJobsRoot = Text("ArchivedJobsRoot"), ArchiveFolder = Text("ArchiveFolder"), JobTemplate = Text("JobTemplate")
+            JobsRoot = Text("JobsRoot"), BidsRoot = Text("BidsRoot"), ArchivedJobsRoot = Text("ArchivedJobsRoot"), ArchiveFolder = Text("ArchiveFolder"), JobTemplate = Text("JobTemplate"), BidTemplate = Text("BidTemplate")
         };
     }
     // Aggiorna solo le proprietà gestite; tutto il resto del documento resta com'era.
@@ -79,6 +80,7 @@ public sealed class ConfigurationFile
         server["ArchiveFolder"] = ArchiveFolder;
         // Campo vuoto = modello predefinito del servizio: una proprietà vuota nel file lo annullerebbe.
         if (JobTemplate.Length > 0) server["JobTemplate"] = JobTemplate; else server.Remove("JobTemplate");
+        if (BidTemplate.Length > 0) server["BidTemplate"] = BidTemplate; else server.Remove("BidTemplate");
         server["EnableLocalAnalysis"] = LocalAnalysis; server["LocalAnalysisStartHour"] = LocalAnalysisStartHour;
         server["LocalAnalysisEndHour"] = LocalAnalysisEndHour; server["LocalAnalysisDocumentsPerHour"] = LocalAnalysisDocumentsPerHour;
         if (server["RefreshMinutes"] == null) server["RefreshMinutes"] = 60;
