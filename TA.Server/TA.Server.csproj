@@ -9,5 +9,7 @@
     <ProjectReference Include="../TA.Transport/TA.Transport.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.13" />
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Grafica dello studio per l'esportazione del curriculum: usata quando in Configura non è indicata un'altra cartella. -->
+    <Content Include="Assets/CurriculumGrafica/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

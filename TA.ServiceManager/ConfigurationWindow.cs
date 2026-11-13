@@ -38,7 +38,7 @@ public sealed class ConfigurationWindow : Window
         Add(panel, "Cartella modello per le nuove commesse (vuoto = modello predefinito del servizio)", template);
         Add(panel, "Cartella modello per le nuove gare (vuoto = viene creata solo la cartella principale)", bidTemplate);
         Add(panel, "Modello Word per l'esportazione del curriculum, con intestazione e stili dello studio (.docx o .dotx; facoltativo)", curriculumTemplate);
-        Add(panel, "Cartella della grafica del curriculum: logo.png, logo-chiaro.png, copertina.jpg, strutture.png, architettura.png, impianti.png, consulenza.png, stile.json (vuoto = impaginazione senza logo)", curriculumGraphics);
+        Add(panel, "Cartella della grafica del curriculum: logo.png, logo-chiaro.png, copertina.jpg, strutture.png, architettura.png, impianti.png, consulenza.png, stile.json (vuoto = grafica fornita con il servizio)", curriculumGraphics);
         panel.Children.Add(analysis);
         panel.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
             Text = "Limiti all'uso di risorse: un documento alla volta a priorità ridotta, al massimo 20 secondi e 512 MB per documento, in pausa durante le scansioni e le letture su richiesta. Qui sotto la fascia oraria e il numero di documenti l'ora." });

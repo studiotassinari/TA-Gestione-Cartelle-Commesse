@@ -130,7 +130,7 @@ public sealed class CurriculumWindow : Window
         var selected = snapshot.Works.FirstOrDefault(w => w.Id == current.Id && current.Id.Length > 0);
         if (selected != null) Edit(selected); else if (current.Id.Length > 0) Edit(new CurriculumWork("", ""));
         ShowProjects();
-        status.Text = $"{snapshot.Works.Length} lavori nel curriculum. " + (snapshot.GraphicsConfigured ? "Esportazione Word con la grafica dello studio." : "Grafica dello studio non configurata sul server: l'esportazione Word esce senza logo e con caratteri predefiniti.");
+        status.Text = $"{snapshot.Works.Length} lavori nel curriculum. " + (snapshot.GraphicsConfigured ? "Esportazione Word con la grafica dello studio." : "Grafica dello studio non trovata sul server: l'esportazione Word esce senza logo e con caratteri predefiniti.");
     }
     private void Filter()
     {

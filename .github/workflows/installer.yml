@@ -68,7 +68,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.32.1"
+          $version = "2.33.0"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -270,12 +270,14 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
-          Versione 2.32.1: corretta la creazione di una nuova commessa, che dopo il salvataggio della configurazione 2.32.0 segnalava un percorso vuoto per la cartella modello.
+          Versione 2.33.0: nuovo curriculum dello studio (menu Gestione). Lavori inseriti a mano con macro categorie di prestazioni, categorie delle opere, fotografie e parole chiave, collegati per codice a commesse, gare e archivio; aggiornabile da tutti gli utenti autorizzati.
+          Esportazione Word del curriculum in tre formati (schede complete, schede sintetiche, elenco per gare con totali per ID opere) con la grafica dello studio installata con il servizio. Il carattere indicato nello stile deve essere installato sui computer che aprono i documenti.
+          Corretta la creazione di una nuova commessa, che dopo il salvataggio della configurazione 2.32.0 segnalava un percorso vuoto per la cartella modello.
           Nuova commessa: casella di ricerca del committente per nome, partita IVA o codice fiscale.
           Pulsante Nuova commessa nella scheda Commesse e Nuova gara nella scheda Gare, con codice successivo proposto. Per le gare il modello si indica in Configura; senza modello viene creata solo la cartella principale.
           Elenco di commesse, gare e archivio: colonna Preventivo con colori (presente, da verificare, non trovato, non verificato), ordinamento con un clic sull'intestazione di ogni colonna, ultime 50 per anno e numero, ricerca anche per anno e numero.
           Archiviazione ZIP non piu bloccata da Thumbs.db e dalla marcatura dei file scaricati; ogni altro flusso alternativo continua a bloccarla.
-          Dopo Verifica e salva il Gestore server propone il riavvio del servizio. Nessuna nuova configurazione richiesta: aggiornare prima il server, poi i client.
+          Dopo Verifica e salva il Gestore server propone il riavvio del servizio. Nessuna nuova configurazione richiesta: aggiornare prima il server, poi i client. La versione 2.32.1 non e stata pubblicata: le sue modifiche sono in questa.
           Installatori iniziali, updater e pacchetti Client/Server/MCP con SHA256. Pacchetti non firmati digitalmente. Tunnel MCP invariato: 21 comandi, avvio manuale.
           '@
           # Salva le note UTF-8 in un file per preservare accenti e interruzioni di riga.

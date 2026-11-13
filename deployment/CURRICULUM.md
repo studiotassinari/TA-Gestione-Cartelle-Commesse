@@ -34,7 +34,7 @@ Sulla scheda si spuntano le macro categorie di prestazioni: Strutture, Architett
 
 ### Grafica dello studio
 
-Logo, copertina, icone e stile **non fanno parte del programma**: restano in una cartella indicata nel **Gestore server > Configura** («Cartella della grafica del curriculum»), che il servizio legge soltanto. La cartella deve essere raggiungibile dal servizio e contenere i file con questi nomi (tutti facoltativi, al massimo 2 MB ciascuno):
+Logo, copertina, icone e stile sono file che il servizio legge soltanto. Il servizio viene installato con la grafica dello studio nella cartella `Assets\CurriculumGrafica` (nel repository: `TA.Server/Assets/CurriculumGrafica`); per usarne un'altra basta indicare una cartella nel **Gestore server > Configura** («Cartella della grafica del curriculum»), raggiungibile dal servizio. I file hanno questi nomi (tutti facoltativi, al massimo 2 MB ciascuno):
 
 | File | Uso |
 | --- | --- |
@@ -56,7 +56,7 @@ Esempio di `stile.json`:
 }
 ```
 
-I caratteri indicati devono essere installati sui computer che aprono o stampano il documento, altrimenti Word li sostituisce. Senza cartella della grafica l'esportazione esce senza immagini, con i colori predefiniti e il carattere Segoe UI.
+I caratteri indicati devono essere installati sui computer che aprono o stampano il documento, altrimenti Word li sostituisce: i file dei caratteri non sono distribuiti con il programma. Se la cartella indicata non esiste l'esportazione esce senza immagini, con i colori predefiniti e il carattere Segoe UI.
 
 ### Modello Word (facoltativo)
 

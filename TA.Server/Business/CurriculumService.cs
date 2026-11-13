@@ -10,7 +10,9 @@ public sealed class CurriculumService
     private const string Kind = "curriculum";
     private readonly BusinessStore store; private readonly Func<WorkProject[]> projects; private readonly string photoFolder; private readonly Func<string> template, graphics;
     public CurriculumService(BusinessService business, ServerSettings settings)
-        : this(business.Store, business.Projects, PhotoFolder(settings), () => settings.CurriculumTemplate, () => settings.CurriculumGraphics) { }
+        : this(business.Store, business.Projects, PhotoFolder(settings), () => settings.CurriculumTemplate, () => settings.CurriculumGraphics is { Length: > 0 } configured ? configured : BundledGraphics) { }
+    // Grafica fornita con il servizio: vale finché in Configura non viene indicata un'altra cartella.
+    public static string BundledGraphics => Path.Combine(AppContext.BaseDirectory, "Assets", "CurriculumGrafica");
     public CurriculumService(BusinessStore store, Func<WorkProject[]> projects, string photoFolder, Func<string>? template = null, Func<string>? graphics = null)
     { this.store = store; this.projects = projects; this.photoFolder = Path.GetFullPath(photoFolder); this.template = template ?? (() => ""); this.graphics = graphics ?? (() => ""); }
     // Nomi fissi: il servizio non legge altro dalla cartella della grafica.
