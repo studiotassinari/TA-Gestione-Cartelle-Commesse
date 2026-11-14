@@ -33,6 +33,11 @@ on:
 permissions:
   # Consente di creare release e caricare i relativi file nel repository.
   contents: write
+  # Lettura del pacchetto GeCo.Dati da GitHub Packages di studiotassinari.
+  packages: read
+# Token per scaricare GeCo.Dati: quello dedicato se presente, altrimenti quello del workflow.
+env:
+  GECO_PACKAGES_TOKEN: ${{ secrets.GECO_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 # Coordina le esecuzioni per evitare pubblicazioni contemporanee.
 concurrency:
   # Raggruppa le esecuzioni di questo workflow sotto la stessa chiave di concorrenza.
@@ -68,7 +73,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.33.0"
+          $version = "2.34.0"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -102,6 +107,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Test trasporto fallito' }
       - name: Verifica aggiornamento viste, archivio annuale e riscontri
         run: |
+          # SQL Server di prova per il database comune con GeCo: LocalDB del runner, database vuoto a ogni esecuzione.
+          sqllocaldb start MSSQLLocalDB | Out-Null
+          sqlcmd -S '(localdb)\MSSQLLocalDB' -Q "IF DB_ID('TAProva') IS NOT NULL DROP DATABASE TAProva; CREATE DATABASE TAProva"
+          $env:TA_TEST_SQL = 'Server=(localdb)\MSSQLLocalDB;Database=TAProva;Integrated Security=True;TrustServerCertificate=True'
           foreach ($test in @('ClientChecks','BusinessChecks','BusinessUiChecks','LocalStorageChecks','LiveIndexChecks','AnnualArchiveChecks','ReliabilityChecks','AcknowledgementChecks','NightlyChecks','HourlyChecks','DirectoryProgressChecks','ClientStatusChecks','ArchiveSourceChecks','UpdaterChecks','InventoryChecks','SqliteChecks','FileSearchChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks','IpripiChecks')) {
             dotnet run --project "tests/$test" -c Release
             if ($LASTEXITCODE -ne 0) { throw "Test fallito: $test" }
@@ -270,6 +279,7 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
+          Versione 2.34.0: collegamento al database comune con GeCo. Se in Gestore server > Configura si indica la stringa di connessione al database SQL Server di GeCo, il servizio scrive l'elenco delle cartelle di commesse, gare e archivio nella tabella comune (all'avvio e a ogni elaborazione giornaliera) e GeCo2027 le mostra nella pagina Cartelle, abbinate a commesse e gare per codice. Senza stringa di connessione nulla cambia. Le cartelle originali restano in sola lettura. Aggiornare prima GeCo2027, poi il server, poi i client.
           Versione 2.33.0: nuovo curriculum dello studio (menu Gestione). Lavori inseriti a mano con macro categorie di prestazioni, categorie delle opere, fotografie e parole chiave, collegati per codice a commesse, gare e archivio; aggiornabile da tutti gli utenti autorizzati.
           Esportazione Word del curriculum in tre formati (schede complete, schede sintetiche, elenco per gare con totali per ID opere) con la grafica dello studio installata con il servizio. Il carattere indicato nello stile deve essere installato sui computer che aprono i documenti.
           Corretta la creazione di una nuova commessa, che dopo il salvataggio della configurazione 2.32.0 segnalava un percorso vuoto per la cartella modello.

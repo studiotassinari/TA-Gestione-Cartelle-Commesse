@@ -12,6 +12,7 @@ Soluzione `TA-Gestione Cartelle Commesse.slnx`, .NET 10, solo Windows (`net10.0-
 - `TA.Core/` — inventario e servizi comuni. `TA.Transport/` — protocollo client/servizio (versione 2).
 - `TA.Mcp/` — server MCP usato da ChatGPT tramite tunnel ad avvio manuale (21 strumenti).
 - `TA.Updater/`, `TA.ServiceManager/`, `TA.Desktop/` — aggiornatore, gestore servizio, area di notifica.
+- Database comune con GeCo2027: libreria `GeCo.Dati` (pacchetto NuGet da GitHub Packages di studiotassinari, sorgente nel repository GeCo2027, `shared/GeCo.Dati`). Lo schema si cambia **solo lì** (`Migrazioni/NNN_*.sql`); qui si usa tramite `TA.Server/SharedDatabase/`. Per compilare serve `GECO_PACKAGES_TOKEN` (vedi `deployment/DATABASE-COMUNE.md`).
 - `tests/*Checks/` — programmi console di verifica (non xUnit): `Check(condizione, "descrizione")`, stampano `PASS:` e falliscono con eccezione.
 - `deployment/` — script PowerShell e documentazione operativa (MCP, GEOLOGIA, IPRIPI, SQLITE, ARCHIVIAZIONE-ZIP…).
 
