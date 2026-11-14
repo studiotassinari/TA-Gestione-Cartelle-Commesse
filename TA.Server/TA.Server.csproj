@@ -5,6 +5,8 @@
     <PackageReference Include="System.DirectoryServices.AccountManagement" Version="10.0.13" />
     <EmbeddedResource Include="IpripiRules.json" LogicalName="TA.Server.IpripiRules.json" />
     <PackageReference Include="PdfPig" Version="0.1.16" />
+    <!-- Libreria del database comune con GeCo2027 (GitHub Packages di studiotassinari): schema, aggiornamenti e regole condivise. -->
+    <PackageReference Include="GeCo.Dati" Version="1.0.*" />
     <ProjectReference Include="../TA.Core/TA.Core.csproj" />
     <ProjectReference Include="../TA.Transport/TA.Transport.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.13" />

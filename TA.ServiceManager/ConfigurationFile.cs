@@ -22,6 +22,7 @@ public sealed class ConfigurationFile
     public string BidTemplate { get; init; } = "";
     public string CurriculumTemplate { get; init; } = "";
     public string CurriculumGraphics { get; init; } = "";
+    public string SharedDatabase { get; init; } = "";
     // Analisi automatica locale e relativi limiti all'uso di risorse.
     public bool LocalAnalysis { get; init; }
     public int LocalAnalysisStartHour { get; init; } = 20;
@@ -64,7 +65,7 @@ public sealed class ConfigurationFile
             LocalAnalysisStartHour = Number("LocalAnalysisStartHour", 20), LocalAnalysisEndHour = Number("LocalAnalysisEndHour", 7), LocalAnalysisDocumentsPerHour = Number("LocalAnalysisDocumentsPerHour", 30),
             // Le configurazioni precedenti avevano un solo gruppo nella proprietà AllowedGroup.
             Groups = List("AllowedGroups").Append(Text("AllowedGroup")).Where(g => g.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-            JobsRoot = Text("JobsRoot"), BidsRoot = Text("BidsRoot"), ArchivedJobsRoot = Text("ArchivedJobsRoot"), ArchiveFolder = Text("ArchiveFolder"), JobTemplate = Text("JobTemplate"), BidTemplate = Text("BidTemplate"), CurriculumTemplate = Text("CurriculumTemplate"), CurriculumGraphics = Text("CurriculumGraphics")
+            JobsRoot = Text("JobsRoot"), BidsRoot = Text("BidsRoot"), ArchivedJobsRoot = Text("ArchivedJobsRoot"), ArchiveFolder = Text("ArchiveFolder"), JobTemplate = Text("JobTemplate"), BidTemplate = Text("BidTemplate"), CurriculumTemplate = Text("CurriculumTemplate"), CurriculumGraphics = Text("CurriculumGraphics"), SharedDatabase = Text("SharedDatabase")
         };
     }
     // Aggiorna solo le proprietà gestite; tutto il resto del documento resta com'era.
@@ -86,6 +87,7 @@ public sealed class ConfigurationFile
         if (BidTemplate.Length > 0) server["BidTemplate"] = BidTemplate; else server.Remove("BidTemplate");
         if (CurriculumTemplate.Length > 0) server["CurriculumTemplate"] = CurriculumTemplate; else server.Remove("CurriculumTemplate");
         if (CurriculumGraphics.Length > 0) server["CurriculumGraphics"] = CurriculumGraphics; else server.Remove("CurriculumGraphics");
+        if (SharedDatabase.Length > 0) server["SharedDatabase"] = SharedDatabase; else server.Remove("SharedDatabase");
         server["EnableLocalAnalysis"] = LocalAnalysis; server["LocalAnalysisStartHour"] = LocalAnalysisStartHour;
         server["LocalAnalysisEndHour"] = LocalAnalysisEndHour; server["LocalAnalysisDocumentsPerHour"] = LocalAnalysisDocumentsPerHour;
         if (server["RefreshMinutes"] == null) server["RefreshMinutes"] = 60;

@@ -1,5 +1,6 @@
 using TA_Gestione_Cartelle_Commesse.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using TA.Server.SharedDatabase;
 namespace TA.Server;
 
 // Una sola elaborazione giornaliera comprende elenchi, metadati e inventario dei nomi.
@@ -51,6 +52,13 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     { "C" => workers['C'], "G" => workers['G'], "A" => workers['A'], _ => throw new ArgumentException("Categoria non valida") };
     public bool Refresh(string category) { _ = Get(category).RefreshIndexAsync(shutdown); return true; }
     public Task<bool> RefreshAsync(string category) => Get(category).RefreshIndexAsync(shutdown);
+    // Elenco delle cartelle nel database comune con GeCo. Un errore qui non ferma mai l'elaborazione: gli elenchi locali restano validi.
+    private async Task<bool> PushShared(CancellationToken token)
+    {
+        if (settings.SharedDatabase.Trim().Length == 0) return true;
+        try { logger.LogInformation("Database comune aggiornato: {Result}", await SharedFolders.PushAsync(settings.SharedDatabase, workers.Values.Select(w => w.State).ToArray(), token)); return true; }
+        catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogError(ex, "Database comune non aggiornato"); return false; }
+    }
     private async Task RunScan(CancellationToken token)
     {
         var started = DateTime.UtcNow;
@@ -74,6 +82,11 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
                 var geology = catalogServices.GetRequiredService<GeologyIndexer>();
                 SetProgress(new(true, "Catalogo MUR", 0, null, "Aggiornamento database MUR", started));
                 await Task.WhenAll(Task.Run(()=>mur.Refresh(token),token),Task.Run(()=>geology.Refresh(token),token));
+            }
+            if (settings.SharedDatabase.Trim().Length > 0)
+            {
+                SetProgress(new(true, "Database comune", 0, null, "Invio dell'elenco delle cartelle", started));
+                warnings |= !await PushShared(token);
             }
             DailyReports.Save(ReportsDirectory, DailyReports.ItalianTime(new DateTimeOffset(started)), workers.Values, new DateTimeOffset(started), currentOnly:true);
             SetProgress(new(true,"Backup database",0,null,"Verifica e copia sulla rete",started));
@@ -112,6 +125,8 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
         SetProgress(new(true,"Caricamento elenchi",0,null,"Caricamento degli elenchi salvati prima della migrazione"));
         await Task.WhenAll(workers.Values.Select(w => w.InitializeAsync()));
         changes.Publish();
+        // Gli elenchi salvati vanno subito nel database comune, senza aspettare l'elaborazione giornaliera.
+        _ = PushShared(stoppingToken);
         while(!settings.LocalStorageOnly && !stoppingToken.IsCancellationRequested)
         {
             try

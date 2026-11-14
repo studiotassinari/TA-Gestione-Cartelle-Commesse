@@ -1,12 +1,16 @@
-# TA-Gestione Cartelle Commesse — 2.33.0
+# TA-Gestione Cartelle Commesse — 2.34.0
+
+## Novità 2.34.0 — database comune con GeCo
+
+Il servizio può collegarsi al database SQL Server di GeCo2027: in **Gestore server > Configura** si indica la stringa di connessione e, da quel momento, l'elenco delle cartelle di commesse, gare e archivio viene scritto nella tabella comune all'avvio e a ogni elaborazione giornaliera. GeCo2027 le mostra nella pagina **Cartelle**, abbinate a commesse e gare per codice, con le cartelle senza commessa e le commesse senza cartella. Senza stringa di connessione nulla cambia; le cartelle originali restano in sola lettura. Dettagli in [deployment/DATABASE-COMUNE.md](deployment/DATABASE-COMUNE.md).
+
+[Scarica aggiornatore 2.34.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.34.0/TA-Commesse-Aggiornatore-2.34.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.34.0).
 
 ## Novità 2.33.0 — curriculum dello studio
 
 Nuovo modulo **Gestione > Curriculum dello studio…**: i lavori svolti si inseriscono a mano con committente, luogo, periodo, prestazioni, importi, macro categorie di prestazioni, categorie delle opere, fotografie e parole chiave, e si collegano per codice a commesse, gare e voci d'archivio (dal tasto destro su una riga si aprono i lavori collegati). Tutti gli utenti autorizzati possono aggiornarlo; i dati stanno nell'archivio del gestionale e rientrano nel backup.
 
 **Esporta in Word…** produce schede complete, schede sintetiche oppure l'elenco per gare con i totali per ID opere, con copertina, simbolo a quadranti delle macro categorie e grafica dello studio. Dettagli in [deployment/CURRICULUM.md](deployment/CURRICULUM.md).
-
-[Scarica aggiornatore 2.33.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.33.0/TA-Commesse-Aggiornatore-2.33.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.33.0).
 
 ### Correzioni e ricerca del committente (previste come 2.32.1, pubblicate con la 2.33.0)
 

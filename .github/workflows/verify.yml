@@ -4,6 +4,10 @@ on:
     branches: [master]
 permissions:
   contents: read
+  # Lettura del pacchetto GeCo.Dati da GitHub Packages di studiotassinari.
+  packages: read
+env:
+  GECO_PACKAGES_TOKEN: ${{ secrets.GECO_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 concurrency:
   group: verifica-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -21,6 +25,10 @@ jobs:
         run: |
           dotnet build 'TA-Gestione Cartelle Commesse.slnx' -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Compilazione fallita' }
+          # SQL Server di prova per il database comune con GeCo: LocalDB del runner, database vuoto a ogni esecuzione.
+          sqllocaldb start MSSQLLocalDB | Out-Null
+          sqlcmd -S '(localdb)\MSSQLLocalDB' -Q "IF DB_ID('TAProva') IS NOT NULL DROP DATABASE TAProva; CREATE DATABASE TAProva"
+          $env:TA_TEST_SQL = 'Server=(localdb)\MSSQLLocalDB;Database=TAProva;Integrated Security=True;TrustServerCertificate=True'
           foreach ($test in @('SqliteChecks','InventoryChecks','FileSearchChecks','HourlyChecks','NightlyChecks','LiveIndexChecks','ReliabilityChecks','DirectoryProgressChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks','IpripiChecks','BusinessChecks','UpdaterChecks','ClientChecks','TemplateChecks')) {
             dotnet run --project "tests/$test" -c Release
             if ($LASTEXITCODE -ne 0) { throw "Verifica fallita: $test" }
