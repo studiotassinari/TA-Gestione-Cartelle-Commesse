@@ -2,7 +2,7 @@
 
 ## Novità 2.34.0 — database comune con GeCo
 
-Il servizio può collegarsi al database SQL Server di GeCo2027: in **Gestore server > Configura** si indica la stringa di connessione e, da quel momento, l'elenco delle cartelle di commesse, gare e archivio viene scritto nella tabella comune all'avvio e a ogni elaborazione giornaliera. GeCo2027 le mostra nella pagina **Cartelle**, abbinate a commesse e gare per codice, con le cartelle senza commessa e le commesse senza cartella. Senza stringa di connessione nulla cambia; le cartelle originali restano in sola lettura. Dettagli in [deployment/DATABASE-COMUNE.md](deployment/DATABASE-COMUNE.md).
+Il servizio può collegarsi al database SQL Server di GeCo2027: in **Gestore server > Configura** si indicano server SQL, database e account SQL (utente e password) e, da quel momento, l'elenco delle cartelle di commesse, gare e archivio viene scritto nella tabella comune all'avvio e a ogni elaborazione giornaliera. GeCo2027 le mostra nella pagina **Cartelle**, abbinate a commesse e gare per codice, con le cartelle senza commessa e le commesse senza cartella. Senza questi dati nulla cambia; le cartelle originali restano in sola lettura. Dettagli in [deployment/DATABASE-COMUNE.md](deployment/DATABASE-COMUNE.md).
 
 [Scarica aggiornatore 2.34.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.34.0/TA-Commesse-Aggiornatore-2.34.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.34.0).
 

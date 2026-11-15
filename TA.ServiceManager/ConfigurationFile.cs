@@ -44,6 +44,13 @@ public sealed class ConfigurationFile
         if (CurriculumTemplate.Length > 0 && System.IO.Path.GetExtension(CurriculumTemplate).ToLowerInvariant() is not (".docx" or ".dotx")) problems.Add("Il modello Word del curriculum deve essere un file .docx o .dotx.");
         if (LocalAnalysisStartHour is < 0 or > 23 || LocalAnalysisEndHour is < 0 or > 23) problems.Add("Le ore dell'analisi automatica devono essere comprese tra 0 e 23.");
         if (LocalAnalysisDocumentsPerHour is < 1 or > 120) problems.Add("L'analisi automatica ammette da 1 a 120 documenti l'ora.");
+        if (SharedDatabase.Length > 0)
+        {
+            // Il collegamento con l'account Windows del servizio non è ammesso: lo studio usa sempre un account SQL.
+            if (SharedDatabase.Contains("Integrated Security", StringComparison.OrdinalIgnoreCase) || SharedDatabase.Contains("Trusted_Connection", StringComparison.OrdinalIgnoreCase))
+                problems.Add("Database comune: il servizio deve collegarsi con un account SQL, non con l'account Windows.");
+            problems.AddRange(SqlAccount.Parse(SharedDatabase).Problems());
+        }
         return problems;
     }
     public static ConfigurationFile Load() => File.Exists(Path) ? Parse(File.ReadAllText(Path)) : new() { Domain = MachineDomain() };

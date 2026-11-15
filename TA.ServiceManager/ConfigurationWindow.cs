@@ -11,7 +11,7 @@ namespace TA.ServiceManager;
 public sealed class ConfigurationWindow : Window
 {
     private readonly TextBox domain = Line(), groups = Lines(), collaborators = Line(), managers = Lines(), port = Line(),
-        jobs = Line(), bids = Line(), archived = Line(), data = Line(), template = Line(), bidTemplate = Line(), curriculumTemplate = Line(), curriculumGraphics = Line(), sharedDatabase = Line(), analysisStart = Line(), analysisEnd = Line(), analysisRate = Line();
+        jobs = Line(), bids = Line(), archived = Line(), data = Line(), template = Line(), bidTemplate = Line(), curriculumTemplate = Line(), curriculumGraphics = Line(), sqlServer = Line(), sqlDatabase = Line(), sqlUser = Line(), analysisStart = Line(), analysisEnd = Line(), analysisRate = Line();
     private readonly CheckBox analysis = new() { Content = "Analizza automaticamente i documenti candidati su questo server (senza ChatGPT e senza servizi esterni)", Margin = new Thickness(0, 12, 0, 8) };
     private readonly CheckBox firewall = new() { Content = "Apri la porta nel firewall di Windows (solo profilo di dominio e sottorete locale)", IsChecked = true, Margin = new Thickness(0, 4, 0, 8) };
     private readonly TextBlock error = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Firebrick, Margin = new Thickness(0, 8, 0, 8) };
@@ -39,7 +39,11 @@ public sealed class ConfigurationWindow : Window
         Add(panel, "Cartella modello per le nuove gare (vuoto = viene creata solo la cartella principale)", bidTemplate);
         Add(panel, "Modello Word per l'esportazione del curriculum, con intestazione e stili dello studio (.docx o .dotx; facoltativo)", curriculumTemplate);
         Add(panel, "Cartella della grafica del curriculum: logo.png, logo-chiaro.png, copertina.jpg, strutture.png, architettura.png, impianti.png, consulenza.png, stile.json (vuoto = grafica fornita con il servizio)", curriculumGraphics);
-        Add(panel, "Database comune con GeCo: stringa di connessione SQL Server, esempio Server=.\\SQLEXPRESS;Database=NomeDatabase;Integrated Security=True;TrustServerCertificate=True (vuoto = nessun collegamento)", sharedDatabase);
+        panel.Children.Add(new TextBlock { Text = "Database comune con GeCo (facoltativo). Il servizio si collega sempre con un account SQL; lasciare vuoti i quattro campi per non collegarlo.", TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 6) });
+        Add(panel, "Server SQL (esempio: .\\SQLEXPRESS)", sqlServer);
+        Add(panel, "Nome del database", sqlDatabase);
+        Add(panel, "Utente SQL", sqlUser);
+        panel.Children.Add(new TextBlock { Text = "Password dell'utente SQL" }); panel.Children.Add(sqlPassword);
         panel.Children.Add(analysis);
         panel.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
             Text = "Limiti all'uso di risorse: un documento alla volta a priorità ridotta, al massimo 20 secondi e 512 MB per documento, in pausa durante le scansioni e le letture su richiesta. Qui sotto la fascia oraria e il numero di documenti l'ora." });
@@ -56,6 +60,7 @@ public sealed class ConfigurationWindow : Window
         try { Fill(ConfigurationFile.Load()); }
         catch (Exception ex) { error.Text = "Configurazione esistente non leggibile: " + ex.Message + " Salvando verrà sostituita."; Fill(new ConfigurationFile()); }
     }
+    private readonly PasswordBox sqlPassword = new() { Margin = new Thickness(0, 4, 0, 12) };
     private static TextBox Line() => new() { Margin = new Thickness(0, 4, 0, 12) };
     private static TextBox Lines() => new() { Margin = new Thickness(0, 4, 0, 12), AcceptsReturn = true, MinLines = 3, MaxLines = 8, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     private static void Add(Panel panel, string label, TextBox box)
@@ -65,7 +70,8 @@ public sealed class ConfigurationWindow : Window
         domain.Text = value.Domain; groups.Text = string.Join(Environment.NewLine, value.Groups); collaborators.Text = value.CollaboratorsGroup;
         managers.Text = string.Join(Environment.NewLine, value.ManagementUsers); port.Text = value.Port.ToString();
         analysis.IsChecked = value.LocalAnalysis; analysisStart.Text = value.LocalAnalysisStartHour.ToString(); analysisEnd.Text = value.LocalAnalysisEndHour.ToString(); analysisRate.Text = value.LocalAnalysisDocumentsPerHour.ToString();
-        jobs.Text = value.JobsRoot; bids.Text = value.BidsRoot; archived.Text = value.ArchivedJobsRoot; data.Text = value.ArchiveFolder; template.Text = value.JobTemplate; bidTemplate.Text = value.BidTemplate; curriculumTemplate.Text = value.CurriculumTemplate; curriculumGraphics.Text = value.CurriculumGraphics; sharedDatabase.Text = value.SharedDatabase;
+        jobs.Text = value.JobsRoot; bids.Text = value.BidsRoot; archived.Text = value.ArchivedJobsRoot; data.Text = value.ArchiveFolder; template.Text = value.JobTemplate; bidTemplate.Text = value.BidTemplate; curriculumTemplate.Text = value.CurriculumTemplate; curriculumGraphics.Text = value.CurriculumGraphics;
+        var sql = SqlAccount.Parse(value.SharedDatabase); sqlServer.Text = sql.Server; sqlDatabase.Text = sql.Database; sqlUser.Text = sql.User; sqlPassword.Password = sql.Password;
     }
     private void Save()
     {
@@ -77,7 +83,8 @@ public sealed class ConfigurationWindow : Window
             LocalAnalysis = analysis.IsChecked == true, LocalAnalysisStartHour = Whole(analysisStart), LocalAnalysisEndHour = Whole(analysisEnd), LocalAnalysisDocumentsPerHour = Whole(analysisRate),
             Domain = domain.Text.Trim(), Groups = ConfigurationFile.Split(groups.Text), CollaboratorsGroup = collaborators.Text.Trim(),
             ManagementUsers = ConfigurationFile.Split(managers.Text), Port = int.TryParse(port.Text.Trim(), out var number) ? number : 0,
-            JobsRoot = jobs.Text.Trim(), BidsRoot = bids.Text.Trim(), ArchivedJobsRoot = archived.Text.Trim(), ArchiveFolder = data.Text.Trim(), JobTemplate = template.Text.Trim(), BidTemplate = bidTemplate.Text.Trim(), CurriculumTemplate = curriculumTemplate.Text.Trim(), CurriculumGraphics = curriculumGraphics.Text.Trim(), SharedDatabase = sharedDatabase.Text.Trim()
+            JobsRoot = jobs.Text.Trim(), BidsRoot = bids.Text.Trim(), ArchivedJobsRoot = archived.Text.Trim(), ArchiveFolder = data.Text.Trim(), JobTemplate = template.Text.Trim(), BidTemplate = bidTemplate.Text.Trim(), CurriculumTemplate = curriculumTemplate.Text.Trim(), CurriculumGraphics = curriculumGraphics.Text.Trim(),
+            SharedDatabase = new SqlAccount(sqlServer.Text.Trim(), sqlDatabase.Text.Trim(), sqlUser.Text.Trim(), sqlPassword.Password).ToConnectionString()
         };
         var problems = value.Validate();
         // Verifica l'esistenza dei nomi senza concedere o cambiare permessi nel dominio.

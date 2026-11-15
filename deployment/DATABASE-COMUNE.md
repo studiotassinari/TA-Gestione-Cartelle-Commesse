@@ -16,16 +16,20 @@ GeCo2027 mostra questi dati nella pagina **Cartelle**.
 
 ## Configurazione
 
-In **Gestore server > Configura**, campo «Database comune con GeCo», indicare la stringa di connessione, poi salvare e riavviare il servizio. Esempi:
+Il servizio si collega al database **sempre con un account SQL** (utente e password), mai con l'account Windows con cui gira. Gli utenti, invece, si riconoscono con il proprio account Windows sia nel programma sia nel browser.
 
-```
-Server=.\SQLEXPRESS;Database=NomeDatabase;Integrated Security=True;TrustServerCertificate=True
-Server=.\SQLEXPRESS;Database=NomeDatabase;User ID=utente;Password=...;TrustServerCertificate=True
-```
+In **Gestore server > Configura**, sezione «Database comune con GeCo», compilare i quattro campi, poi salvare e riavviare il servizio:
 
-- Con `Integrated Security=True` il collegamento avviene con l'account con cui gira il servizio: quell'account deve avere un accesso in SQL Server e, sul database, i ruoli `db_datareader`, `db_datawriter` e `db_ddladmin` (l'ultimo serve per applicare gli aggiornamenti dello schema).
-- Con utente e password la stringa resta nel file `server-settings.json` del server: non va copiata altrove.
-- Campo vuoto = nessun collegamento, comportamento identico alle versioni precedenti.
+| Campo | Esempio |
+| --- | --- |
+| Server SQL | `.\SQLEXPRESS` |
+| Nome del database | quello usato da GeCo2027 |
+| Utente SQL | lo stesso account di GeCo2027 oppure uno dedicato |
+| Password | la password di quell'utente |
+
+- L'utente SQL deve avere sul database i ruoli `db_datareader`, `db_datawriter` e `db_ddladmin` (l'ultimo serve per applicare gli aggiornamenti dello schema).
+- Utente e password restano nel file `server-settings.json` del server, leggibile solo dagli amministratori: non vanno copiati altrove.
+- Quattro campi vuoti = nessun collegamento, comportamento identico alle versioni precedenti.
 
 Ordine degli aggiornamenti quando cambia il database: prima GeCo2027, poi il server di TA-Gestione, poi i client.
 
