@@ -56,8 +56,20 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     private async Task<bool> PushShared(CancellationToken token)
     {
         if (settings.SharedDatabase.Trim().Length == 0) return true;
-        try { logger.LogInformation("Database comune aggiornato: {Result}", await SharedFolders.PushAsync(settings.SharedDatabase, workers.Values.Select(w => w.State).ToArray(), token)); return true; }
-        catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogError(ex, "Database comune non aggiornato"); return false; }
+        try
+        {
+            var result = await SharedFolders.PushAsync(settings.SharedDatabase, workers.Values.Select(w => w.State).ToArray(), token);
+            logger.LogInformation("Database comune aggiornato: {Result}", result); SharedStatus("Ultimo invio riuscito: " + result); return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogError(ex, "Database comune non aggiornato"); SharedStatus("Ultimo invio NON riuscito: " + ex.Message); return false; }
+    }
+    // Esito dell'ultimo invio in un file di testo nella cartella dati: il Gestore server lo mostra in Configura,
+    // così un errore di collegamento si vede senza aprire il registro del servizio.
+    public const string SharedStatusFile = "database-comune-stato.txt";
+    private void SharedStatus(string text)
+    {
+        try { Directory.CreateDirectory(settings.ArchiveFolder); File.WriteAllText(Path.Combine(settings.ArchiveFolder, SharedStatusFile), DateTime.Now.ToString("dd/MM/yyyy HH:mm") + " — " + text); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { logger.LogWarning(ex, "Esito dell'invio al database comune non scritto"); }
     }
     private async Task RunScan(CancellationToken token)
     {

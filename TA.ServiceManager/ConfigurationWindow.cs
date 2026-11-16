@@ -44,7 +44,7 @@ public sealed class ConfigurationWindow : Window
         Add(panel, "Server SQL (esempio: .\\SQLEXPRESS)", sqlServer);
         Add(panel, "Nome del database", sqlDatabase);
         Add(panel, "Utente SQL", sqlUser);
-        panel.Children.Add(new TextBlock { Text = "Password dell'utente SQL" }); panel.Children.Add(sqlPassword);
+        panel.Children.Add(new TextBlock { Text = "Password dell'utente SQL" }); panel.Children.Add(sqlPassword); panel.Children.Add(sqlStatus);
         panel.Children.Add(analysis);
         panel.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
             Text = "Limiti all'uso di risorse: un documento alla volta a priorità ridotta, al massimo 20 secondi e 512 MB per documento, in pausa durante le scansioni e le letture su richiesta. Qui sotto la fascia oraria e il numero di documenti l'ora." });
@@ -63,6 +63,18 @@ public sealed class ConfigurationWindow : Window
         catch (Exception ex) { error.Text = "Configurazione esistente non leggibile: " + ex.Message + " Salvando verrà sostituita."; Fill(new ConfigurationFile()); }
     }
     private readonly PasswordBox sqlPassword = new() { Margin = new Thickness(0, 4, 0, 12) };
+    private readonly TextBlock sqlStatus = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) };
+    // Esito dell'ultimo invio delle cartelle al database comune, scritto dal servizio nella propria cartella dati.
+    private static string SharedStatus(ConfigurationFile value)
+    {
+        if (value.SharedDatabase.Length == 0) return "";
+        try
+        {
+            var file = System.IO.Path.Combine(value.ArchiveFolder, "database-comune-stato.txt");
+            return System.IO.File.Exists(file) ? "Stato del collegamento — " + System.IO.File.ReadAllText(file) : "Stato del collegamento: nessun invio registrato finora (il servizio invia le cartelle all'avvio).";
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or ArgumentException) { return "Stato del collegamento non leggibile: " + ex.Message; }
+    }
     private static TextBox Line() => new() { Margin = new Thickness(0, 4, 0, 12) };
     private static TextBox Lines() => new() { Margin = new Thickness(0, 4, 0, 12), AcceptsReturn = true, MinLines = 3, MaxLines = 8, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     private static void Add(Panel panel, string label, TextBox box)
@@ -75,6 +87,7 @@ public sealed class ConfigurationWindow : Window
         analysis.IsChecked = value.LocalAnalysis; analysisStart.Text = value.LocalAnalysisStartHour.ToString(); analysisEnd.Text = value.LocalAnalysisEndHour.ToString(); analysisRate.Text = value.LocalAnalysisDocumentsPerHour.ToString();
         jobs.Text = value.JobsRoot; bids.Text = value.BidsRoot; archived.Text = value.ArchivedJobsRoot; data.Text = value.ArchiveFolder; template.Text = value.JobTemplate; bidTemplate.Text = value.BidTemplate; curriculumTemplate.Text = value.CurriculumTemplate; curriculumGraphics.Text = value.CurriculumGraphics;
         var sql = SqlAccount.Parse(value.SharedDatabase); sqlServer.Text = sql.Server; sqlDatabase.Text = sql.Database; sqlUser.Text = sql.User; sqlPassword.Password = sql.Password;
+        sqlStatus.Text = SharedStatus(value);
     }
     private void Save()
     {
