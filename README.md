@@ -1,10 +1,14 @@
-# TA-Gestione Cartelle Commesse — 2.34.0
+# TA-Gestione Cartelle Commesse — 2.34.1
+
+## Novità 2.34.1 — stato dell'analisi delle relazioni geologiche
+
+La riga di stato del catalogo delle relazioni geologiche dice ora se l'analisi automatica locale è attiva, quanti documenti hanno già un'analisi, quanti sono in coda e quanti se ne possono analizzare al giorno con i limiti impostati. L'analisi parte dai documenti con «geologica» o «geotecnica» nel nome del file; quelli individuati solo per la cartella in cui si trovano, molto più numerosi, vengono dopo. Basta aggiornare il server.
+
+[Scarica aggiornatore 2.34.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.34.1/TA-Commesse-Aggiornatore-2.34.1.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.34.1).
 
 ## Novità 2.34.0 — database comune con GeCo
 
 Il servizio può collegarsi al database SQL Server di GeCo2027: in **Gestore server > Configura** si indicano server SQL, database e account SQL (utente e password) e, da quel momento, l'elenco delle cartelle di commesse, gare e archivio viene scritto nella tabella comune all'avvio e a ogni elaborazione giornaliera. GeCo2027 le mostra nella pagina **Cartelle**, abbinate a commesse e gare per codice, con le cartelle senza commessa e le commesse senza cartella. Senza questi dati nulla cambia; le cartelle originali restano in sola lettura. Dettagli in [deployment/DATABASE-COMUNE.md](deployment/DATABASE-COMUNE.md).
-
-[Scarica aggiornatore 2.34.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.34.0/TA-Commesse-Aggiornatore-2.34.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.34.0).
 
 ## Novità 2.33.0 — curriculum dello studio
 

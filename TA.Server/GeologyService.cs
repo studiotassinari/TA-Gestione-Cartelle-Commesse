@@ -26,7 +26,15 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
         var rows = catalog.Reports.Where(r => (!q.OnlyLocated || r.HasPosition) && r.ProjectCode.Contains(q.Code, StringComparison.OrdinalIgnoreCase) &&
             terms.All(t => string.Join(' ', r.Title, r.FileName, r.Municipality, r.Address, r.ProjectCode, r.Client, r.Author, r.Kind, r.Notes, r.DossierTitle, r.AnalysisStatus).Contains(t, StringComparison.OrdinalIgnoreCase)))
             .OrderByDescending(r=>AnalysisOrder.Year(r.Year,r.ProjectCode)).ThenByDescending(r=>AnalysisOrder.Number(r.ProjectCode)).ThenBy(r => r.Title, StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal).ToArray();
-        return new(version, catalog.UpdatedUtc, rows.Length, q.Offset, q.Offset + q.Limit < rows.Length ? q.Offset + q.Limit : null, rows.Skip(q.Offset).Take(q.Limit).ToList(), catalog.Warnings);
+        return new(version, catalog.UpdatedUtc, rows.Length, q.Offset, q.Offset + q.Limit < rows.Length ? q.Offset + q.Limit : null, rows.Skip(q.Offset).Take(q.Limit).ToList(), Warnings(catalog));
+    }
+    // L'avviso scritto dal censimento non conosce lo stato dell'analisi automatica: viene completato al momento della risposta.
+    private List<string> Warnings(GeologyCatalog catalog)
+    {
+        const string head = "Candidati individuati dai nomi, non relazioni confermate.";
+        var warnings = catalog.Warnings.Where(w => !w.StartsWith(head, StringComparison.Ordinal)).ToList();
+        warnings.Insert(0, head + " " + AnalysisStatus(LocalAnalysisLimits.From(settings), catalog.Reports));
+        return warnings;
     }
     private (GeologyCatalog Catalog, string Version) ReadCatalog(CancellationToken token)
     {

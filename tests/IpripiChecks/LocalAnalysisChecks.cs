@@ -47,6 +47,20 @@ internal static class LocalAnalysisChecks
         check(draft.Outcome == "Non leggibile" && draft.Interventions.Count == 0, "Analisi locale: scansione senza testo registrata come non leggibile");
 
         var report = new GeologicalReport { Id = "geo", Title = "Relazione", FileName = "Relazione.pdf", ProjectCode = "C26001", SourceFingerprint = new string('C', 64) };
+        // Stato dell'analisi automatica nel catalogo geologico: conteggi e precedenza ai documenti con il termine nel nome.
+        var queuedDirect = report with { Id = "a", PhysicalPath = @"\\server.example\dati\a.pdf", DetectionEvidence = GeologyClassifier.DirectEvidence };
+        var queuedFolder = report with { Id = "b", PhysicalPath = @"\\server.example\dati\b.pdf", DetectionEvidence = "Documento in una cartella tematica: tipologia da verificare" };
+        var done = queuedDirect with { Id = "c", AnalysisCurrent = true };
+        var list = queuedDirect with { Id = "d", Kind = "Elenco elaborati" };
+        var sheet = queuedDirect with { Id = "e", FileName = "Prove.xlsx" };
+        var all = new[] { queuedFolder, queuedDirect, done, list, sheet };
+        check(GeologyService.Queued(queuedDirect) && GeologyService.Queued(queuedFolder) && !GeologyService.Queued(done) && !GeologyService.Queued(list) && !GeologyService.Queued(sheet) && !GeologyService.Queued(report)
+            && GeologyService.Direct(queuedDirect) && !GeologyService.Direct(queuedFolder), "Analisi locale geologica: in coda solo i documenti leggibili senza analisi attuale");
+        var active = GeologyService.AnalysisStatus(new LocalAnalysisLimits(true, 20, 7, 30), all);
+        check(active.Contains("Documenti con analisi: 1 su 5") && active.Contains("in coda per l'analisi automatica: 2, di cui 1 con il termine nel nome") && active.Contains("circa 330 documenti al giorno"),
+            "Stato del catalogo geologico: avanzamento e capacità dell'analisi automatica");
+        check(GeologyService.AnalysisStatus(new LocalAnalysisLimits(true, 8, 8, 120), all).Contains("circa 2880 documenti al giorno") && GeologyService.AnalysisStatus(new LocalAnalysisLimits(false, 20, 7, 30), all).Contains("non attiva"),
+            "Stato del catalogo geologico: tutto il giorno e analisi disattivata");
         var geology = "[Pagina 1]\nRELAZIONE GEOLOGICA E GEOTECNICA\nComune di San Lazzaro - intervento di prova sintetico.\n" +
             string.Concat(Enumerable.Repeat("Il modello geologico del sito e i parametri geotecnici sono descritti nel seguito con dati sintetici. ", 4));
         var classified = GeologyLocalAnalyzer.Analyze(report, version, geology, none, null) ?? throw new Exception("Relazione sintetica non classificata");

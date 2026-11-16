@@ -31,3 +31,11 @@ Lo stato compare nel registro del servizio e nella voce «modalità di analisi»
 ## Che cosa non fa ancora
 
 Non include OCR: i documenti acquisiti come immagine sono registrati come «Non leggibile» (MUR) o saltati (geologia) e restano da leggere con ChatGPT o a vista. Le caselle barrate, le firme e le annotazioni grafiche non sono valutate.
+
+## Ordine di analisi e avanzamento (dalla 2.34.1)
+
+Per le relazioni geologiche l'analisi automatica parte dai documenti che hanno «geologica» o «geotecnica» nel nome del file e solo dopo passa a quelli individuati per la cartella in cui si trovano, che sono molti di più e raramente sono relazioni. Gli elenchi elaborati e i formati diversi da PDF, DOCX e TXT non vengono analizzati in automatico.
+
+La riga di stato del catalogo delle relazioni geologiche riporta: se l'analisi è attiva, la fascia oraria e il limite orario, quanti documenti hanno un'analisi valida, quanti sono in coda e quanti se ne possono analizzare al massimo in un giorno (la capacità è condivisa con il catalogo MUR). Se la coda è lunga rispetto alla capacità, si possono allargare la fascia oraria o il numero di documenti l'ora in **Gestore server > Configura** (fino a 120 l'ora, anche tutto il giorno).
+
+Le posizioni sulla mappa non vengono cercate in automatico: la ricerca di un indirizzo usa un servizio esterno e parte solo su richiesta dal client.

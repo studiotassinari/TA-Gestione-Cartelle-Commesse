@@ -12,6 +12,8 @@ public static class GeologyClassifier
     private static readonly Regex Geology = new(@"\b(?:geologic\w*|geologi[ae]|geological)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Geotechnics = new(@"\b(?:geotecnic\w*|geotechnic\w*)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Coordinates = new(@"\blat(?:itudine)?\s*[=:]?\s*(?<lat>[+-]?\d{1,2}[.,]\d{3,9})\s*[;_ ]+\s*lon(?:gitudine)?\s*[=:]?\s*(?<lon>[+-]?\d{1,3}[.,]\d{3,9})(?!\d)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    // Evidenza dei candidati che hanno il termine nel nome del file: sono i più probabili e vengono analizzati per primi.
+    public const string DirectEvidence = "Termine geologico/geotecnico nel nome del file";
     public static bool IsDrawingList(string name)=>Regex.IsMatch(name.Replace('_',' ').Replace('-',' '),@"\b(?:elenco|indice|lista)\s+(?:degli\s+)?(?:elaborati|documenti)\b",RegexOptions.IgnoreCase|RegexOptions.CultureInvariant);
     public static bool MentionsGeology(string text)=>Geology.IsMatch(text)||Geotechnics.IsMatch(text);
     public static GeologicalReport? Classify(InventoryManifest manifest, InventoryEntry entry, string containerStamp = "", DateTime? containerModifiedUtc = null, string referenceEvidence="")
@@ -50,7 +52,7 @@ public static class GeologyClassifier
             Year = manifest.Unit.Year, ProjectCode = classified ? manifest.Unit.Code : "", Client = manifest.Unit.Client,
             SuggestedProjectCode = classified ? "" : manifest.Unit.Code,
             Kind = list?"Elenco elaborati":referenceEvidence.Length>0?"Da verificare":geology && geotechnics ? "Geologica e geotecnica" : geology ? "Geologica" : "Geotecnica",
-            DetectionEvidence = referenceEvidence.Length>0?referenceEvidence:list?"Elenco elaborati: leggere su richiesta per individuare riferimenti geologici":direct ? "Termine geologico/geotecnico nel nome del file" : "Documento in una cartella tematica: tipologia da verificare",
+            DetectionEvidence = referenceEvidence.Length>0?referenceEvidence:list?"Elenco elaborati: leggere su richiesta per individuare riferimenti geologici":direct ? DirectEvidence : "Documento in una cartella tematica: tipologia da verificare",
             DetectionStatus = "Da verificare", SourceCheckedUtc = manifest.CheckedUtc, SourceComplete = manifest.Complete,
             Latitude = lat, Longitude = lon, PositionSource = lat.HasValue ? "Etichette lat/lon nel nome censito: da verificare" : "",
             PositionAccuracy = lat.HasValue ? "Coordinate nel nome, non verificate" : "",
