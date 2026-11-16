@@ -12,6 +12,7 @@ public sealed class ConfigurationWindow : Window
 {
     private readonly TextBox domain = Line(), groups = Lines(), collaborators = Line(), managers = Lines(), port = Line(),
         jobs = Line(), bids = Line(), archived = Line(), data = Line(), template = Line(), bidTemplate = Line(), curriculumTemplate = Line(), curriculumGraphics = Line(), sqlServer = Line(), sqlDatabase = Line(), sqlUser = Line(), analysisStart = Line(), analysisEnd = Line(), analysisRate = Line();
+    private readonly CheckBox geocoding = new() { Content = new TextBlock { Text = "Cerca automaticamente la posizione delle relazioni geologiche con OpenStreetMap Nominatim: vengono inviati al servizio esterno solo località e indirizzo, mai documenti o nomi di committenti", TextWrapping = TextWrapping.Wrap }, Margin = new Thickness(0, 4, 0, 8) };
     private readonly CheckBox analysis = new() { Content = "Analizza automaticamente i documenti candidati su questo server (senza ChatGPT e senza servizi esterni)", Margin = new Thickness(0, 12, 0, 8) };
     private readonly CheckBox firewall = new() { Content = "Apri la porta nel firewall di Windows (solo profilo di dominio e sottorete locale)", IsChecked = true, Margin = new Thickness(0, 4, 0, 8) };
     private readonly TextBlock error = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Firebrick, Margin = new Thickness(0, 8, 0, 8) };
@@ -50,6 +51,7 @@ public sealed class ConfigurationWindow : Window
         Add(panel, "Ora di inizio dell'analisi automatica (0–23, ora italiana)", analysisStart);
         Add(panel, "Ora di fine (0–23; uguale all'inizio = tutto il giorno)", analysisEnd);
         Add(panel, "Documenti l'ora al massimo (1–120)", analysisRate);
+        panel.Children.Add(geocoding);
         panel.Children.Add(firewall); panel.Children.Add(error);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         var cancel = new Button { Content = "Annulla", IsCancel = true, Margin = new Thickness(6), Padding = new Thickness(12, 7, 12, 7) };
@@ -69,6 +71,7 @@ public sealed class ConfigurationWindow : Window
     {
         domain.Text = value.Domain; groups.Text = string.Join(Environment.NewLine, value.Groups); collaborators.Text = value.CollaboratorsGroup;
         managers.Text = string.Join(Environment.NewLine, value.ManagementUsers); port.Text = value.Port.ToString();
+        geocoding.IsChecked = value.AutomaticGeocoding;
         analysis.IsChecked = value.LocalAnalysis; analysisStart.Text = value.LocalAnalysisStartHour.ToString(); analysisEnd.Text = value.LocalAnalysisEndHour.ToString(); analysisRate.Text = value.LocalAnalysisDocumentsPerHour.ToString();
         jobs.Text = value.JobsRoot; bids.Text = value.BidsRoot; archived.Text = value.ArchivedJobsRoot; data.Text = value.ArchiveFolder; template.Text = value.JobTemplate; bidTemplate.Text = value.BidTemplate; curriculumTemplate.Text = value.CurriculumTemplate; curriculumGraphics.Text = value.CurriculumGraphics;
         var sql = SqlAccount.Parse(value.SharedDatabase); sqlServer.Text = sql.Server; sqlDatabase.Text = sql.Database; sqlUser.Text = sql.User; sqlPassword.Password = sql.Password;
@@ -80,6 +83,7 @@ public sealed class ConfigurationWindow : Window
         static int Whole(TextBox box) => int.TryParse(box.Text.Trim(), out var parsed) ? parsed : -1;
         var value = new ConfigurationFile
         {
+            AutomaticGeocoding = geocoding.IsChecked == true,
             LocalAnalysis = analysis.IsChecked == true, LocalAnalysisStartHour = Whole(analysisStart), LocalAnalysisEndHour = Whole(analysisEnd), LocalAnalysisDocumentsPerHour = Whole(analysisRate),
             Domain = domain.Text.Trim(), Groups = ConfigurationFile.Split(groups.Text), CollaboratorsGroup = collaborators.Text.Trim(),
             ManagementUsers = ConfigurationFile.Split(managers.Text), Port = int.TryParse(port.Text.Trim(), out var number) ? number : 0,

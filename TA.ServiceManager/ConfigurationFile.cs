@@ -25,6 +25,7 @@ public sealed class ConfigurationFile
     public string SharedDatabase { get; init; } = "";
     // Analisi automatica locale e relativi limiti all'uso di risorse.
     public bool LocalAnalysis { get; init; }
+    public bool AutomaticGeocoding { get; init; }
     public int LocalAnalysisStartHour { get; init; } = 20;
     public int LocalAnalysisEndHour { get; init; } = 7;
     public int LocalAnalysisDocumentsPerHour { get; init; } = 30;
@@ -69,6 +70,7 @@ public sealed class ConfigurationFile
         {
             Domain = Text("Domain"), CollaboratorsGroup = Text("CollaboratorsGroup"), ManagementUsers = List("ManagementUsers"), Port = Number("Port", 5443),
             LocalAnalysis = server["EnableLocalAnalysis"] is JsonValue flag && flag.TryGetValue<bool>(out var enabled) && enabled,
+            AutomaticGeocoding = server["EnableAutomaticGeocoding"] is JsonValue locate && locate.TryGetValue<bool>(out var locating) && locating,
             LocalAnalysisStartHour = Number("LocalAnalysisStartHour", 20), LocalAnalysisEndHour = Number("LocalAnalysisEndHour", 7), LocalAnalysisDocumentsPerHour = Number("LocalAnalysisDocumentsPerHour", 30),
             // Le configurazioni precedenti avevano un solo gruppo nella proprietà AllowedGroup.
             Groups = List("AllowedGroups").Append(Text("AllowedGroup")).Where(g => g.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
@@ -95,7 +97,7 @@ public sealed class ConfigurationFile
         if (CurriculumTemplate.Length > 0) server["CurriculumTemplate"] = CurriculumTemplate; else server.Remove("CurriculumTemplate");
         if (CurriculumGraphics.Length > 0) server["CurriculumGraphics"] = CurriculumGraphics; else server.Remove("CurriculumGraphics");
         if (SharedDatabase.Length > 0) server["SharedDatabase"] = SharedDatabase; else server.Remove("SharedDatabase");
-        server["EnableLocalAnalysis"] = LocalAnalysis; server["LocalAnalysisStartHour"] = LocalAnalysisStartHour;
+        server["EnableLocalAnalysis"] = LocalAnalysis; server["EnableAutomaticGeocoding"] = AutomaticGeocoding; server["LocalAnalysisStartHour"] = LocalAnalysisStartHour;
         server["LocalAnalysisEndHour"] = LocalAnalysisEndHour; server["LocalAnalysisDocumentsPerHour"] = LocalAnalysisDocumentsPerHour;
         if (server["RefreshMinutes"] == null) server["RefreshMinutes"] = 60;
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });

@@ -56,6 +56,18 @@ internal static class LocalAnalysisChecks
         var geologyRows = new[] { queuedFolder, queuedDirect, done, drawingList, sheet };
         check(GeologyService.Queued(queuedDirect) && GeologyService.Queued(queuedFolder) && !GeologyService.Queued(done) && !GeologyService.Queued(drawingList) && !GeologyService.Queued(sheet) && !GeologyService.Queued(report)
             && GeologyService.Direct(queuedDirect) && !GeologyService.Direct(queuedFolder), "Analisi locale geologica: in coda solo i documenti leggibili senza analisi attuale");
+        // Ricerca automatica della posizione: solo località e indirizzo, prima quelli letti dal documento.
+        var inFolder = report with { PhysicalPath = @"\\server.example\dati\lavori\2026\C26001 - Committente di prova - Borgo Esempio - Nuovo capannone\Relazioni\Relazione.pdf" };
+        check(GeologyService.FolderPlace(inFolder) == "Borgo Esempio" && GeologyService.FolderPlace(report) == "" && GeologyService.FolderPlace(inFolder with { ProjectCode = "" }) == ""
+            && GeologyService.FolderPlace(inFolder with { PhysicalPath = @"\\server.example\dati\lavori\C26001 - Solo due parti\Relazione.pdf" }) == "", "Posizione automatica: località letta dal nome della cartella della commessa");
+        var fromFolder = GeologyService.LocateRequest(inFolder);
+        var fromDocument = GeologyService.LocateRequest(inFolder with { AnalysisCurrent = true, Municipality = " Borgo  Esempio ", Address = "Via di Prova 1" });
+        var fromTown = GeologyService.LocateRequest(inFolder with { AnalysisCurrent = true, Municipality = "Borgo Esempio" });
+        check(fromFolder is { Query: "Borgo Esempio, Italia", Address: "" } && fromFolder.Accuracy.Contains("nome della cartella") && fromDocument is { Query: "Via di Prova 1, Borgo Esempio, Italia", Municipality: "Borgo Esempio" }
+            && fromDocument.Accuracy.Contains("Indirizzo letto dal documento") && fromTown!.Accuracy.Contains("Comune letto dal documento") && GeologyService.LocateRequest(report) == null
+            && !fromFolder.Query.Contains("Committente") && !fromDocument.Query.Contains("Committente"), "Posizione automatica: si cercano solo località e indirizzo, mai committenti o nomi di file");
+        var located = inFolder with { Latitude = 44.5, Longitude = 11.3, PositionAccuracy = fromFolder!.Accuracy + " · Indicata da " + GeologyService.AutomaticLocator + " il 01/01/2026" };
+        check(GeologyService.LocateStatus(true, new[] { located, inFolder }).Contains("1 posizioni proposte") && GeologyService.LocateStatus(false, new[] { located }) == "", "Stato del catalogo geologico: posizioni proposte dalla ricerca automatica");
         var active = GeologyService.AnalysisStatus(new LocalAnalysisLimits(true, 20, 7, 30), geologyRows);
         check(active.Contains("Documenti con analisi: 1 su 5") && active.Contains("in coda per l'analisi automatica: 2, di cui 1 con il termine nel nome") && active.Contains("circa 330 documenti al giorno"),
             "Stato del catalogo geologico: avanzamento e capacità dell'analisi automatica");
