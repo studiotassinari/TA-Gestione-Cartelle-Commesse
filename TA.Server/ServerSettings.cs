@@ -56,6 +56,9 @@ public sealed class ServerSettings
     public string SharedDatabase { get; set; } = "";
     // Analisi automatica locale dei candidati (testo e regole, nessun servizio esterno). Disattivata se non scelta in Configura.
     public bool EnableLocalAnalysis { get; set; }
+    // Ricerca automatica della posizione delle relazioni geologiche con OpenStreetMap Nominatim (solo località e indirizzo).
+    // Disattivata se non scelta in Configura: è l'unico uso automatico di un servizio esterno.
+    public bool EnableAutomaticGeocoding { get; set; }
     // Limiti all'uso di risorse: fascia oraria italiana (inizio = fine significa tutto il giorno) e documenti l'ora.
     public int LocalAnalysisStartHour { get; set; } = 20;
     public int LocalAnalysisEndHour { get; set; } = 7;

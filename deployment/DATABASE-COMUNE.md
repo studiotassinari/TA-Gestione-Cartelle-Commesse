@@ -31,6 +31,8 @@ In **Gestore server > Configura**, sezione «Database comune con GeCo», compila
 - Utente e password restano nel file `server-settings.json` del server, leggibile solo dagli amministratori: non vanno copiati altrove.
 - Quattro campi vuoti = nessun collegamento, comportamento identico alle versioni precedenti.
 
+**Controllo**: riaprendo Configura, sotto i quattro campi compare l'esito dell'ultimo invio («Ultimo invio riuscito: C: … cartelle…» oppure «Ultimo invio NON riuscito:» con l'errore di SQL Server). Lo stesso esito è nel file `database-comune-stato.txt` della cartella dati del servizio.
+
 Ordine degli aggiornamenti quando cambia il database: prima GeCo2027, poi il server di TA-Gestione, poi i client.
 
 ## Compilazione

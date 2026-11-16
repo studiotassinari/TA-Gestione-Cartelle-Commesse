@@ -1,10 +1,14 @@
-# TA-Gestione Cartelle Commesse — 2.34.1
+# TA-Gestione Cartelle Commesse — 2.35.0
+
+## Novità 2.35.0 — posizione automatica delle relazioni geologiche
+
+Con la casella «Cerca automaticamente la posizione delle relazioni geologiche» in **Gestore server > Configura**, il servizio mette da solo le relazioni sulla mappa: cerca con OpenStreetMap Nominatim l'indirizzo o il comune letti dal documento e, se non c'è ancora un'analisi, la località scritta nel nome della cartella della commessa. Ogni posizione è una proposta da verificare e riporta da quale dato nasce; quelle indicate a mano non vengono mai sostituite. Al servizio esterno arrivano solo località e indirizzo. Dettagli in [deployment/ANALISI-LOCALE.md](deployment/ANALISI-LOCALE.md).
+
+[Scarica aggiornatore 2.35.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.35.0/TA-Commesse-Aggiornatore-2.35.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.35.0).
 
 ## Novità 2.34.1 — stato dell'analisi delle relazioni geologiche
 
 La riga di stato del catalogo delle relazioni geologiche dice ora se l'analisi automatica locale è attiva, quanti documenti hanno già un'analisi, quanti sono in coda e quanti se ne possono analizzare al giorno con i limiti impostati. L'analisi parte dai documenti con «geologica» o «geotecnica» nel nome del file; quelli individuati solo per la cartella in cui si trovano, molto più numerosi, vengono dopo. Basta aggiornare il server.
-
-[Scarica aggiornatore 2.34.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.34.1/TA-Commesse-Aggiornatore-2.34.1.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.34.1).
 
 ## Novità 2.34.0 — database comune con GeCo
 

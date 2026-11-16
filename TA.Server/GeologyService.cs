@@ -33,7 +33,7 @@ public sealed partial class GeologyService(ServerSettings settings, DocumentServ
     {
         const string head = "Candidati individuati dai nomi, non relazioni confermate.";
         var warnings = catalog.Warnings.Where(w => !w.StartsWith(head, StringComparison.Ordinal)).ToList();
-        warnings.Insert(0, head + " " + AnalysisStatus(LocalAnalysisLimits.From(settings), catalog.Reports));
+        warnings.Insert(0, head + " " + AnalysisStatus(LocalAnalysisLimits.From(settings), catalog.Reports) + LocateStatus(settings.EnableAutomaticGeocoding, catalog.Reports));
         return warnings;
     }
     private (GeologyCatalog Catalog, string Version) ReadCatalog(CancellationToken token)

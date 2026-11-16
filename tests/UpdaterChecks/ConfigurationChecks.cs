@@ -31,8 +31,10 @@ internal static class ConfigurationChecks
         ConfigurationFile Shared(string connection) => new()
         {
             Domain = updated.Domain, Groups = updated.Groups, CollaboratorsGroup = updated.CollaboratorsGroup, ManagementUsers = updated.ManagementUsers, Port = updated.Port,
-            JobsRoot = updated.JobsRoot, BidsRoot = updated.BidsRoot, ArchivedJobsRoot = updated.ArchivedJobsRoot, ArchiveFolder = updated.ArchiveFolder, SharedDatabase = connection
+            JobsRoot = updated.JobsRoot, BidsRoot = updated.BidsRoot, ArchivedJobsRoot = updated.ArchivedJobsRoot, ArchiveFolder = updated.ArchiveFolder, SharedDatabase = connection, AutomaticGeocoding = connection.Length > 0
         };
+        check(ConfigurationFile.Parse(Shared("Server=s;Database=d;User ID=u;Password=p").Merge(previous)).AutomaticGeocoding && !ConfigurationFile.Parse(Shared("").Merge(previous)).AutomaticGeocoding && !old.AutomaticGeocoding,
+            "Ricerca automatica della posizione salvata e riletta; disattivata se non scelta");
         var saved = ConfigurationFile.Parse(Shared(sql.ToConnectionString()).Merge(previous));
         check(SqlAccount.Parse(saved.SharedDatabase) == sql && saved.Validate().Count == 0 && saved.SharedDatabase.EndsWith("TrustServerCertificate=True"), "Account SQL del database comune salvato e riletto, password compresa");
         check(SqlAccount.Parse("Data Source=srv;Initial Catalog=db;UID=u;PWD='a;b'") == new SqlAccount("srv", "db", "u", "a;b") && new SqlAccount().ToConnectionString() == "" && SqlAccount.Parse(null).Empty, "Stringhe di connessione equivalenti lette; campi vuoti = nessun collegamento");

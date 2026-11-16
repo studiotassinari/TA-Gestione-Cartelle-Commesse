@@ -73,7 +73,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.34.1"
+          $version = "2.35.0"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -279,6 +279,7 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
+          Versione 2.35.0: ricerca automatica della posizione delle relazioni geologiche, da attivare in Gestore server > Configura. Il servizio cerca con OpenStreetMap Nominatim l'indirizzo o il comune letti dal documento oppure, in mancanza, la località nel nome della cartella della commessa, e mette la relazione sulla mappa come posizione proposta da verificare. Al servizio esterno arrivano solo località e indirizzo; le posizioni indicate a mano non vengono sostituite. Aggiornare il server e riavviare il servizio dopo aver spuntato la casella. In Configura, sotto i dati del database comune con GeCo, compare ora l'esito dell'ultimo invio delle cartelle, con l'eventuale errore di collegamento.
           Versione 2.34.1: il catalogo delle relazioni geologiche mostra lo stato dell'analisi automatica locale (attiva o no, documenti analizzati, documenti in coda, capacità giornaliera) e l'analisi parte dai documenti con «geologica» o «geotecnica» nel nome del file, lasciando per ultimi quelli trovati solo per la cartella in cui stanno. Aggiornare solo il server.
           Versione 2.34.0: collegamento al database comune con GeCo. Se in Gestore server > Configura si indicano server SQL, database e account SQL (utente e password) di GeCo, il servizio scrive l'elenco delle cartelle di commesse, gare e archivio nella tabella comune (all'avvio e a ogni elaborazione giornaliera) e GeCo2027 le mostra nella pagina Cartelle, abbinate a commesse e gare per codice. Senza questi dati nulla cambia. Le cartelle originali restano in sola lettura. Aggiornare prima GeCo2027, poi il server, poi i client.
           Versione 2.33.0: nuovo curriculum dello studio (menu Gestione). Lavori inseriti a mano con macro categorie di prestazioni, categorie delle opere, fotografie e parole chiave, collegati per codice a commesse, gare e archivio; aggiornabile da tutti gli utenti autorizzati.

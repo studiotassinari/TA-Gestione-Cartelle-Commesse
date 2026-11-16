@@ -38,4 +38,14 @@ Per le relazioni geologiche l'analisi automatica parte dai documenti che hanno �
 
 La riga di stato del catalogo delle relazioni geologiche riporta: se l'analisi è attiva, la fascia oraria e il limite orario, quanti documenti hanno un'analisi valida, quanti sono in coda e quanti se ne possono analizzare al massimo in un giorno (la capacità è condivisa con il catalogo MUR). Se la coda è lunga rispetto alla capacità, si possono allargare la fascia oraria o il numero di documenti l'ora in **Gestore server > Configura** (fino a 120 l'ora, anche tutto il giorno).
 
-Le posizioni sulla mappa non vengono cercate in automatico: la ricerca di un indirizzo usa un servizio esterno e parte solo su richiesta dal client.
+## Ricerca automatica della posizione (dalla 2.35.0)
+
+Di base le posizioni sulla mappa si cercano solo su richiesta dal client. Spuntando in **Gestore server > Configura** la casella «Cerca automaticamente la posizione delle relazioni geologiche» (e riavviando il servizio), il servizio le cerca da solo con OpenStreetMap Nominatim. È l'unico caso in cui il servizio contatta da solo un servizio esterno.
+
+- **Che cosa viene inviato**: solo il testo da cercare, cioè indirizzo e comune, seguiti da «Italia». Mai documenti, nomi di file, codici di commessa o nomi di committenti.
+- **Da dove viene il dato**: dall'indirizzo o dal comune letti dal documento, se la relazione ha un'analisi valida; altrimenti dalla località nel nome della cartella della commessa (`CODICE - COMMITTENTE - LUOGO - OGGETTO`). Senza nessuno dei due la relazione resta da localizzare a mano.
+- **Che cosa viene salvato**: il primo risultato del servizio, come posizione proposta. La precisione dichiara l'origine («Indirizzo letto dal documento», «Comune letto dal documento», «Località dal nome della cartella della commessa») e che è da verificare.
+- **Precedenze**: una posizione indicata a mano non viene mai sostituita. Una posizione automatica viene aggiornata se in seguito diventa disponibile un dato più preciso (per esempio l'indirizzo dopo l'analisi del documento).
+- **Ritmo**: una ricerca alla volta, cinque secondi tra una richiesta e l'altra; le ricerche già fatte restano in memoria locale e non vengono ripetute. Se il servizio esterno chiede una pausa, la ricerca si sospende per quindici minuti.
+
+La riga di stato del catalogo riporta quante posizioni sono state proposte dalla ricerca automatica.

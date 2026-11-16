@@ -20,7 +20,7 @@ Soluzione `TA-Gestione Cartelle Commesse.slnx`, .NET 10, solo Windows (`net10.0-
 
 - Le cartelle e i documenti originali delle commesse si leggono **soltanto**. Indici, cataloghi e cache scrivono solo nei propri database/JSON. Unica eccezione: archiviazione ZIP dal client, con conferma separata, eseguita dal server, solo per Antonio/Giuseppe.
 - Scansioni automatiche solo su nomi, percorsi e metadati. Contenuti letti solo su richiesta esplicita (MCP o apertura dal client) oppure dall'analisi automatica locale, se abilitata in Configura: un documento alla volta, entro i limiti di `LocalAnalysisLimits`, senza servizi esterni e senza sostituire analisi salvate su richiesta.
-- Nessuna analisi cloud autonoma, nessuna API a pagamento, nessuna modifica ad Active Directory.
+- Nessuna analisi cloud autonoma, nessuna API a pagamento, nessuna modifica ad Active Directory. Unica eccezione, decisa dai titolari: la ricerca automatica della posizione delle relazioni geologiche con OpenStreetMap Nominatim, se abilitata in Configura; invia soltanto località e indirizzo (mai documenti, nomi di file o di committenti), una richiesta alla volta, e non sostituisce le posizioni indicate a mano.
 - Candidati, dati parziali e posizioni non accertate vanno sempre indicati come tali, mai come risultati certi.
 - Mai nel repository: documenti reali, cataloghi reali, coordinate riservate, chiavi del tunnel, credenziali. I casi di prova sono sintetici o anonimizzati. Unica eccezione, decisa dai titolari: la grafica dello studio per il curriculum in `TA.Server/Assets/CurriculumGrafica` (logo, copertina, icone, `stile.json`); i file dei caratteri non vanno mai aggiunti.
 - I permessi si decidono sul server (token Windows), mai da campi della richiesta.
