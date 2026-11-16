@@ -26,6 +26,18 @@ internal static class ConfigurationChecks
         var reread = ConfigurationFile.Parse(merged);
         check(reread.Groups.Length == 2 && reread.Domain == "esempio.example" && reread.CollaboratorsGroup == @"ESEMPIO\Collaboratori" && reread.ManagementUsers.SequenceEqual(updated.ManagementUsers),
             "Dominio, gruppi e utenti di gestione riletti come salvati");
+        // Database comune: sempre account SQL, password con caratteri particolari conservata, account Windows rifiutato.
+        var sql = new SqlAccount(@".\SQLEXPRESS", "ProvaComune", "utente_prova", "pa;ss \"wo=rd");
+        ConfigurationFile Shared(string connection) => new()
+        {
+            Domain = updated.Domain, Groups = updated.Groups, CollaboratorsGroup = updated.CollaboratorsGroup, ManagementUsers = updated.ManagementUsers, Port = updated.Port,
+            JobsRoot = updated.JobsRoot, BidsRoot = updated.BidsRoot, ArchivedJobsRoot = updated.ArchivedJobsRoot, ArchiveFolder = updated.ArchiveFolder, SharedDatabase = connection
+        };
+        var saved = ConfigurationFile.Parse(Shared(sql.ToConnectionString()).Merge(previous));
+        check(SqlAccount.Parse(saved.SharedDatabase) == sql && saved.Validate().Count == 0 && saved.SharedDatabase.EndsWith("TrustServerCertificate=True"), "Account SQL del database comune salvato e riletto, password compresa");
+        check(SqlAccount.Parse("Data Source=srv;Initial Catalog=db;UID=u;PWD='a;b'") == new SqlAccount("srv", "db", "u", "a;b") && new SqlAccount().ToConnectionString() == "" && SqlAccount.Parse(null).Empty, "Stringhe di connessione equivalenti lette; campi vuoti = nessun collegamento");
+        check(Shared("Server=srv;Database=db;Integrated Security=True").Validate().Count >= 2 && Shared(new SqlAccount("srv", "db", "u").ToConnectionString()).Validate().Count == 1
+            && ConfigurationFile.Parse(Shared("").Merge(saved.Merge(previous))).SharedDatabase == "", "Collegamento con account Windows o senza password rifiutato; campi svuotati tolgono il collegamento");
         check(new ConfigurationFile().Validate().Count > 0 && ConfigurationFile.Parse(updated.Merge(null)).Complete && ConfigurationFile.Parse(updated.Merge("non json")).Complete,
             "Prima configurazione: file assente o illeggibile sostituito da una configurazione completa");
         using (var without = JsonDocument.Parse(updated.Merge("""{"Server":{"JobTemplate":""}}""")))

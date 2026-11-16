@@ -10,6 +10,7 @@ void Reject(Action action) { try { action(); } catch (Exception e) when (e is Ar
 try
 {
     FattureExcelChecks.Run();
+    SharedDatabaseChecks.Run();
     ProjectStructureChecks.Run(Path.Combine(root,"project-structure"));
     ProjectActivityChecks.Run(Path.Combine(root,"project-activity"));
     CategoryProjectChecks.Run(Path.Combine(root,"category-projects"));
