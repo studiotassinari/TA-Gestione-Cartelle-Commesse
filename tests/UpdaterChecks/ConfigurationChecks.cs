@@ -40,6 +40,17 @@ internal static class ConfigurationChecks
         check(SqlAccount.Parse("Data Source=srv;Initial Catalog=db;UID=u;PWD='a;b'") == new SqlAccount("srv", "db", "u", "a;b") && new SqlAccount().ToConnectionString() == "" && SqlAccount.Parse(null).Empty, "Stringhe di connessione equivalenti lette; campi vuoti = nessun collegamento");
         check(Shared("Server=srv;Database=db;Integrated Security=True").Validate().Count >= 2 && Shared(new SqlAccount("srv", "db", "u").ToConnectionString()).Validate().Count == 1
             && ConfigurationFile.Parse(Shared("").Merge(saved.Merge(previous))).SharedDatabase == "", "Collegamento con account Windows o senza password rifiutato; campi svuotati tolgono il collegamento");
+        // Indirizzo di GeCo: salvato e riletto, tolto se svuotato, rifiutato se non è un indirizzo http o https.
+        ConfigurationFile WithGeCo(string address) => new()
+        {
+            Domain = updated.Domain, Groups = updated.Groups, CollaboratorsGroup = updated.CollaboratorsGroup, ManagementUsers = updated.ManagementUsers, Port = updated.Port,
+            JobsRoot = updated.JobsRoot, BidsRoot = updated.BidsRoot, ArchivedJobsRoot = updated.ArchivedJobsRoot, ArchiveFolder = updated.ArchiveFolder, GeCoAddress = address
+        };
+        var withGeCo = WithGeCo("http://server.example:8027").Merge(previous);
+        check(ConfigurationFile.Parse(withGeCo).GeCoAddress == "http://server.example:8027" && WithGeCo("http://server.example:8027").Validate().Count == 0
+            && ConfigurationFile.Parse(WithGeCo("").Merge(withGeCo)).GeCoAddress == "" && old.GeCoAddress == "", "Indirizzo di GeCo salvato e riletto; svuotato viene tolto");
+        check(WithGeCo("server.example:8027").Validate().Count == 1 && WithGeCo(@"C:\programma.exe").Validate().Count == 1 && WithGeCo("file://server/cartella").Validate().Count == 1,
+            "Indirizzo di GeCo accettato solo se http o https");
         check(new ConfigurationFile().Validate().Count > 0 && ConfigurationFile.Parse(updated.Merge(null)).Complete && ConfigurationFile.Parse(updated.Merge("non json")).Complete,
             "Prima configurazione: file assente o illeggibile sostituito da una configurazione completa");
         using (var without = JsonDocument.Parse(updated.Merge("""{"Server":{"JobTemplate":""}}""")))

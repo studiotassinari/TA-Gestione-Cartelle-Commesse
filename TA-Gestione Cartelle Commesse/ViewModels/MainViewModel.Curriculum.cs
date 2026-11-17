@@ -5,6 +5,17 @@ namespace TA_Gestione_Cartelle_Commesse.ViewModels;
 public sealed partial class MainViewModel
 {
     public Command CurriculumCommand { get; private set; } = null!;
+    public Command GeCoPlanningCommand { get; private set; } = null!;
+    // Indirizzo di GeCo comunicato dal server; vuoto finché non è configurato in Gestore server > Configura.
+    private string geCoAddress = "";
+    private void ApplyGeCoAddress(string address) { geCoAddress = address ?? ""; GeCoPlanningCommand.Refresh(); }
+    // La pianificazione delle attività sta in GeCo: il client apre la pagina nel browser, dove l'utente entra con il proprio account.
+    private void OpenGeCoPlanning()
+    {
+        if (GeCoLink.Planning(geCoAddress) is not { } link) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(link) { UseShellExecute = true }); }
+        catch (Exception ex) { ClientLog.Write("Apertura di GeCo non riuscita", ex); System.Windows.MessageBox.Show("Impossibile aprire GeCo nel browser: " + ex.Message, "GeCo"); }
+    }
     private Views.CurriculumWindow? curriculumWindow;
     // Dal menu: tutto il curriculum. Da una riga: i lavori collegati a quel codice, con un nuovo lavoro già precompilato.
     private void ShowCurriculum(WorkProjectViewModel? project = null)

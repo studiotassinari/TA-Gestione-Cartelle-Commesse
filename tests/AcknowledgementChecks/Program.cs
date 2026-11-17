@@ -9,6 +9,9 @@ using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(40));
 var token = timeout.Token;
 var logsRead = false;
 ServerLogs Logs() { logsRead = true; return new("servizio", "comunicazione"); }
+Check(AdministrativeCommands.Handle(new("Permissions"), false, Logs, " http://server.example:8027 ")?.Data.GetProperty("GeCoAddress").GetString() == "http://server.example:8027"
+    && AdministrativeCommands.Handle(new("Permissions"), false, Logs)?.Data.GetProperty("GeCoAddress").GetString() == "",
+    "Permessi: la risposta porta l'indirizzo di GeCo configurato, anche vuoto");
 Check(AdministrativeCommands.Handle(new("AdminLogs", ClientMachine: "Domain Admin"), false, Logs)?.Success == false && !logsRead,
     "Utente ordinario: log amministrativi negati dal server senza leggerli");
 Check(AdministrativeCommands.Handle(new("AdminAudit", RelativePath: "Restart"), false, Logs)?.Success == false, "Utente ordinario: audit amministrativo negato");

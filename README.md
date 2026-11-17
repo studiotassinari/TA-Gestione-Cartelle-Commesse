@@ -1,10 +1,15 @@
-# TA-Gestione Cartelle Commesse — 2.35.0
+# TA-Gestione Cartelle Commesse — 2.36.0
+
+## Novità 2.36.0 — pianificazione delle attività in GeCo
+
+Nel menu **Gestione** del client c'è il comando **Pianificazione delle attività in GeCo…**: apre nel browser la pagina Pianificazione di GeCo2027, dove le attività sulle commesse si dispongono per giorni, persona per persona. La funzione resta una sola, in GeCo; il client la raggiunge senza duplicarla. Il comando è attivo dopo aver indicato l'**indirizzo di GeCo** in **Gestore server > Configura** (per esempio `http://server:8027`) e riavviato il servizio. In Configura l'esempio del server SQL riporta ora anche la forma con la porta (`NOME-SERVER,1433`). Aggiornare prima il server, poi i client.
+
+[Scarica aggiornatore 2.36.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.36.0/TA-Commesse-Aggiornatore-2.36.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.36.0).
+
 
 ## Novità 2.35.0 — posizione automatica delle relazioni geologiche
 
 Con la casella «Cerca automaticamente la posizione delle relazioni geologiche» in **Gestore server > Configura**, il servizio mette da solo le relazioni sulla mappa: cerca con OpenStreetMap Nominatim l'indirizzo o il comune letti dal documento e, se non c'è ancora un'analisi, la località scritta nel nome della cartella della commessa. Ogni posizione è una proposta da verificare e riporta da quale dato nasce; quelle indicate a mano non vengono mai sostituite. Al servizio esterno arrivano solo località e indirizzo. Dettagli in [deployment/ANALISI-LOCALE.md](deployment/ANALISI-LOCALE.md).
-
-[Scarica aggiornatore 2.35.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.35.0/TA-Commesse-Aggiornatore-2.35.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.35.0).
 
 ## Novità 2.34.1 — stato dell'analisi delle relazioni geologiche
 
