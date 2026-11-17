@@ -11,7 +11,7 @@ namespace TA.ServiceManager;
 public sealed class ConfigurationWindow : Window
 {
     private readonly TextBox domain = Line(), groups = Lines(), collaborators = Line(), managers = Lines(), port = Line(),
-        jobs = Line(), bids = Line(), archived = Line(), data = Line(), template = Line(), bidTemplate = Line(), curriculumTemplate = Line(), curriculumGraphics = Line(), sqlServer = Line(), sqlDatabase = Line(), sqlUser = Line(), analysisStart = Line(), analysisEnd = Line(), analysisRate = Line();
+        jobs = Line(), bids = Line(), archived = Line(), data = Line(), template = Line(), bidTemplate = Line(), curriculumTemplate = Line(), curriculumGraphics = Line(), sqlServer = Line(), gecoAddress = Line(), sqlDatabase = Line(), sqlUser = Line(), analysisStart = Line(), analysisEnd = Line(), analysisRate = Line();
     private readonly CheckBox geocoding = new() { Content = new TextBlock { Text = "Cerca automaticamente la posizione delle relazioni geologiche con OpenStreetMap Nominatim: vengono inviati al servizio esterno solo località e indirizzo, mai documenti o nomi di committenti", TextWrapping = TextWrapping.Wrap }, Margin = new Thickness(0, 4, 0, 8) };
     private readonly CheckBox analysis = new() { Content = "Analizza automaticamente i documenti candidati su questo server (senza ChatGPT e senza servizi esterni)", Margin = new Thickness(0, 12, 0, 8) };
     private readonly CheckBox firewall = new() { Content = "Apri la porta nel firewall di Windows (solo profilo di dominio e sottorete locale)", IsChecked = true, Margin = new Thickness(0, 4, 0, 8) };
@@ -41,7 +41,8 @@ public sealed class ConfigurationWindow : Window
         Add(panel, "Modello Word per l'esportazione del curriculum, con intestazione e stili dello studio (.docx o .dotx; facoltativo)", curriculumTemplate);
         Add(panel, "Cartella della grafica del curriculum: logo.png, logo-chiaro.png, copertina.jpg, strutture.png, architettura.png, impianti.png, consulenza.png, stile.json (vuoto = grafica fornita con il servizio)", curriculumGraphics);
         panel.Children.Add(new TextBlock { Text = "Database comune con GeCo (facoltativo). Il servizio si collega sempre con un account SQL; lasciare vuoti i quattro campi per non collegarlo.", TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 6) });
-        Add(panel, "Server SQL (esempio: .\\SQLEXPRESS)", sqlServer);
+        Add(panel, "Indirizzo di GeCo, per aprire dal client la pianificazione delle attività (esempio: http://server:8027; vuoto = comando non disponibile)", gecoAddress);
+        Add(panel, "Server SQL (esempi: .\\SQLEXPRESS oppure NOME-SERVER,1433 con la porta)", sqlServer);
         Add(panel, "Nome del database", sqlDatabase);
         Add(panel, "Utente SQL", sqlUser);
         panel.Children.Add(new TextBlock { Text = "Password dell'utente SQL" }); panel.Children.Add(sqlPassword); panel.Children.Add(sqlStatus);
@@ -86,7 +87,7 @@ public sealed class ConfigurationWindow : Window
         geocoding.IsChecked = value.AutomaticGeocoding;
         analysis.IsChecked = value.LocalAnalysis; analysisStart.Text = value.LocalAnalysisStartHour.ToString(); analysisEnd.Text = value.LocalAnalysisEndHour.ToString(); analysisRate.Text = value.LocalAnalysisDocumentsPerHour.ToString();
         jobs.Text = value.JobsRoot; bids.Text = value.BidsRoot; archived.Text = value.ArchivedJobsRoot; data.Text = value.ArchiveFolder; template.Text = value.JobTemplate; bidTemplate.Text = value.BidTemplate; curriculumTemplate.Text = value.CurriculumTemplate; curriculumGraphics.Text = value.CurriculumGraphics;
-        var sql = SqlAccount.Parse(value.SharedDatabase); sqlServer.Text = sql.Server; sqlDatabase.Text = sql.Database; sqlUser.Text = sql.User; sqlPassword.Password = sql.Password;
+        var sql = SqlAccount.Parse(value.SharedDatabase); gecoAddress.Text = value.GeCoAddress; sqlServer.Text = sql.Server; sqlDatabase.Text = sql.Database; sqlUser.Text = sql.User; sqlPassword.Password = sql.Password;
         sqlStatus.Text = SharedStatus(value);
     }
     private void Save()
@@ -96,7 +97,7 @@ public sealed class ConfigurationWindow : Window
         static int Whole(TextBox box) => int.TryParse(box.Text.Trim(), out var parsed) ? parsed : -1;
         var value = new ConfigurationFile
         {
-            AutomaticGeocoding = geocoding.IsChecked == true,
+            AutomaticGeocoding = geocoding.IsChecked == true, GeCoAddress = gecoAddress.Text.Trim(),
             LocalAnalysis = analysis.IsChecked == true, LocalAnalysisStartHour = Whole(analysisStart), LocalAnalysisEndHour = Whole(analysisEnd), LocalAnalysisDocumentsPerHour = Whole(analysisRate),
             Domain = domain.Text.Trim(), Groups = ConfigurationFile.Split(groups.Text), CollaboratorsGroup = collaborators.Text.Trim(),
             ManagementUsers = ConfigurationFile.Split(managers.Text), Port = int.TryParse(port.Text.Trim(), out var number) ? number : 0,

@@ -43,3 +43,9 @@ Il pacchetto `GeCo.Dati` è su GitHub Packages di `studiotassinari`, che richied
 - **Sul proprio PC**: impostare la variabile d'ambiente `GECO_PACKAGES_TOKEN` con un token personale che abbia il permesso `read:packages` (e `GITHUB_ACTOR` con il proprio nome utente GitHub), poi compilare normalmente.
 
 La verifica `SharedDatabaseChecks` (dentro `BusinessChecks`) prova la scrittura su un SQL Server vero solo se è impostata la variabile `TA_TEST_SQL` con una stringa di connessione a un database di prova vuoto; su GitHub è LocalDB.
+
+## Pianificazione delle attività
+
+La pianificazione delle attività sta in GeCo2027 (pagina **Pianificazione**). Il client la apre nel browser con il comando **Gestione > Pianificazione delle attività in GeCo…**: non ne esiste una copia nel client.
+
+Il comando è attivo quando in **Gestore server > Configura** è indicato l'**indirizzo di GeCo** (per esempio `http://server:8027`); dopo averlo salvato va riavviato il servizio. Sono accettati solo indirizzi `http` o `https`.

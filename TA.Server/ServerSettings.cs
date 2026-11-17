@@ -52,6 +52,8 @@ public sealed class ServerSettings
     // Account (utente@dominio o DOMINIO\utente) ammessi alla gestione straordinaria: servizio, registri, archiviazione ZIP, gestionale.
     public string[] ManagementUsers { get; set; } = [];
     public string[] AuthorizedGroups() => (AllowedGroups ?? Array.Empty<string>()).Append(AllowedGroup).Select(g => (g ?? "").Trim()).Where(g => g.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    // Indirizzo del sito GeCo (esempio: http://server:8027). Vuoto = i client non mostrano i comandi che aprono GeCo.
+    public string GeCoAddress { get; set; } = "";
     // Stringa di connessione al database SQL Server comune con GeCo. Vuota = nessun collegamento.
     public string SharedDatabase { get; set; } = "";
     // Analisi automatica locale dei candidati (testo e regole, nessun servizio esterno). Disattivata se non scelta in Configura.

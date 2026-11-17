@@ -108,7 +108,7 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
                         ? Reply.Ok((curriculum??throw new IOException("Curriculum non disponibile.")).Execute(request.Curriculum??throw new ArgumentException("Comando mancante."),user))
                         : AdministrativeCommands.Handle(request, ManagementAccess.Allows(identity), () => new(
                         CommunicationLog.Tail(Path.Combine(CommunicationLog.DirectoryPath, "service.log")),
-                        CommunicationLog.Tail(CommunicationLog.FilePath))) ?? await Dispatch(request,ct,user).WaitAsync(ct);
+                        CommunicationLog.Tail(CommunicationLog.FilePath)), settings.GeCoAddress) ?? await Dispatch(request,ct,user).WaitAsync(ct);
                 }
                 catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or KeyNotFoundException)
                 { reply = Reply.Fail(ex.Message); }

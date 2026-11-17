@@ -46,6 +46,7 @@ public sealed partial class MainViewModel : Observable
         Commesse.ArchiveRequested += ShowFolderArchive; Gare.ArchiveRequested += ShowFolderArchive;
         BusinessCommand = new(ShowBusiness, () => connection != null);
         CurriculumCommand = new(() => ShowCurriculum(), () => connection != null);
+        GeCoPlanningCommand = new(OpenGeCoPlanning, () => connection != null && GeCoLink.Planning(geCoAddress) != null);
         foreach (var category in new[] { Commesse, Gare, Archivio }) category.CurriculumRequested += project => ShowCurriculum(project);
         CustomersCommand = new(() => ShowCustomers(""), () => connection != null);
         Commesse.ProjectRequested += ShowProject;
@@ -129,10 +130,10 @@ public sealed partial class MainViewModel : Observable
     // Chiede al server se l'account autenticato è tra gli utenti di gestione straordinaria configurati.
     private async Task RefreshManagementAccessAsync(ServerConnection current)
     {
-        bool allowed = false;
-        try { allowed = (await current.SendAsync<TA_Gestione_Cartelle_Commesse.Contracts.ServerPermissions>(new("Permissions"))).DomainAdministrator; }
+        bool allowed = false; string geco = "";
+        try { var permissions = await current.SendAsync<TA_Gestione_Cartelle_Commesse.Contracts.ServerPermissions>(new("Permissions")); allowed = permissions.DomainAdministrator; geco = permissions.GeCoAddress ?? ""; }
         catch (Exception ex) { ClientLog.Write("Permessi di gestione non disponibili", ex); }
-        if (ReferenceEquals(current, connection)) ApplyManagementAccess(allowed);
+        if (ReferenceEquals(current, connection)) { ApplyManagementAccess(allowed); ApplyGeCoAddress(geco); }
     }
     private void ApplyManagementAccess(bool allowed)
     {

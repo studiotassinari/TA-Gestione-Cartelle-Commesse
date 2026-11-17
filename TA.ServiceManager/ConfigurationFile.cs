@@ -23,6 +23,7 @@ public sealed class ConfigurationFile
     public string CurriculumTemplate { get; init; } = "";
     public string CurriculumGraphics { get; init; } = "";
     public string SharedDatabase { get; init; } = "";
+    public string GeCoAddress { get; init; } = "";
     // Analisi automatica locale e relativi limiti all'uso di risorse.
     public bool LocalAnalysis { get; init; }
     public bool AutomaticGeocoding { get; init; }
@@ -45,6 +46,8 @@ public sealed class ConfigurationFile
         if (CurriculumTemplate.Length > 0 && System.IO.Path.GetExtension(CurriculumTemplate).ToLowerInvariant() is not (".docx" or ".dotx")) problems.Add("Il modello Word del curriculum deve essere un file .docx o .dotx.");
         if (LocalAnalysisStartHour is < 0 or > 23 || LocalAnalysisEndHour is < 0 or > 23) problems.Add("Le ore dell'analisi automatica devono essere comprese tra 0 e 23.");
         if (LocalAnalysisDocumentsPerHour is < 1 or > 120) problems.Add("L'analisi automatica ammette da 1 a 120 documenti l'ora.");
+        if (GeCoAddress.Length > 0 && !(Uri.TryCreate(GeCoAddress, UriKind.Absolute, out var geco) && geco.Scheme is "http" or "https" && geco.Host.Length > 0))
+            problems.Add("Indirizzo di GeCo: indicare un indirizzo completo, per esempio http://server:8027.");
         if (SharedDatabase.Length > 0)
         {
             // Il collegamento con l'account Windows del servizio non è ammesso: lo studio usa sempre un account SQL.
@@ -74,7 +77,7 @@ public sealed class ConfigurationFile
             LocalAnalysisStartHour = Number("LocalAnalysisStartHour", 20), LocalAnalysisEndHour = Number("LocalAnalysisEndHour", 7), LocalAnalysisDocumentsPerHour = Number("LocalAnalysisDocumentsPerHour", 30),
             // Le configurazioni precedenti avevano un solo gruppo nella proprietà AllowedGroup.
             Groups = List("AllowedGroups").Append(Text("AllowedGroup")).Where(g => g.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-            JobsRoot = Text("JobsRoot"), BidsRoot = Text("BidsRoot"), ArchivedJobsRoot = Text("ArchivedJobsRoot"), ArchiveFolder = Text("ArchiveFolder"), JobTemplate = Text("JobTemplate"), BidTemplate = Text("BidTemplate"), CurriculumTemplate = Text("CurriculumTemplate"), CurriculumGraphics = Text("CurriculumGraphics"), SharedDatabase = Text("SharedDatabase")
+            JobsRoot = Text("JobsRoot"), BidsRoot = Text("BidsRoot"), ArchivedJobsRoot = Text("ArchivedJobsRoot"), ArchiveFolder = Text("ArchiveFolder"), JobTemplate = Text("JobTemplate"), BidTemplate = Text("BidTemplate"), CurriculumTemplate = Text("CurriculumTemplate"), CurriculumGraphics = Text("CurriculumGraphics"), GeCoAddress = Text("GeCoAddress"), SharedDatabase = Text("SharedDatabase")
         };
     }
     // Aggiorna solo le proprietà gestite; tutto il resto del documento resta com'era.
@@ -97,6 +100,7 @@ public sealed class ConfigurationFile
         if (CurriculumTemplate.Length > 0) server["CurriculumTemplate"] = CurriculumTemplate; else server.Remove("CurriculumTemplate");
         if (CurriculumGraphics.Length > 0) server["CurriculumGraphics"] = CurriculumGraphics; else server.Remove("CurriculumGraphics");
         if (SharedDatabase.Length > 0) server["SharedDatabase"] = SharedDatabase; else server.Remove("SharedDatabase");
+        if (GeCoAddress.Length > 0) server["GeCoAddress"] = GeCoAddress; else server.Remove("GeCoAddress");
         server["EnableLocalAnalysis"] = LocalAnalysis; server["EnableAutomaticGeocoding"] = AutomaticGeocoding; server["LocalAnalysisStartHour"] = LocalAnalysisStartHour;
         server["LocalAnalysisEndHour"] = LocalAnalysisEndHour; server["LocalAnalysisDocumentsPerHour"] = LocalAnalysisDocumentsPerHour;
         if (server["RefreshMinutes"] == null) server["RefreshMinutes"] = 60;
