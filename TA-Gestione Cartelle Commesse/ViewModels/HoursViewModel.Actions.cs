@@ -19,14 +19,8 @@ public sealed partial class HoursViewModel
         foreach (var c in Searched.GetValueOrDefault(p.Id) ?? []) all.TryAdd(c.IdCommessa, c);
         return all.Values.OrderBy(c => c.Codice, StringComparer.Ordinal).ToArray();
     }
-    // Colore della commessa: lo stesso ordine (per id) per tutte le persone mostrate.
-    public (string Back, string Fore) Color(int project)
-    {
-        var ids = Rows.Values.SelectMany(r => r).Select(r => r.Item.IdCommessa).Concat(People.SelectMany(p => p.Proposals.Team).Select(c => c.IdCommessa))
-            .Concat(Searched.Values.SelectMany(l => l).Select(c => c.IdCommessa)).Distinct().Order().ToList();
-        int i = ids.IndexOf(project);
-        return i < 0 ? GeCoCalendar.Palette[5] : GeCoCalendar.Palette[i % GeCoCalendar.Palette.Length];
-    }
+    // Colore legato alla commessa (non alla posizione): uguale per tutte le persone e stabile quando se ne aggiungono altre.
+    public (string Back, string Fore) Color(int project) => GeCoCalendar.ProjectColor(project);
     // Voci di ore tra cui scegliere quella delle nuove giornate (solo se più di una).
     public GeCoCostItem[] NewItems() => People.Where(p => !ReadOnly(p)).SelectMany(p => p.Period!.Voci.Where(v => p.Period.VociSelezionate.Contains(v.Id) && v.Id != KmOf(p)?.Id)).DistinctBy(v => v.Id).ToArray();
 

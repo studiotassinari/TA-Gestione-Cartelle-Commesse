@@ -19,6 +19,9 @@ public static class GeCoCalendar
     public static readonly string[] DayNames = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
     // Colori delle commesse (sfondo, testo), gli stessi della Pianificazione di GeCo2027.
     public static readonly (string Back, string Fore)[] Palette = [("#135F6E", "#FFFFFF"), ("#192845", "#FFFFFF"), ("#E3C77A", "#192845"), ("#BFE0E6", "#192845"), ("#8A4B14", "#FFFFFF"), ("#D9DEE2", "#192845")];
+    // Il colore dipende solo dall'id della commessa, non dalla posizione nell'elenco: aggiungerne una non cambia il colore
+    // delle altre. Stessa regola di GeCo2027 (components/ColoriCommesse.js), così la commessa ha lo stesso colore ovunque.
+    public static (string Back, string Fore) ProjectColor(int project) => Palette[((project % Palette.Length) + Palette.Length) % Palette.Length];
 
     public static DateTime Date(string iso) => DateTime.ParseExact(iso, "yyyy-MM-dd", CultureInfo.InvariantCulture);
     public static string Iso(DateTime day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);

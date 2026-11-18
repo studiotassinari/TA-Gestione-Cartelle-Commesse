@@ -73,11 +73,7 @@ public sealed class PlanningViewModel(IGeCoGateway gateway) : IDisposable
         foreach (var c in Added) all.TryAdd(c.Id, c);
         return all.Values.OrderBy(c => c.Codice, StringComparer.Ordinal).ToArray();
     }
-    public (string Back, string Fore) Color(int project)
-    {
-        var index = Array.FindIndex(Projects(), c => c.Id == project);
-        return index < 0 ? GeCoCalendar.Palette[5] : GeCoCalendar.Palette[index % GeCoCalendar.Palette.Length];
-    }
+    public (string Back, string Fore) Color(int project) => GeCoCalendar.ProjectColor(project);
     public string Code(int project) => Projects().FirstOrDefault(c => c.Id == project)?.Codice ?? "";
 
     // Piano di una persona: le sue barre, le righe parallele, le attività in corso per giorno e la stima delle ore.
