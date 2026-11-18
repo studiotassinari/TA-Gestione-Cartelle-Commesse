@@ -32,6 +32,9 @@ public sealed class ChangeHub(bool enabled = true)
     {
         internal Channel<long> Queue { get; } = Channel.CreateBounded<long>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest });
         public ValueTask<long> ReadAsync(CancellationToken token) => Queue.Reader.ReadAsync(token);
+        // Attesa senza consumare: la sessione push aspetta insieme questa coda e quella degli eventi di GeCo.
+        public ValueTask<bool> WaitToReadAsync(CancellationToken token) => Queue.Reader.WaitToReadAsync(token);
+        public bool TryRead(out long revision) => Queue.Reader.TryRead(out revision);
         public void Dispose()
         {
             lock (owner.gate) { owner.subscribers.Remove(this); Queue.Writer.TryComplete(); }

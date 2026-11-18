@@ -17,6 +17,8 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
     private Task current = Task.CompletedTask;
     private Task<bool> indexTask = Task.FromResult(false);
     public CategoryState State { get { lock (gate) return state; } }
+    // Elenco delle cartelle cambiato (cartella nuova, rinominata, spostata o sparita) dopo una lettura completa dell'elenco.
+    public Action? ListChanged { get; set; }
     public async Task InitializeAsync()
     {
         try
@@ -91,6 +93,7 @@ public sealed class CategoryWorker(char prefix, string root, string archive, ILo
             logger.LogInformation("Elenco {Category} verificato: {Count} cartelle, {Changes} modifiche, durata {Seconds:F1}s", prefix, result.Records.Count, differences.Count, (DateTime.UtcNow - started).TotalSeconds);
             if (publish) changes.Publish(differences.Count > 0 ? prefix + ": " + FolderChanges.Summary(differences) : null);
             persistence.Enqueue(State.Snapshot!, token);
+            if (differences.Count > 0) ListChanged?.Invoke();
             return true;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { return false; }

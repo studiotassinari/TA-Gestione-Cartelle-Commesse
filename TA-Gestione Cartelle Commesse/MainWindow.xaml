@@ -172,6 +172,7 @@
                 <MenuItem Header="Clienti e commesse associate…" Command="{Binding CustomersCommand}"/>
                 <MenuItem Header="Pianificazione delle attività…" Command="{Binding GeCoPlanningCommand}" ToolTip="Pianificazione di GeCo sul database comune"/>
                 <MenuItem Header="Ore lavorate…" Command="{Binding GeCoHoursCommand}" ToolTip="Ore lavorate (statini) di GeCo sul database comune"/>
+                <MenuItem Header="Collegamento cartelle…" Command="{Binding GeCoFolderLinksCommand}" ToolTip="Cartelle collegate a commesse e gare di GeCo e notifiche da GeCo2027 (amministratori di GeCo)"/>
                 <MenuItem Header="Clienti e autorizzazioni delle commesse…" Command="{Binding BusinessCommand}"/>
                 <MenuItem Header="Curriculum dello studio…" Command="{Binding CurriculumCommand}"/>
                 <Separator/>

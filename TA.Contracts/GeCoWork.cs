@@ -6,14 +6,18 @@ namespace TA_Gestione_Cartelle_Commesse.Contracts;
 // il servizio li copia così come sono, e un nome diverso perderebbe il dato senza errori.
 
 // Comando verso il servizio. Persone null = solo la persona dell'utente; Settimane null = quelle predefinite.
+// Collegamento cartelle (2.38.0): Tipo "commessa" o "gara", Id dell'elemento, IdCartella, Valore = sostituire il collegamento
+// esistente, Collegamenti = anteprima delle proposte sicure, DopoId = ultimo evento già ricevuto (null = gli ultimi).
 public sealed record GeCoCommand(string Action, string? Dal = null, int? Settimane = null, int[]? Persone = null, int? IdCdc = null, int[]? Voci = null,
     string? Testo = null, int Id = 0, int IdCommessa = 0, int IdVdc = 0, int? IdFase = null, bool Valore = false,
-    GeCoActivityRequest? Attivita = null, GeCoSaveRequest? Salvataggio = null, GeCoConfirmRequest? Conferma = null);
+    GeCoActivityRequest? Attivita = null, GeCoSaveRequest? Salvataggio = null, GeCoConfirmRequest? Conferma = null,
+    string? Tipo = null, int IdCartella = 0, GeCoLinkItem[]? Collegamenti = null, long? DopoId = null);
 
 // Chi è l'utente per GeCo, deciso dal servizio dal token Windows. Recognized falso: le finestre mostrano Message e non permettono nulla.
 // Match: come è stato trovato l'utente (abbinamento della pagina Utenti di GeCo, nome uguale...). Hours: funzione delle ore assegnata.
+// Administrator: amministratore di GeCo (tipo A o tutte le funzioni); Links: database con il collegamento delle cartelle (migrazione 12).
 public sealed record GeCoAccess(bool Recognized, string Message, string Account, string User = "", string Name = "", string Match = "", string Company = "",
-    int DatabaseVersion = 0, bool Planning = false, bool Hours = false);
+    int DatabaseVersion = 0, bool Planning = false, bool Hours = false, bool Administrator = false, bool Links = false);
 
 // ---------------------------------------------------------------- pianificazione (ServizioPianificazione)
 

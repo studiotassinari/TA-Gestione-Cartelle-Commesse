@@ -48,6 +48,7 @@ public sealed partial class MainViewModel : Observable
         CurriculumCommand = new(() => ShowCurriculum(), () => connection != null);
         GeCoPlanningCommand = new(ShowGeCoPlanning, () => connection != null);
         GeCoHoursCommand = new(ShowGeCoHours, () => connection != null);
+        GeCoFolderLinksCommand = new(ShowGeCoFolderLinks, () => connection != null);
         foreach (var category in new[] { Commesse, Gare, Archivio }) category.CurriculumRequested += project => ShowCurriculum(project);
         CustomersCommand = new(() => ShowCustomers(""), () => connection != null);
         Commesse.ProjectRequested += ShowProject;
@@ -103,7 +104,7 @@ public sealed partial class MainViewModel : Observable
         ApplyManagementAccess(false);
         CloseProjectWindows(); businessWindow?.Close(); CloseGeCoWindows(); curriculumWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); GeCoPlanningCommand.Refresh(); GeCoHoursCommand.Refresh(); CurriculumCommand.Refresh(); NonconformityReportCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); GeCoPlanningCommand.Refresh(); GeCoHoursCommand.Refresh(); GeCoFolderLinksCommand.Refresh(); CurriculumCommand.Refresh(); NonconformityReportCommand.Refresh();
         CustomersCommand.Refresh(); ArchiveFolderCommand.Refresh();
         try { new ClientSettings(host.Trim(), number, UseCurrentAccount, accountName).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
@@ -178,7 +179,7 @@ public sealed partial class MainViewModel : Observable
                 {
                     CommunicationStatus = $"Canale verificato alle {DateTime.Now:HH:mm:ss}: {notice.Kind}; " + (notice.ProbeId != null ? "riscontro inviato al server." : "server precedente senza riscontro.");
                     ClientLog.Write(CommunicationStatus);
-                });
+                }, GeCoEventsArrived);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
             catch (System.Security.Authentication.AuthenticationException ex)

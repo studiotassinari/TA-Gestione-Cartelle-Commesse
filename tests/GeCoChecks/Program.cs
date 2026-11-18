@@ -11,6 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Contracts;
 // può fare e come i risultati delle regole della libreria arrivano al client con i nomi del protocollo. Dati sintetici su EF
 // InMemory: le regole stesse sono provate in GeCo2027 (tests/GeCo.Dati.Checks), qui si prova il collegamento.
 const int Soc = 1, CdcAdmin = 10, CdcCollab = 11, UteAdmin = 1, UteCollab = 2, UteOther = 3, VoceOre = 100, VoceKm = 101, Comm = 1000, CommOther = 1001, Fase1 = 2000, Fase2 = 2001;
+const int CommDeleted = 9999, CarComm = 1, CarOther = 2, CarGara = 3, CarOrphan = 4;
 var version = AggiornamentoDatabase.VersioneRichiesta;
 var name = Guid.NewGuid().ToString();
 var options = new DbContextOptionsBuilder<GeCoDbContext>().UseInMemoryDatabase(name, b => b.EnableNullChecks(false))
@@ -107,7 +108,73 @@ Check(await Fails(() => Send<GeCoSaveResult>(new("HoursSave", Salvataggio: new(C
     "Ore: le ore di un'altra persona non si modificano");
 Check(await Fails(() => Send<bool>(new("Sconosciuto"), Collab)) is ArgumentException, "Comando GeCo sconosciuto rifiutato");
 Check(GeCoWorkService.Translate(new RegolaException("x", 503)) is IOException && GeCoWorkService.Translate(new RegolaException("y", 409)) is ArgumentException { Message: "y" }, "Errori delle regole tradotti con lo stesso messaggio");
-Console.WriteLine("GeCoChecks: pianificazione e ore di GeCo verificate su dati sintetici.");
+// ---------------------------------------------------------------- collegamento cartelle (2.38.0)
+// Le proposte e le scritture sono di ServizioCollegamentiCartelle (provato in GeCo2027): qui chi può, l'origine «GeCa», i nomi
+// del protocollo, la sostituzione esplicita, l'anteprima delle proposte sicure e gli errori della libreria con il loro messaggio.
+var adminAccess = await Send<GeCoAccess>(new("Access"), Admin);
+Check(adminAccess is { Recognized: true, Administrator: true, Links: true } && access is { Administrator: false, Links: true }, "Accesso: amministratore di GeCo e collegamento cartelle disponibile, decisi dal servizio");
+Check(await Fails(() => Send<GeCoLinks>(new("Links"), Collab)) is UnauthorizedAccessException { Message: "Funzione riservata agli amministratori" }
+    && await Fails(() => Send<int>(new("Link", Tipo: "commessa", Id: Comm, IdCartella: CarComm), Collab)) is UnauthorizedAccessException, "Collegamento cartelle: riservato agli amministratori, anche per le scritture");
+var links = await Send<GeCoLinks>(new("Links"), Admin);
+var rowComm = links.Elementi.Single(r => r.Tipo == "commessa" && r.Id == Comm);
+Check(rowComm is { Codice: "B260001", Livello: "sicura", Collegamento: null, Proposta: { IdCartella: CarComm, Punteggio: 100, Cartella.Nome: "B260001 - Cliente di prova - Progetto di prova" } }
+    && links.Elementi.Single(r => r.Tipo == "gara").Proposta?.IdCartella == CarGara && links.Sicure.Length == 3 && links.Sincronizzazioni.Single().Categoria == "C"
+    && links.CartelleLibere.Any(f => f.Cartella.Id == CarOrphan && f.CandidataPer.Length == 0) && links.Conflitti.Any(c => c.Tipo == "SenzaCommessa" && c.IdCartella == CarOrphan),
+    "Collegamento cartelle: proposte sicure per codice, cartella senza commessa segnalata, nomi del protocollo");
+var stale = links.Sicure;
+Check(await Send<int>(new("Link", Tipo: "commessa", Id: Comm, IdCartella: CarComm), Admin) > 0, "Collegamento cartelle: proposta confermata");
+using (var db = new TestDb(options))
+    Check(db.tblCartelleCollegamenti.Single() is { Ccl_IdCartella: CarComm, Ccl_IdCommessa: Comm, Ccl_Origine: EventiSincronizzazione.GeCa, Ccl_IdUtente: UteAdmin }
+        && db.tblSincronizzazioneEventi.Single(e => e.Sev_Tipo == EventiSincronizzazione.Tipi.Collegata) is { Sev_Origine: EventiSincronizzazione.GeCa, Sev_IdCommessa: Comm, Sev_IdUtente: UteAdmin },
+        "Collegamento cartelle: scritto con l'utente del token e l'origine GeCa, con l'evento per GeCo2027");
+var replace = await Fails(() => Send<int>(new("Link", Tipo: "commessa", Id: Comm, IdCartella: CarOther), Admin));
+Check(replace is ArgumentException && replace.Message.Contains("confermare la sostituzione"), "Collegamento cartelle: un elemento già collegato si ricollega solo con la sostituzione esplicita");
+Check((await Fails(() => Send<int>(new("ConfirmSafe", Collegamenti: stale), Admin)))?.Message.Contains("Le proposte sono cambiate") == true, "Collegamento cartelle: anteprima superata, nessuna proposta confermata");
+var fresh = (await Send<GeCoLinks>(new("Links"), Admin)).Sicure;
+Check(fresh.Length == 2 && await Send<int>(new("ConfirmSafe", Collegamenti: fresh), Admin) == 2, "Collegamento cartelle: proposte sicure confermate in blocco dopo l'anteprima");
+var choices = await Send<GeCoFolderChoice[]>(new("Folders", Testo: "B26", Tipo: "commessa"), Admin);
+Check(choices.Single().Cartella.Id == CarComm && choices[0].CollegataA is { Tipo: "commessa", Id: Comm } && (await Send<GeCoFolderChoice[]>(new("Folders", Tipo: "gara"), Admin)).All(c => c.Cartella.Categoria is "G" or "A"),
+    "Collegamento cartelle: ricerca delle cartelle della categoria ammessa, con quelle già collegate indicate");
+Check(await Send<bool>(new("Unlink", Tipo: "commessa", Id: Comm), Admin) && !await Send<bool>(new("Unlink", Tipo: "commessa", Id: Comm), Admin), "Collegamento cartelle: scollegata; una seconda volta non c'è nulla da togliere");
+Check(await Fails(() => Send<bool>(new("Unlink", Tipo: "cartella", Id: Comm), Admin)) is ArgumentException, "Collegamento cartelle: tipo non previsto rifiutato dalla libreria");
+var old11 = new GeCoWorkService(() => new TestDb(options), _ => Task.FromResult(11), Soc, (_, _, _) => Task.FromResult(true));
+Check((await old11.ExecuteAsync(new("Access"), Admin, default)) is GeCoAccess { Links: false } && (await Fails(() => old11.ExecuteAsync(new("Links"), Admin, default)))?.Message == GeCoWorkService.LinksNotReady
+    && (await old11.ExecuteAsync(new("SyncEvents"), Collab, default)) is GeCoSyncEvents { Disponibile: false }, "Database senza la migrazione 12: collegamento e notifiche non disponibili, con il motivo");
+
+// ---------------------------------------------------------------- notifiche da GeCo2027
+long Register(string type, string text, int? project)
+{
+    using var db = new TestDb(options);
+    return EventiSincronizzazione.RegistraAsync(db, version, EventiSincronizzazione.GeCo2027, new NuovoEvento(type, text, project), UteAdmin, "Amministratore").GetAwaiter().GetResult()!.Value;
+}
+var hub = new GeCoEventHub();
+var reader = new GeCoEventsService(new TA.Server.ServerSettings(), hub, Microsoft.Extensions.Logging.Abstractions.NullLogger<GeCoEventsService>.Instance);
+using (var db = new TestDb(options)) Check(await reader.PollAsync(db, 11, default) == -1 && reader.Position == null, "Lettore degli eventi: in attesa senza la migrazione 12");
+using (var db = new TestDb(options))
+{
+    Check(await reader.PollAsync(db, version, default) == 0 && reader.Position == await EventiSincronizzazione.UltimoIdAsync(db) && hub.Last == reader.Position,
+        "Lettore degli eventi: al primo avvio parte dall'ultimo evento, senza notificare la cronologia");
+    Check(await EventiSincronizzazione.PosizioneAsync(db, GeCoEventsService.Consumer) == reader.Position
+        && db.tblSincronizzazionePosizioni.AsNoTracking().Single().Sip_OrigineLetta == EventiSincronizzazione.GeCo2027, "Lettore degli eventi: posizione «GeCa» salvata subito, sugli eventi di GeCo2027");
+}
+var created = Register(EventiSincronizzazione.Tipi.CommessaCreata, "Commessa B260001 creata da Amministratore.", Comm);
+var foreign = Register(EventiSincronizzazione.Tipi.CommessaEliminata, "Commessa Z260001 eliminata.", CommDeleted);
+using var watching = hub.Subscribe(); watching.TryRead(out _);
+using (var db = new TestDb(options))
+{
+    await EventiSincronizzazione.RegistraAsync(db, version, EventiSincronizzazione.GeCa, new NuovoEvento(EventiSincronizzazione.Tipi.CartellaNuova, "Nuova cartella."), null, "TA-Gestione");
+    Check(await reader.PollAsync(db, version, default) == 2 && reader.Position == foreign && watching.TryRead(out var pushed) && pushed == foreign && hub.Summary == "2 novità da GeCo2027"
+        && await EventiSincronizzazione.PosizioneAsync(db, GeCoEventsService.Consumer) == foreign, "Lettore degli eventi: solo quelli di GeCo2027, client avvisati, posizione salvata");
+    Check(await reader.PollAsync(db, version, default) == 0 && !watching.TryRead(out _), "Lettore degli eventi: nessuna notifica ripetuta");
+}
+var restarted = new GeCoEventsService(new TA.Server.ServerSettings(), new GeCoEventHub(), Microsoft.Extensions.Logging.Abstractions.NullLogger<GeCoEventsService>.Instance);
+using (var db = new TestDb(options)) Check(await restarted.PollAsync(db, version, default) == 0 && restarted.Position == foreign, "Lettore degli eventi: dopo un riavvio riprende dalla posizione salvata");
+var notices = await Send<GeCoSyncEvents>(new("SyncEvents"), Collab);
+Check(notices is { Disponibile: true, UltimoId: var lastGeCo } && lastGeCo == foreign && notices.Eventi.Any(e => e.Id == created && e.Tipo == "CommessaCreata" && e.Utente == "Amministratore" && e.Data.Length == 16)
+    && notices.Eventi.All(e => e.Origine == EventiSincronizzazione.GeCo2027 && e.Id != foreign), "Notifiche: eventi di GeCo2027, senza quelli di commesse che l'utente non può vedere (eliminate)");
+Check((await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: foreign), Collab)).Eventi.Length == 0 && (await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: created - 1), Admin)).Eventi.Select(e => e.Id).SequenceEqual(new[] { foreign, created }),
+    "Notifiche: solo quelle dopo l'ultima ricevuta; l'amministratore vede anche le commesse eliminate");
+Console.WriteLine("GeCoChecks: pianificazione, ore, collegamento cartelle e notifiche di GeCo verificati su dati sintetici.");
 
 static void Check(bool condition, string message) { if (!condition) throw new Exception("FAIL: " + message); Console.WriteLine("PASS: " + message); }
 
@@ -136,6 +203,17 @@ static void Seed(TestDb db)
     db.tblCommesse.AddRange(
         new tblCommesse { Cmm_Id = 1000, Cmm_IdSocieta = 1, Cmm_Anno = 2026, Cmm_Codice = "B260001", Cmm_Postfisso = "", Cmm_Descr = "Progetto di prova", Cmm_IdCliente = 1, Cmm_IdResp = 11, Cmm_DataIniEff = new DateTime(2026, 1, 1) },
         new tblCommesse { Cmm_Id = 1001, Cmm_IdSocieta = 1, Cmm_Anno = 2026, Cmm_Codice = "N260001", Cmm_Postfisso = "", Cmm_Descr = "Commessa di altri", Cmm_IdCliente = 1, Cmm_IdResp = 10, Cmm_DataIniEff = new DateTime(2026, 1, 1) });
+    // Collegamento cartelle: cartelle e una gara sintetiche, una cartella senza commessa.
+    db.tblGare.Add(new tblGare { Gar_Id = 1, Gar_Codice = "G26001", Gar_Anno = 2026, Gar_Oggetto = "Gara di prova", Gar_Ente = "Ente di prova" });
+    var seen = new DateTime(2026, 11, 1, 8, 0, 0);
+    tblCartelle Folder(int id, string path, string category, string code, string client, string subject) => new()
+    { Car_Id = id, Car_Percorso = path, Car_Categoria = category, Car_Codice = code, Car_Anno = 2026, Car_Committente = client, Car_Oggetto = subject, Car_Presente = true, Car_PrimaRilevazione = seen, Car_UltimaRilevazione = seen };
+    db.tblCartelle.AddRange(
+        Folder(1, @"\\server\lavori\2026\B260001 - Cliente di prova - Progetto di prova", "C", "B260001", "Cliente di prova", "Progetto di prova"),
+        Folder(2, @"\\server\lavori\2026\N260001 - Cliente di prova - Commessa di altri", "C", "N260001", "Cliente di prova", "Commessa di altri"),
+        Folder(3, @"\\server\gare\2026\G26001 - Ente di prova - Gara di prova", "G", "G26001", "Ente di prova", "Gara di prova"),
+        Folder(4, @"\\server\lavori\2026\C26999 - Senza commessa", "C", "C26999", "Senza", "commessa"));
+    db.tblCartelleSincronizzazioni.Add(new tblCartelleSincronizzazioni { Cas_Categoria = "C", Cas_Data = seen, Cas_Origine = "TA-Gestione di prova", Cas_Cartelle = 3 });
     db.tblFasiCommesse.AddRange(
         new tblFasiCommesse { Fco_Id = 2000, Fco_IdCommessa = 1000, Fco_Descrizione = "Progetto", Fco_Ordinamento = 1 },
         new tblFasiCommesse { Fco_Id = 2001, Fco_IdCommessa = 1000, Fco_Descrizione = "Direzione lavori", Fco_Ordinamento = 2 });

@@ -60,6 +60,9 @@ builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddSingleton<TA.Server.Business.BusinessService>();
 builder.Services.AddSingleton<TA.Server.Business.CurriculumService>();
 builder.Services.AddSingleton(new TA.Server.SharedDatabase.GeCoWorkService(settings));
+builder.Services.AddSingleton<TA.Server.SharedDatabase.GeCoEventHub>();
+// Eventi di GeCo2027 dal registro comune verso i client (consumatore «GeCa»); senza database comune non fa nulla.
+builder.Services.AddHostedService<TA.Server.SharedDatabase.GeCoEventsService>();
 builder.Services.AddHostedService<TA.Server.Business.BusinessBackupService>();
 builder.Services.AddHostedService<DailyDatabaseBackupService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());

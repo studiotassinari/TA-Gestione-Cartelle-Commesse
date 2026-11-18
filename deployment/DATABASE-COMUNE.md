@@ -2,19 +2,20 @@
 
 TA-Gestione Cartelle Commesse e GeCo2027 condividono un database SQL Server. Lo schema, gli aggiornamenti e le regole comuni stanno nella libreria **GeCo.Dati** (repository GeCo2027, cartella `shared/GeCo.Dati`), che questo progetto usa come pacchetto NuGet: qui non si scrivono script per quel database.
 
-## Cosa fa il servizio (dalla versione 2.34.0; pianificazione e ore dalla 2.37.0)
+## Cosa fa il servizio (dalla versione 2.34.0; pianificazione e ore dalla 2.37.0; collegamento cartelle dalla 2.38.0)
 
 Se è configurata la stringa di connessione, il servizio:
 
 1. porta il database alla versione prevista dalla libreria, se non l'ha già fatto GeCo2027;
 2. scrive nella tabella `tblCartelle` l'elenco delle cartelle di commesse (C), gare (G) e archivio (A): codice, anno, committente e oggetto letti dal nome, percorso, stato, dimensione, ultima modifica, esito del controllo sul preventivo;
-3. lo ripete all'avvio del servizio e alla fine di ogni elaborazione giornaliera. Le cartelle non più trovate restano in tabella segnate come non presenti.
+3. lo ripete all'avvio del servizio, alla fine di ogni elaborazione giornaliera e, dalla 2.38.0, circa 15 secondi dopo ogni aggiornamento dell'elenco durante il giorno che trova cartelle nuove, rinominate, spostate o sparite (comando «Aggiorna elenco» del client, nuova commessa o gara da modello, archiviazione ZIP). Le cartelle non più trovate restano in tabella segnate come non presenti;
+4. dalla migrazione 12 (2.38.0), nella stessa scrittura, registra gli eventi per GeCo2027 (vedi [Collegamento delle cartelle](#collegamento-delle-cartelle-e-notifiche-di-geco2027-2380)).
 
 Vengono inviati solo dati già presenti negli elenchi del servizio: nessuna lettura aggiuntiva sulle cartelle e nessuna scrittura sugli originali. Un errore di collegamento non ferma l'elaborazione: viene scritto nel registro del servizio e segnalato nell'esito.
 
 GeCo2027 mostra questi dati nella pagina **Cartelle**.
 
-Dalla 2.37.0 lo stesso collegamento serve anche alla **pianificazione delle attività** e alle **ore lavorate** del client (vedi sotto).
+Dalla 2.37.0 lo stesso collegamento serve anche alla **pianificazione delle attività** e alle **ore lavorate** del client, dalla 2.38.0 al **collegamento delle cartelle** a commesse e gare e alle **notifiche** di GeCo2027 (vedi sotto).
 
 ## Configurazione
 
@@ -63,3 +64,28 @@ L'indirizzo di GeCo in Configura non serve più per la pianificazione: il comand
 Le attività, il Gantt e le ore registrate nel vecchio archivio del gestionale (`gestionale.sqlite`) non si mostrano più nel client: erano dati di prova, restano nel file e nei suoi backup e non vengono cancellati.
 
 Verifiche: `tests/GeCoChecks` (identità, permessi e comandi del protocollo su dati sintetici), `tests/TransportChecks` (trasporto del comando), `tests/ClientChecks` e `tests/BusinessUiChecks` (calcoli e finestre del client); le regole stesse sono provate in GeCo2027 (`tests/GeCo.Dati.Checks`).
+
+## Collegamento delle cartelle e notifiche di GeCo2027 (2.38.0)
+
+Una cartella rilevata dal servizio (`tblCartelle`) si collega in modo definitivo e biunivoco a una commessa o a una gara di GeCo (`tblCartelleCollegamenti`, migrazione 12 di GeCo.Dati): una cartella al massimo a un elemento, un elemento al massimo a una cartella. Il collegamento si decide da GeCo2027 (pagina **Collegamento cartelle** e riquadro «Cartella» delle schede) oppure dal client, nella finestra **Gestione > Collegamento cartelle…**, con le stesse regole: quelle di `ServizioCollegamentiCartelle` della libreria, che il servizio chiama con origine «GeCa». Qui non si scrive nessuna regola.
+
+**Chi può.** La situazione completa e le modifiche sono riservate agli **amministratori di GeCo** (tipo «Amministratore» o «Tutte le funzioni» nella pagina Utenti), riconosciuti come per la pianificazione dall'account Windows del canale (`AccountWindows.TrovaUtenteAsync`). Chi non è amministratore vede nella finestra il motivo e le sole notifiche.
+
+**Cosa mostra la finestra.** Commesse e gare con la cartella collegata, oppure la cartella proposta con il punteggio e il motivo («stesso codice della commessa», «anno diverso»…), le altre candidate e le segnalazioni della libreria (cartella collegata non più sul disco, cartella spostata da ricollegare, più cartelle con lo stesso codice, cartella contesa, commessa senza cartella, cartella senza commessa). Una proposta è sempre indicata come tale: diventa un collegamento solo quando un amministratore la conferma.
+
+- **Conferma proposta**: collega la cartella proposta. Se l'elemento era già collegato (per esempio a una cartella rinominata, non più presente) la finestra chiede di confermare la sostituzione.
+- **Scegli cartella…**: ricerca tra le cartelle presenti della categoria ammessa (commesse o archivio per una commessa, gare o archivio per una gara); quelle già collegate non si possono scegliere finché non vengono scollegate.
+- **Scollega**: toglie il collegamento; la cartella sul disco non viene toccata.
+- **Conferma tutte le proposte sicure**: il client manda l'anteprima vista; il servizio ricalcola e scrive tutte le proposte o nessuna, se nel frattempo un altro amministratore o una scansione hanno cambiato qualcosa.
+
+Le cartelle e i documenti originali restano in sola lettura: il collegamento è soltanto una riga del database comune. Due amministratori che confermano insieme (da GeCo2027 e dal client) sono fermati dai vincoli del database e dalla transazione della libreria: uno dei due riceve il messaggio di ricaricare.
+
+**Eventi tra i due programmi.** GeCo2027 e il servizio non si chiamano mai: si avvisano solo attraverso il registro comune `tblSincronizzazioneEventi`, ciascuno dopo l'ultimo evento elaborato (`tblSincronizzazionePosizioni`).
+
+- Il servizio scrive, con l'invio dell'elenco delle cartelle, gli eventi delle cartelle nuove, modificate, rinominate o spostate, sparite, e delle cartelle collegate che non sono più sul disco (regola `EventiSincronizzazione.DaSincronizzazione` della libreria); scrive inoltre un evento per ogni collegamento confermato o tolto dal client. GeCo2027 li mostra nella campanella delle notifiche. L'esito dell'invio in Configura riporta anche quanti eventi sono stati registrati.
+- Il servizio legge ogni 10 secondi, come consumatore «GeCa», gli eventi scritti da GeCo2027 (commesse e gare create, modificate, eliminate o importate, collegamenti decisi là), salva la propria posizione e avvisa i client collegati con il canale push. Dopo un riavvio riprende dall'ultimo evento salvato; al primo avvio parte dall'ultimo evento presente, senza riproporre la cronologia.
+- Il client chiede le notifiche al servizio, che restituisce le ultime visibili all'utente con le regole comuni (commesse della società di lavoro e, se assegnate, delle sue aree di business; le commesse eliminate solo agli amministratori). La notifica push non contiene testi: dice soltanto che ci sono eventi nuovi. Le notifiche compaiono nella finestra Collegamento cartelle; con la finestra chiusa la barra di stato del programma segnala che ne sono arrivate.
+
+**Requisiti e compatibilità.** Il database comune alla migrazione 12: il servizio la applica da sé all'invio delle cartelle, ma l'ordine resta GeCo2027, poi il server, poi i client. Senza la migrazione 12 la finestra lo dice e il lettore degli eventi attende senza errori; con il database irraggiungibile lo scrive una volta nel registro del servizio e riprova ogni minuto. I client precedenti alla 2.38.0 non ricevono le notifiche push degli eventi (non le conoscono); un servizio precedente risponde che il comando non è gestito e il client chiede di aggiornarlo. La pulizia degli eventi vecchi la fa GeCo2027 (`EventiSincronizzazione.PuliziaAsync`), che non elimina quelli non ancora letti dal servizio.
+
+Verifiche: `tests/GeCoChecks` (ruoli, origine «GeCa», sostituzione esplicita, anteprima delle proposte sicure, notifiche filtrate, lettore degli eventi con posizione e riavvio, database senza migrazione 12), `tests/PushChecks` (notifiche «GeCo» solo ai client che le chiedono, insieme a quelle delle cartelle), `tests/TransportChecks` (campi nuovi del protocollo e compatibilità), `tests/ClientChecks` (testi della finestra, filtri, richieste e notifiche senza ripetizioni), `SharedDatabaseChecks` in `tests/BusinessChecks` (eventi della scansione su SQL Server, con `TA_TEST_SQL`); le regole stesse sono provate in GeCo2027 (`tests/GeCo.Dati.Checks`).

@@ -1,4 +1,10 @@
-# TA-Gestione Cartelle Commesse — 2.37.1
+# TA-Gestione Cartelle Commesse — 2.38.0
+
+## Novità 2.38.0 — collegamento delle cartelle con GeCo
+
+Nel menu **Gestione** c'è la finestra **Collegamento cartelle…**, per gli amministratori di GeCo: elenca commesse e gare con la cartella collegata o quella proposta, con le stesse proposte e regole della pagina Collegamento cartelle di GeCo2027 (libreria comune GeCo.Dati). Si conferma una proposta, se ne sceglie un'altra cartella, si scollega, oppure si confermano in una volta tutte le proposte sicure (stesso codice, nessun concorrente); una proposta resta tale finché un amministratore non la conferma e le cartelle sul disco non vengono mai toccate. A destra compaiono le notifiche arrivate da GeCo2027 (commesse e gare create, modificate o eliminate, collegamenti decisi là). Il servizio invia l'elenco delle cartelle al database comune anche subito dopo ogni aggiornamento dell'elenco durante il giorno (Aggiorna elenco, nuova commessa o gara da modello, archiviazione ZIP), così GeCo2027 riceve gli eventi delle cartelle nuove, rinominate, spostate o sparite senza aspettare la notte. Serve il database comune alla migrazione 12: aggiornare prima GeCo2027, poi il server, poi i client ([dettagli](deployment/DATABASE-COMUNE.md#collegamento-delle-cartelle-e-notifiche-di-geco2027-2380)).
+
+[Scarica aggiornatore 2.38.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.38.0/TA-Commesse-Aggiornatore-2.38.0.exe)
 
 ## Novità 2.37.1 — account Windows per il raccordo con GeCo
 

@@ -19,6 +19,9 @@ public static class SharedFolders
     // Porta prima il database alla versione prevista dalla libreria (chi parte per primo tra GeCo e questo servizio lo aggiorna),
     // poi riscrive l'elenco di ogni categoria che ha un elenco caricato. Una categoria senza elenco non viene toccata:
     // scriverla vuota farebbe risultare sparite tutte le sue cartelle.
+    // Dalla migrazione 12 la libreria confronta l'elenco con quello precedente e registra, nella stessa transazione, gli eventi
+    // per GeCo2027 (cartelle nuove, modificate, rinominate o spostate, sparite, cartelle collegate da ricollegare): la regola è
+    // EventiSincronizzazione.DaSincronizzazione, qui non si decide nulla. Prima della migrazione 12 gli eventi sono zero.
     public static async Task<string> PushAsync(string connectionString, IEnumerable<CategoryState> states, CancellationToken token)
     {
         await AggiornamentoDatabase.EseguiAsync(connectionString, null, token);
@@ -26,8 +29,8 @@ public static class SharedFolders
         foreach (var state in states)
         {
             if (state.Snapshot is not { } snapshot) continue;
-            int written = await SincronizzazioneCartelle.AggiornaAsync(connectionString, state.Prefix.ToString(), From(snapshot), "TA-Gestione su " + Environment.MachineName, token);
-            done.Add(state.Prefix + ": " + written + " cartelle");
+            var result = await SincronizzazioneCartelle.AggiornaConEventiAsync(connectionString, state.Prefix.ToString(), From(snapshot), "TA-Gestione su " + Environment.MachineName, token);
+            done.Add(state.Prefix + ": " + result.Scritte + " cartelle" + (result.Eventi > 0 ? $" ({result.Eventi} eventi per GeCo2027)" : ""));
         }
         return done.Count == 0 ? "nessun elenco da inviare" : string.Join(", ", done);
     }

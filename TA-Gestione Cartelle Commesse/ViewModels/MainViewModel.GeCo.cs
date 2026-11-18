@@ -25,5 +25,5 @@ public sealed partial class MainViewModel
         hoursWindow.Show();
     }
     // Al cambio di connessione l'utente può essere un altro: le finestre si chiudono (le ore non salvate vengono chieste prima).
-    private void CloseGeCoWindows() { planningWindow?.Close(); hoursWindow?.Close(); }
+    private void CloseGeCoWindows() { planningWindow?.Close(); hoursWindow?.Close(); folderLinksWindow?.Close(); geCoRevision = 0; }
 }

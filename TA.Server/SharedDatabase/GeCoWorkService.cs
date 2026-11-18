@@ -6,12 +6,13 @@ using Microsoft.EntityFrameworkCore;
 using TA_Gestione_Cartelle_Commesse.Contracts;
 namespace TA.Server.SharedDatabase;
 
-// Pianificazione delle attività e ore lavorate di GeCo per il client WPF, sullo stesso database SQL Server di GeCo2027 e con
-// le stesse regole: quelle dei servizi della libreria GeCo.Dati (ServizioPianificazione, ServizioConsuntivo), mai riscritte qui.
+// Pianificazione delle attività, ore lavorate e collegamento delle cartelle (GeCoWorkService.Links.cs) di GeCo per il client
+// WPF, sullo stesso database SQL Server di GeCo2027 e con le stesse regole: quelle dei servizi della libreria GeCo.Dati
+// (ServizioPianificazione, ServizioConsuntivo, ServizioCollegamentiCartelle), mai riscritte qui.
 // Il servizio decide soltanto chi è l'utente: l'account Windows autenticato sul canale (mai un nome inviato dal client)
 // diventa un utente di GeCo con AccountWindows.TrovaUtenteAsync, la stessa funzione dell'accesso dal browser di GeCo2027.
 // Senza utente corrispondente, o senza la società abilitata, nessun comando viene eseguito.
-public sealed class GeCoWorkService
+public sealed partial class GeCoWorkService
 {
     private readonly Func<GeCoDbContext>? open;
     private readonly Func<CancellationToken, Task<int>> version;
@@ -21,7 +22,7 @@ public sealed class GeCoWorkService
     // open null = database comune non configurato. enabled: utente abilitato alla società (in GeCo2017 spSocieta_x_Utente).
     public GeCoWorkService(Func<GeCoDbContext>? open, Func<CancellationToken, Task<int>> version, int companyId = 0, Func<GeCoDbContext, int, int, Task<bool>>? enabled = null)
     { this.open = open; this.version = version; this.companyId = companyId; this.enabled = enabled ?? Enabled; }
-    private static Func<GeCoDbContext>? Open(string connection) => string.IsNullOrWhiteSpace(connection) ? null
+    internal static Func<GeCoDbContext>? Open(string connection) => string.IsNullOrWhiteSpace(connection) ? null
         : () => new GeCoDbContext(new DbContextOptionsBuilder<GeCoDbContext>().UseSqlServer(connection).Options);
     // Stessa verifica dell'accesso a GeCo2027: la società di lavoro deve essere tra quelle dell'utente.
     private static async Task<bool> Enabled(GeCoDbContext db, int user, int company) => (await db.spSocieta_x_Utente(user)).Any(s => s.Soc_Id == company);
@@ -76,7 +77,8 @@ public sealed class GeCoWorkService
         bool hours = await HasHoursAsync(db, user);
         bool planning = current >= Pianificazione.VersioneRichiesta;
         var message = planning ? "" : "Pianificazione non disponibile: il database non è stato aggiornato. Aggiornare prima GeCo2027 o riavviare il servizio.";
-        return (new(true, message, account, user.Ute_Username, name, found.Come ?? "", company.Soc_RagSoc, current, planning, hours), context);
+        return (new(true, message, account, user.Ute_Username, name, found.Come ?? "", company.Soc_RagSoc, current, planning, hours,
+            Ruoli.Amministratore(user), current >= EventiSincronizzazione.VersioneRichiesta), context);
     }
     private static async Task<bool> HasHoursAsync(GeCoDbContext db, tblUtenti user)
     {
@@ -119,6 +121,7 @@ public sealed class GeCoWorkService
             case "HoursConfirm":
                 var k = c.Conferma ?? throw new ArgumentException("Settimana mancante.");
                 return As<GeCoConfirmResult>(await hours.ConfermaAsync(new RichiestaConferma { IdCdc = k.IdCdc, Dal = k.Dal, Voci = k.Voci?.ToList(), Conferma = k.Conferma }));
+            case "Links" or "Link" or "Unlink" or "ConfirmSafe" or "Folders" or "SyncEvents": return await HandleLinksAsync(c, context, token);
             default: throw new ArgumentException("Comando GeCo sconosciuto.");
         }
     }

@@ -53,15 +53,32 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     public bool Refresh(string category) { _ = Get(category).RefreshIndexAsync(shutdown); return true; }
     public Task<bool> RefreshAsync(string category) => Get(category).RefreshIndexAsync(shutdown);
     // Elenco delle cartelle nel database comune con GeCo. Un errore qui non ferma mai l'elaborazione: gli elenchi locali restano validi.
+    // Un invio alla volta: quello giornaliero e quello dopo una modifica rilevata dal monitor non si sovrappongono.
+    private readonly SemaphoreSlim sharedGate = new(1, 1);
     private async Task<bool> PushShared(CancellationToken token)
     {
         if (settings.SharedDatabase.Trim().Length == 0) return true;
+        await sharedGate.WaitAsync(token);
         try
         {
             var result = await SharedFolders.PushAsync(settings.SharedDatabase, workers.Values.Select(w => w.State).ToArray(), token);
             logger.LogInformation("Database comune aggiornato: {Result}", result); SharedStatus("Ultimo invio riuscito: " + result); return true;
         }
         catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogError(ex, "Database comune non aggiornato"); SharedStatus("Ultimo invio NON riuscito: " + ex.Message); return false; }
+        finally { sharedGate.Release(); }
+    }
+    // Elenco cambiato fuori dall'elaborazione giornaliera (Aggiorna elenco, creazione da modello, archiviazione ZIP, monitor se attivo):
+    // l'elenco completo va subito nel database comune, così GeCo2027 riceve gli eventi senza aspettare la notte. Le modifiche
+    // ravvicinate si raccolgono in un solo invio dopo 15 secondi; una modifica durante l'invio ne programma un altro.
+    private int sharedPending;
+    private void SharedListChanged()
+    {
+        if (settings.SharedDatabase.Trim().Length == 0 || Interlocked.Exchange(ref sharedPending, 1) == 1) return;
+        _ = Task.Run(async () =>
+        {
+            try { await Task.Delay(TimeSpan.FromSeconds(15), shutdown); Interlocked.Exchange(ref sharedPending, 0); await PushShared(shutdown); }
+            catch (OperationCanceledException) { Interlocked.Exchange(ref sharedPending, 0); }
+        });
     }
     // Esito dell'ultimo invio in un file di testo nella cartella dati: il Gestore server lo mostra in Configura,
     // così un errore di collegamento si vede senza aprire il registro del servizio.
@@ -124,6 +141,7 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         shutdown = stoppingToken;
+        foreach (var worker in workers.Values) worker.ListChanged = SharedListChanged;
         if(settings.LocalStorageOnly)
         {
             while(!stoppingToken.IsCancellationRequested)

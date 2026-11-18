@@ -5,7 +5,8 @@ using TA_Gestione_Cartelle_Commesse.Contracts;
 using TA_Gestione_Cartelle_Commesse.Models;
 
 // Database comune con GeCo: conversione degli elenchi in cartelle rilevate e, se è disponibile un SQL Server di prova
-// (variabile TA_TEST_SQL, impostata dai flussi di GitHub su LocalDB), scrittura reale nella tabella tblCartelle.
+// (variabile TA_TEST_SQL, impostata dai flussi di GitHub su LocalDB), scrittura reale nella tabella tblCartelle e, dalla
+// migrazione 12, degli eventi della scansione nel registro comune con GeCo2027.
 internal static class SharedDatabaseChecks
 {
     public static void Run()
@@ -66,6 +67,14 @@ IF OBJECT_ID('dbo.tblUtentiFunzioni') IS NULL
         using (var command = new SqlCommand("SELECT COUNT(*) FROM dbo.tblFunzioni WHERE Fun_Url LIKE '%ESolver%'", connection))
             Check((int)command.ExecuteScalar()! == 0, "Aggiornamento dello schema: funzioni E-Solver non tolte");
         Check(AggiornamentoDatabase.VersioneAttualeAsync(sql).GetAwaiter().GetResult() >= SincronizzazioneCartelle.VersioneRichiesta, "Database comune non aggiornato alla versione richiesta");
+        // Dalla migrazione 12 (2.38.0) la stessa transazione registra gli eventi per GeCo2027: le due cartelle nuove alla prima
+        // scansione, poi quella sparita e quella cambiata di stato, con origine GeCa; nessun evento per la categoria non inviata.
+        if (AggiornamentoDatabase.VersioneAttualeAsync(sql).GetAwaiter().GetResult() >= GeCo.Dati.Regole.EventiSincronizzazione.VersioneRichiesta)
+        {
+            int Events(string where) { using var command = new SqlCommand("SELECT COUNT(*) FROM dbo.tblSincronizzazioneEventi WHERE Sev_Origine = 'GeCa' AND " + where, connection); return (int)command.ExecuteScalar()!; }
+            Check(first.Contains("2 eventi per GeCo2027") && Events("Sev_Tipo = 'CartellaNuova'") == 2 && Events("Sev_Tipo = 'CartellaSparita' AND Sev_Codice = 'C23007'") == 1
+                && Events("Sev_Tipo = 'CartellaModificata' AND Sev_Codice = 'C24031'") == 1, "Eventi della scansione delle cartelle non registrati per GeCo2027: " + first);
+        }
         Console.WriteLine("SharedDatabaseChecks: aggiornamento dello schema e sincronizzazione delle cartelle verificati su SQL Server.");
     }
 }

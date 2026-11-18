@@ -30,6 +30,22 @@ using (var memory = new MemoryStream())
     var legacy = System.Text.Json.JsonSerializer.Deserialize<Request>("""{"Operation":"Business","Category":"C","Version":2}""")!;
     Check(legacy.GeCo == null && legacy.Operation == "Business", "Richiesta di un client precedente senza il campo GeCo");
 }
+// Collegamento cartelle ed eventi di GeCo2027 (2.38.0): campi nuovi del comando e della sottoscrizione push; i client precedenti
+// non dichiarano SupportsGeCoEvents e non ricevono notifiche che non conoscono.
+using (var memory = new MemoryStream())
+{
+    var request = new Request("GeCo", GeCo: new GeCoCommand("ConfirmSafe", Collegamenti: [new("commessa", 1000, 7), new("gara", 3, 9)], DopoId: 42));
+    await WireProtocol.WriteAsync(memory, request, default);
+    memory.Position = 0;
+    var read = await WireProtocol.ReadAsync<Request>(memory, default);
+    Check(read.GeCo is { Action: "ConfirmSafe", DopoId: 42, Collegamenti: [{ Tipo: "commessa", Id: 1000, IdCartella: 7 }, { Tipo: "gara", IdCartella: 9 }] } && !read.SupportsGeCoEvents,
+        "Round-trip del comando di collegamento con l'anteprima delle proposte sicure");
+    var subscribe = System.Text.Json.JsonSerializer.Deserialize<Request>(System.Text.Json.JsonSerializer.Serialize(new Request("Subscribe", SupportsAcknowledgements: true, SupportsGeCoEvents: true)))!;
+    var oldSubscribe = System.Text.Json.JsonSerializer.Deserialize<Request>("""{"Operation":"Subscribe","Version":2,"SupportsAcknowledgements":true}""")!;
+    Check(subscribe.SupportsGeCoEvents && !oldSubscribe.SupportsGeCoEvents, "Sottoscrizione con gli eventi di GeCo solo se il client la dichiara");
+    var oldAccess = System.Text.Json.JsonSerializer.Deserialize<GeCoAccess>("""{"Recognized":true,"Message":"","Account":"x","Planning":true}""")!;
+    Check(oldAccess is { Administrator: false, Links: false }, "Risposta di accesso di un servizio precedente: nessun collegamento cartelle");
+}
 foreach (var header in new[] { new byte[] { 0, 0, 0, 0 }, new byte[] { 127, 255, 255, 255 }, "GET "u8.ToArray() })
 {
     using var stream = new MemoryStream(header);

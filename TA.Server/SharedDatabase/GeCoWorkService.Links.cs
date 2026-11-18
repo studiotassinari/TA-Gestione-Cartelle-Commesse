@@ -1,0 +1,95 @@
+using GeCo.Dati;
+using GeCo.Dati.Regole;
+using Microsoft.EntityFrameworkCore;
+using TA_Gestione_Cartelle_Commesse.Contracts;
+namespace TA.Server.SharedDatabase;
+
+// Collegamento definitivo delle cartelle a commesse e gare (pagina Collegamento cartelle di GeCo2027) e notifiche degli eventi
+// di GeCo2027. Proposte, livelli e scritture sono di ServizioCollegamentiCartelle con origine «GeCa»: l'evento registrato dice
+// a GeCo2027 che il collegamento è stato deciso qui. La situazione completa e le scritture sono riservate agli amministratori
+// di GeCo, decisi dalla libreria (Ruoli) sull'utente del token Windows; le notifiche le vede ciascuno secondo le regole di
+// visibilità comuni (società e aree di business della commessa citata), come nella campanella di GeCo2027.
+public sealed partial class GeCoWorkService
+{
+    public const string LinksNotReady = "Collegamento delle cartelle non disponibile: il database comune non è ancora aggiornato (migrazione 12). Aggiornare prima GeCo2027 o riavviare il servizio.";
+    public const string EventsNotReady = "Notifiche di GeCo2027 non disponibili: il database comune non è ancora aggiornato (migrazione 12).";
+    // Notifiche restituite al massimo per richiesta: le più recenti, come l'elenco della campanella di GeCo2027.
+    public const int RecentEvents = 50;
+    private const int EventWindow = 200;
+
+    private static async Task<object> HandleLinksAsync(GeCoCommand c, ContestoRegole context, CancellationToken token)
+    {
+        if (c.Action == "SyncEvents") return await EventsAsync(context, c.DopoId, token);
+        // Prima il ruolo, poi lo stato del database: a chi non è amministratore non serve sapere altro.
+        Ruoli.RichiediAmministratore(context.Utente);
+        if (context.VersioneDatabase < EventiSincronizzazione.VersioneRichiesta) throw new IOException(LinksNotReady);
+        var links = new ServizioCollegamentiCartelle(context, EventiSincronizzazione.GeCa);
+        switch (c.Action)
+        {
+            case "Links":
+                var syncs = (await context.Db.tblCartelleSincronizzazioni.AsNoTracking().OrderBy(x => x.Cas_Categoria).ToListAsync(token))
+                    .Select(x => new GeCoFolderSync(x.Cas_Categoria, Date(x.Cas_Data), x.Cas_Origine, x.Cas_Cartelle)).ToArray();
+                return Map(await links.CalcolaAsync(stop: token), syncs);
+            case "Folders": return await FoldersAsync(links, c.Testo, c.Tipo, token);
+            case "Link": return (await links.CollegaAsync(c.Tipo ?? "", c.Id, c.IdCartella, c.Valore, token)).IdRiga;
+            case "Unlink": return await links.ScollegaAsync(c.Tipo ?? "", c.Id, token);
+            default:
+                // «Conferma tutte le proposte sicure»: la libreria ricalcola e scrive tutte o nessuna.
+                var items = (c.Collegamenti ?? []).Select(v => new VoceCollegamento(v.Tipo, v.Id, v.IdCartella)).ToList();
+                return await links.ConfermaSicureAsync(items, token);
+        }
+    }
+
+    private static string Date(DateTime value) => value.ToString("dd/MM/yyyy HH:mm");
+    public static GeCoFolder? Folder(CartellaCollegabile? c) => c is null ? null
+        : new(c.Id, c.Percorso, EventiSincronizzazione.NomeCartella(c.Percorso), c.Categoria, c.Codice, c.Anno, c.Committente, c.Oggetto, c.Presente,
+            c.UltimaRilevazione is { } d ? Date(d) : null);
+    private static GeCoLinkConflict Conflict(ConflittoCollegamento x) => new(x.Tipo, x.TipoElemento, x.IdElemento, x.IdCartella, x.IdCartellaNuova, x.Testo);
+    public static string Level(LivelloProposta level) => level switch { LivelloProposta.Sicura => "sicura", LivelloProposta.DaVerificare => "daverificare", _ => "" };
+
+    // Esito delle regole nei record del protocollo, con le cartelle già risolte (come l'elenco di CollegamentiCartelleController).
+    public static GeCoLinks Map(EsitoCollegamenti e, GeCoFolderSync[] syncs)
+    {
+        GeCoFolder? F(int? id) => id is int i ? Folder(e.Cartelle.GetValueOrDefault(i)) : null;
+        GeCoFolderCandidate Candidate(CandidatoCartella c) => new(c.IdCartella, c.Punteggio, c.Motivo, F(c.IdCartella));
+        var rows = e.Elementi.Select(r => new GeCoLinkRow(r.Elemento.Tipo, r.Elemento.Id, r.Elemento.Codice, r.Anno, r.Descrizione, r.Cliente, r.Sottocommessa,
+            r.Collegamento is { } l ? new GeCoLinkInfo(l.IdRiga, l.IdCartella, Date(l.Data), l.Origine, l.Utente) : null, F(r.Collegamento?.IdCartella),
+            r.Proposta is { } p ? Candidate(p) : null, r.Candidati.Select(Candidate).ToArray(), Level(r.Livello), r.Conflitti.Select(Conflict).ToArray())).ToArray();
+        var free = e.CartelleLibere.Select(l => new GeCoFreeFolder(F(l.IdCartella)!, l.CandidataPer.Select(x => new GeCoLinkElement(x.Tipo, x.Id, x.Codice)).ToArray())).ToArray();
+        return new(rows, free, e.Conflitti.Select(Conflict).ToArray(), e.Sicure.Select(v => new GeCoLinkItem(v.Tipo, v.Id, v.IdCartella)).ToArray(), syncs);
+    }
+
+    // Cartelle presenti per «Scegli cartella…»: tutte le parole cercate nel codice, nel percorso, nel committente, nell'oggetto o
+    // nell'anno, solo della categoria ammessa per l'elemento; le più recenti prima, al massimo 200 (come in GeCo2027).
+    private static async Task<GeCoFolderChoice[]> FoldersAsync(ServizioCollegamentiCartelle links, string? text, string? type, CancellationToken token)
+    {
+        var t = string.IsNullOrWhiteSpace(type) ? null : CollegamentiCartelle.ControllaTipo(type);
+        var folders = (await links.CartelleAsync(token)).Where(c => c.Presente && (t is null || CollegamentiCartelle.CategoriaAmmessa(t, c.Categoria)));
+        foreach (var word in (text ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            folders = folders.Where(c => new[] { c.Codice, c.Percorso, c.Committente, c.Oggetto, c.Anno?.ToString() }.Any(x => x != null && x.Contains(word, StringComparison.CurrentCultureIgnoreCase)));
+        var linked = (await links.CollegamentiAsync(token)).GroupBy(l => l.IdCartella).ToDictionary(g => g.Key, g => g.First());
+        return folders.OrderByDescending(c => c.Anno ?? 0).ThenByDescending(c => c.Codice, StringComparer.OrdinalIgnoreCase).Take(200)
+            .Select(c => new GeCoFolderChoice(Folder(c)!, linked.TryGetValue(c.Id, out var l)
+                ? new GeCoLinkElement(l.IdGara is not null ? CollegamentiCartelle.Gara : CollegamentiCartelle.Commessa, l.IdGara ?? l.IdCommessa ?? 0, "") : null))
+            .ToArray();
+    }
+
+    // Eventi scritti da GeCo2027 (commesse e gare create, modificate, eliminate; collegamenti decisi là) dopo DopoId, o gli
+    // ultimi se DopoId manca; sempre entro gli ultimi 200, così un client rimasto spento a lungo non scarica tutto il registro.
+    // UltimoId è l'ultimo evento di GeCo2027 anche se l'utente non lo vede: il client non lo richiede di nuovo.
+    private static async Task<GeCoSyncEvents> EventsAsync(ContestoRegole context, long? after, CancellationToken token)
+    {
+        if (context.VersioneDatabase < EventiSincronizzazione.VersioneRichiesta) return new([], 0, false, EventsNotReady);
+        var db = context.Db;
+        var recent = await db.tblSincronizzazioneEventi.AsNoTracking().Where(e => e.Sev_Origine == EventiSincronizzazione.GeCo2027)
+            .OrderByDescending(e => e.Sev_Id).Select(e => e.Sev_Id).Take(EventWindow).ToListAsync(token);
+        if (recent.Count == 0) return new([], 0, true);
+        var from = Math.Max(after ?? 0, recent[^1] - 1);
+        var events = await EventiSincronizzazione.LeggiDopoAsync(db, from, soloOrigine: EventiSincronizzazione.GeCo2027, massimo: EventWindow, stop: token);
+        var visibility = await EventiSincronizzazione.VisibilitaAsync(db, context.Utente, context.IdSocieta, token);
+        var projects = await EventiSincronizzazione.CommesseAsync(db, events, token);
+        var visible = events.Where(e => EventiSincronizzazione.Visibile(e, projects, visibility)).OrderByDescending(e => e.Id).Take(RecentEvents)
+            .Select(e => new GeCoSyncEvent(e.Id, Date(e.Data), e.Origine, e.Tipo, e.IdCommessa, e.IdGara, e.IdCartella, e.Codice, e.Percorso, e.Testo, e.Utente)).ToArray();
+        return new(visible, recent[0], true);
+    }
+}

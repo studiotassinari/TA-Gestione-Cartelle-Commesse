@@ -96,5 +96,60 @@ internal static class GeCoClientChecks
         var denied = new HoursViewModel(new Fake(c => new GeCoAccess(false, "L'account Windows DOM\\x non corrisponde a nessun utente attivo di GeCo", "DOM\\x")));
         denied.StartAsync().GetAwaiter().GetResult();
         Check(denied.Start == null && denied.AccessMessage.Contains("non corrisponde") && denied.People.Count == 0, "Ore: senza utente di GeCo la finestra mostra il motivo e non permette nulla");
+        FolderLinks();
+    }
+
+    // Collegamento cartelle (2.38.0): testi delle righe (collegamento confermato o soltanto proposta), filtri, richieste inviate,
+    // notifiche di GeCo2027 senza ripetizioni. Proposte e scritture restano del servizio (GeCoChecks) e della libreria.
+    private static void FolderLinks()
+    {
+        GeCoFolder F(int id, string name, bool present = true) => new(id, @"\\server\lavori\2026\" + name, name, "C", name[..7], 2026, null, null, present, "01/11/2026 08:00");
+        var safeRow = new GeCoLinkRow("commessa", 1000, "B260001", 2026, "Progetto", "Cliente", false, null, null, new(1, 100, "stesso codice della commessa", F(1, "B260001 - Cliente - Progetto")),
+            [new(1, 100, "stesso codice della commessa", F(1, "B260001 - Cliente - Progetto"))], "sicura", []);
+        var movedRow = new GeCoLinkRow("gara", 3, "G26001", 2026, "Gara", "Ente", false, new(5, 2, "01/11/2026 09:00", "GeCo2027", "Amministratore"), F(2, "G26001 - Vecchia", false),
+            new(4, 80, "stesso codice della gara", F(4, "G26001 - Nuova")), [new(4, 80, "stesso codice della gara", F(4, "G26001 - Nuova"))], "daverificare",
+            [new("CartellaSpostata", "gara", 3, 2, 4, "La cartella collegata alla gara G26001 non è più sul disco.")]);
+        var plainRow = new GeCoLinkRow("commessa", 1001, "N260001", 2026, "Altro", null, false, null, null, null, [], "", [new("SenzaCartella", "commessa", 1001, null, null, "La commessa N260001 non ha una cartella.")]);
+        var links = new GeCoLinks([safeRow, movedRow, plainRow], [], [], [new("commessa", 1000, 1)], [new("C", "01/11/2026 08:00", "TA-Gestione", 3)]);
+        long last = 10;
+        var events = new List<GeCoSyncEvent> { new(10, "18/11/2026 09:00", "GeCo2027", "CommessaCreata", 1000, null, null, "B260001", null, "Commessa B260001 creata.", "Amministratore") };
+        var gateway = new Fake(c => c.Action switch
+        {
+            "Access" => new GeCoAccess(true, "", "DOM\\a", "admin", "Amministratore", Administrator: true, Links: true),
+            "Links" => links, "Link" => 9, "Unlink" => true, "ConfirmSafe" => 1,
+            "SyncEvents" => new GeCoSyncEvents(events.Where(e => e.Id > (c.DopoId ?? 0)).ToArray(), last, true),
+            _ => true,
+        });
+        var vm = new FolderLinksViewModel(gateway);
+        vm.StartAsync().GetAwaiter().GetResult();
+        Check(vm.Allowed && vm.Links != null && vm.Events.Single().Id == 10 && vm.Arrived == 0, "Collegamento cartelle: amministratore, elenco e ultime notifiche (non contate come nuove)");
+        var items = vm.Items().ToList();
+        Check(items[0] is { Stato: "Proposta sicura (da confermare)", Cartella: "B260001 - Cliente - Progetto", Elemento: "Commessa" } && items[0].Motivo.StartsWith("Punteggio 100")
+            && items[1] is { Stato: "Collegata, cartella non più sul disco", Elemento: "Gara" } && items[1].Motivo.Contains("proposta da verificare: G26001 - Nuova") && items[2].Stato == "Senza cartella",
+            "Collegamento cartelle: una proposta non è mai mostrata come collegamento; la cartella sparita è segnalata con la nuova da verificare");
+        vm.View = FolderLinksViewModel.Safe; Check(vm.Items().Single().Row.Id == 1000, "Collegamento cartelle: filtro delle proposte sicure");
+        vm.View = FolderLinksViewModel.Warnings; Check(vm.Items().Count() == 2, "Collegamento cartelle: filtro delle segnalazioni");
+        vm.View = FolderLinksViewModel.All; vm.Filter = "ente g26"; Check(vm.Items().Single().Row.Tipo == "gara", "Collegamento cartelle: ricerca per parole");
+        vm.Filter = "";
+        Check(vm.ConfirmSafeAsync().GetAwaiter().GetResult() && gateway.Sent.Last(c => c.Action == "ConfirmSafe").Collegamenti!.Single() == new GeCoLinkItem("commessa", 1000, 1) && vm.Done == "1 collegamenti confermati.",
+            "Collegamento cartelle: conferma in blocco con l'anteprima vista");
+        var questions = new List<string>(); vm.Ask = q => { questions.Add(q); return true; };
+        Check(vm.ConfirmAsync(movedRow).GetAwaiter().GetResult() && gateway.Sent.Last(c => c.Action == "Link") is { Tipo: "gara", Id: 3, IdCartella: 4, Valore: true } && questions.Single().Contains("Sostituire"),
+            "Collegamento cartelle: ricollegare una gara già collegata chiede conferma e invia la sostituzione esplicita");
+        vm.Ask = _ => false; int sent = gateway.Sent.Count;
+        Check(!vm.UnlinkAsync(movedRow).GetAwaiter().GetResult() && gateway.Sent.Count == sent, "Collegamento cartelle: scollegamento annullato, nessuna richiesta");
+        events.Insert(0, new(12, "18/11/2026 10:00", "GeCo2027", "CommessaModificata", 1000, null, null, "B260001", null, "Commessa B260001 modificata.", "Amministratore")); last = 12;
+        int loads = gateway.Sent.Count(c => c.Action == "Links");
+        vm.PushedAsync(12).GetAwaiter().GetResult();
+        Check(vm.Events[0].Id == 12 && vm.Arrived == 1 && gateway.Sent.Last(c => c.Action == "SyncEvents").DopoId == 10 && gateway.Sent.Count(c => c.Action == "Links") == loads + 1,
+            "Notifiche: evento nuovo da GeCo2027 in cima, chiesto dopo l'ultimo ricevuto, con l'elenco ricaricato");
+        sent = gateway.Sent.Count; vm.PushedAsync(12).GetAwaiter().GetResult();
+        Check(gateway.Sent.Count == sent && vm.Events.Count == 2, "Notifiche: la stessa notifica ripetuta alla riconnessione non rifà richieste");
+        var collaborator = new FolderLinksViewModel(new Fake(c => c.Action == "Access" ? new GeCoAccess(true, "", "DOM\\b", "b", "Persona B", Links: true) : new GeCoSyncEvents([], 0, true)));
+        collaborator.StartAsync().GetAwaiter().GetResult();
+        Check(!collaborator.Allowed && collaborator.Links == null && collaborator.Denied.Contains("riservato agli amministratori"), "Collegamento cartelle: per chi non è amministratore il motivo, senza elenco");
+        var oldServer = new FolderLinksViewModel(new Fake(c => c.Action == "Access" ? new GeCoAccess(true, "", "DOM\\a", Administrator: true, Links: true) : throw new ArgumentException("Comando GeCo sconosciuto.")));
+        oldServer.StartAsync().GetAwaiter().GetResult();
+        Check(oldServer.Error.Contains("2.38.0") && oldServer.EventsMessage.Contains("2.38.0"), "Collegamento cartelle: un servizio precedente chiede di aggiornarlo");
     }
 }

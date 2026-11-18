@@ -55,6 +55,50 @@ using (var sessionStop = CancellationTokenSource.CreateLinkedTokenSource(token))
     sessionStop.Cancel(); await serving.WaitAsync(token);
 }
 
+// Eventi di GeCo2027 (2.38.0): solo i client che li chiedono ricevono le notifiche «GeCo», insieme a quelle delle cartelle e con
+// il riscontro; l'ultimo evento noto arriva anche a chi si collega dopo, una lettura ripetuta non rimanda nulla.
+var geCo = new TA.Server.SharedDatabase.GeCoEventHub();
+using (var early = geCo.Subscribe()) Check(!early.TryRead(out _), "Eventi di GeCo: nessuna notifica prima del primo evento letto");
+geCo.Publish(40, "2 novità da GeCo2027"); geCo.Publish(40); geCo.Publish(39);
+using (var late = geCo.Subscribe()) Check(late.TryRead(out var lastId) && lastId == 40 && !late.TryRead(out _) && geCo.Summary == "2 novità da GeCo2027", "Eventi di GeCo: ultimo evento a chi si collega, nessuna ripetizione");
+foreach (var withGeCo in new[] { true, false })
+{
+    using var listener = new TcpListener(IPAddress.Loopback, 0);
+    using var sessionStop = CancellationTokenSource.CreateLinkedTokenSource(token);
+    var cards = new ChangeHub();
+    listener.Start();
+    var serving = Task.Run(async () =>
+    {
+        using var accepted = await listener.AcceptTcpClientAsync(token);
+        try { await PushSession.RunAsync(accepted.GetStream(), cards, sessionStop.Token, true, geCo: withGeCo ? geCo : null); }
+        catch (OperationCanceledException) when (sessionStop.IsCancellationRequested) { }
+    });
+    using var client = new TcpClient();
+    await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port, token);
+    var stream = client.GetStream();
+    async Task<PushNotice> Receive()
+    {
+        var n = await WireProtocol.ReadAsync<PushNotice>(stream, token);
+        await WireProtocol.WriteAsync(stream, new PushAcknowledgement(n.ProbeId!, n.Kind, n.Revision, n.Kind == "Changed"), token);
+        return n;
+    }
+    Check((await WireProtocol.ReadAsync<Reply>(stream, token)).Success, "Sottoscrizione con riscontro confermata" + (withGeCo ? " (con eventi di GeCo)" : ""));
+    var initial = new List<PushNotice> { await Receive() };
+    if (withGeCo) initial.Add(await Receive());
+    Check(initial.Any(n => n.Kind == "Changed") && (withGeCo ? initial.Single(n => n.Kind == PushNotice.GeCo).Revision == 40 : initial.All(n => n.Kind != PushNotice.GeCo)),
+        withGeCo ? "Notifica iniziale delle cartelle e ultimo evento di GeCo" : "Client precedente: nessuna notifica di GeCo");
+    geCo.Publish(withGeCo ? 41 : 42, "1 novità da GeCo2027");
+    if (withGeCo)
+    {
+        var arrived = await Receive();
+        Check(arrived is { Kind: PushNotice.GeCo, Revision: 41, Summary: "1 novità da GeCo2027" }, "Nuovo evento di GeCo notificato al client, con riscontro senza viste da aggiornare");
+        cards.Publish("C: aggiunta");
+        Check((await Receive()) is { Kind: "Changed", Summary: "C: aggiunta" }, "Le modifiche delle cartelle continuano ad arrivare insieme agli eventi di GeCo");
+    }
+    else Check((await Receive()).Kind == "Heartbeat", "Client precedente: dopo un evento di GeCo solo heartbeat");
+    sessionStop.Cancel(); await serving.WaitAsync(token);
+}
+
 // Integra il vero FileSystemWatcher con il coordinatore, usando solo cartelle sintetiche locali.
 var jobs = Path.Combine(root, "lavori"); var bids = Path.Combine(root, "gare"); var archive = Path.Combine(root, "archivio");
 var job = Directory.CreateDirectory(Path.Combine(jobs, "2026", "C26001 - Cliente - Progetto")).FullName;
