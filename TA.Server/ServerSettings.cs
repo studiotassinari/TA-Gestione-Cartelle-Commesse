@@ -56,6 +56,9 @@ public sealed class ServerSettings
     public string GeCoAddress { get; set; } = "";
     // Stringa di connessione al database SQL Server comune con GeCo. Vuota = nessun collegamento.
     public string SharedDatabase { get; set; } = "";
+    // Società di GeCo su cui lavorano pianificazione e ore (Soc_Id, la stessa di GeCo2027). 0 = la prima società del database:
+    // basta quando ce n'è una sola; con più società va indicata nel file di configurazione del server.
+    public int GeCoCompanyId { get; set; }
     // Analisi automatica locale dei candidati (testo e regole, nessun servizio esterno). Disattivata se non scelta in Configura.
     public bool EnableLocalAnalysis { get; set; }
     // Ricerca automatica della posizione delle relazioni geologiche con OpenStreetMap Nominatim (solo località e indirizzo).

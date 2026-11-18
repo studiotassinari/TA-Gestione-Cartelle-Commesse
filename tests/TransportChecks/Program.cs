@@ -17,6 +17,19 @@ using (var memory = new MemoryStream())
     memory.Position = 0;
     Check(await WireProtocol.ReadAsync<Request>(memory, default) == request, "Round-trip protocollo dedicato");
 }
+// Pianificazione e ore di GeCo (2.37.0): il comando viaggia nella versione 2 del protocollo; una richiesta di un client
+// precedente, senza il campo GeCo, resta leggibile.
+using (var memory = new MemoryStream())
+{
+    var request = new Request("GeCo", GeCo: new GeCoCommand("HoursSave", Salvataggio: new(11, "2026-11-16", 2, [new(1000, 100, "2026-11-17", "7:30", 2000, Note: "Sopralluogo")])));
+    await WireProtocol.WriteAsync(memory, request, default);
+    memory.Position = 0;
+    var read = await WireProtocol.ReadAsync<Request>(memory, default);
+    Check(read is { Operation: "GeCo", Version: 2, GeCo: { Action: "HoursSave", Salvataggio: { IdCdc: 11, Settimane: 2 } s } } && s.Celle.Single() is { Qta: "7:30", IdFase: 2000, Note: "Sopralluogo", IdVdc: 100 },
+        "Round-trip del comando GeCo con le caselle da salvare");
+    var legacy = System.Text.Json.JsonSerializer.Deserialize<Request>("""{"Operation":"Business","Category":"C","Version":2}""")!;
+    Check(legacy.GeCo == null && legacy.Operation == "Business", "Richiesta di un client precedente senza il campo GeCo");
+}
 foreach (var header in new[] { new byte[] { 0, 0, 0, 0 }, new byte[] { 127, 255, 255, 255 }, "GET "u8.ToArray() })
 {
     using var stream = new MemoryStream(header);

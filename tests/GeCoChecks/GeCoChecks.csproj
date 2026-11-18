@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pianificazione e ore di GeCo nel servizio: identità dal token, permessi e comandi del protocollo su EF InMemory con dati sintetici (nessun SQL Server). -->
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><NoWarn>$(NoWarn);IDE1006</NoWarn></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../TA.Server/TA.Server.csproj" /><PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.*" /></ItemGroup>
+</Project>

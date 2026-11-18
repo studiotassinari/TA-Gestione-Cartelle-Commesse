@@ -11,7 +11,7 @@ using TA_Gestione_Cartelle_Commesse.Models;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA.Server;
 // Ogni comando richiede cifratura, firma, autenticazione Windows mutua e appartenenza al gruppo configurato.
-public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, Business.BusinessService? business = null, DeepInspectionService? deepInspection = null, Archiving.FolderArchiveService? folderArchive = null, Business.CurriculumService? curriculum = null) : BackgroundService
+public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, AnalysisService analysis, FileSearchService files, ChangeHub changes, TemplateCreationService templates, ILogger<TcpService> logger, TA.Server.Documents.DocumentService? documents = null, GeologyService? geology = null, IpripiService? ipripi = null, Business.BusinessService? business = null, DeepInspectionService? deepInspection = null, Archiving.FolderArchiveService? folderArchive = null, Business.CurriculumService? curriculum = null, SharedDatabase.GeCoWorkService? geCoWork = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -137,6 +137,8 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
             case "ReadGeologicalDocument": return Reply.Ok(await (geology ?? throw new IOException("Catalogo geologico non disponibile sul server.")).ReadAsync(request.GeologicalRead ?? throw new ArgumentException("Relazione mancante."), token, scheduled: !string.IsNullOrWhiteSpace(request.McpTool)));
             case "ReadDocument": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,request.Document,null,token)).Document);
             case "ListDocuments": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,null,request.Documents,token)).Listing);
+            // Pianificazione e ore di GeCo: l'utente è quello del token Windows del canale, mai un nome scritto nella richiesta.
+            case "GeCo": return Reply.Ok(await (geCoWork ?? throw new IOException("Pianificazione e ore lavorate di GeCo non disponibili sul server.")).ExecuteAsync(request.GeCo ?? throw new ArgumentException("Comando mancante."), user, token));
             case "Info": return Reply.Ok(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "Sconosciuta");
             case "TemplatePreview":
                 if (request.Category is not ("C" or "G")) return Reply.Fail("La creazione da modello e disponibile solo per commesse e gare.");

@@ -41,7 +41,7 @@ public sealed class ConfigurationWindow : Window
         Add(panel, "Modello Word per l'esportazione del curriculum, con intestazione e stili dello studio (.docx o .dotx; facoltativo)", curriculumTemplate);
         Add(panel, "Cartella della grafica del curriculum: logo.png, logo-chiaro.png, copertina.jpg, strutture.png, architettura.png, impianti.png, consulenza.png, stile.json (vuoto = grafica fornita con il servizio)", curriculumGraphics);
         panel.Children.Add(new TextBlock { Text = "Database comune con GeCo (facoltativo). Il servizio si collega sempre con un account SQL; lasciare vuoti i quattro campi per non collegarlo.", TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 6) });
-        Add(panel, "Indirizzo di GeCo, per aprire dal client la pianificazione delle attività (esempio: http://server:8027; vuoto = comando non disponibile)", gecoAddress);
+        Add(panel, "Indirizzo di GeCo (esempio: http://server:8027; facoltativo). Dalla 2.37.0 pianificazione e ore lavorate di GeCo si aprono nel programma e usano il database comune qui sotto, non questo indirizzo", gecoAddress);
         Add(panel, "Server SQL (esempi: .\\SQLEXPRESS oppure NOME-SERVER,1433 con la porta)", sqlServer);
         Add(panel, "Nome del database", sqlDatabase);
         Add(panel, "Utente SQL", sqlUser);

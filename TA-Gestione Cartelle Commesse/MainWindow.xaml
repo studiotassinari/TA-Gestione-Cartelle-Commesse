@@ -170,9 +170,10 @@
                 <MenuItem Header="Nuova commessa da modello…" Command="{Binding CreateJobCommand}"/>
                 <MenuItem Header="Nuova gara…" Command="{Binding CreateBidCommand}"/>
                 <MenuItem Header="Clienti e commesse associate…" Command="{Binding CustomersCommand}"/>
-                <MenuItem Header="Pianificazione, attività e ore…" Command="{Binding BusinessCommand}"/>
+                <MenuItem Header="Pianificazione delle attività…" Command="{Binding GeCoPlanningCommand}" ToolTip="Pianificazione di GeCo sul database comune"/>
+                <MenuItem Header="Ore lavorate…" Command="{Binding GeCoHoursCommand}" ToolTip="Ore lavorate (statini) di GeCo sul database comune"/>
+                <MenuItem Header="Clienti e autorizzazioni delle commesse…" Command="{Binding BusinessCommand}"/>
                 <MenuItem Header="Curriculum dello studio…" Command="{Binding CurriculumCommand}"/>
-                <MenuItem Header="Pianificazione delle attività in GeCo…" Command="{Binding GeCoPlanningCommand}"/>
                 <Separator/>
                 <MenuItem Header="Archivia cartella in ZIP…" Command="{Binding ArchiveFolderCommand}"/>
           <MenuItem Header="Apri cartella selezionata" Command="{Binding ActiveCategory.OpenFolderCommand}"/>

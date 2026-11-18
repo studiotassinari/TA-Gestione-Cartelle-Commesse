@@ -2,7 +2,7 @@
 
 TA-Gestione Cartelle Commesse e GeCo2027 condividono un database SQL Server. Lo schema, gli aggiornamenti e le regole comuni stanno nella libreria **GeCo.Dati** (repository GeCo2027, cartella `shared/GeCo.Dati`), che questo progetto usa come pacchetto NuGet: qui non si scrivono script per quel database.
 
-## Cosa fa il servizio (versione 2.34.0)
+## Cosa fa il servizio (dalla versione 2.34.0; pianificazione e ore dalla 2.37.0)
 
 Se è configurata la stringa di connessione, il servizio:
 
@@ -13,6 +13,8 @@ Se è configurata la stringa di connessione, il servizio:
 Vengono inviati solo dati già presenti negli elenchi del servizio: nessuna lettura aggiuntiva sulle cartelle e nessuna scrittura sugli originali. Un errore di collegamento non ferma l'elaborazione: viene scritto nel registro del servizio e segnalato nell'esito.
 
 GeCo2027 mostra questi dati nella pagina **Cartelle**.
+
+Dalla 2.37.0 lo stesso collegamento serve anche alla **pianificazione delle attività** e alle **ore lavorate** del client (vedi sotto).
 
 ## Configurazione
 
@@ -44,8 +46,20 @@ Il pacchetto `GeCo.Dati` è su GitHub Packages di `studiotassinari`, che richied
 
 La verifica `SharedDatabaseChecks` (dentro `BusinessChecks`) prova la scrittura su un SQL Server vero solo se è impostata la variabile `TA_TEST_SQL` con una stringa di connessione a un database di prova vuoto; su GitHub è LocalDB.
 
-## Pianificazione delle attività
+## Pianificazione delle attività e ore lavorate (2.37.0)
 
-La pianificazione delle attività sta in GeCo2027 (pagina **Pianificazione**). Il client la apre nel browser con il comando **Gestione > Pianificazione delle attività in GeCo…**: non ne esiste una copia nel client.
+La pianificazione delle attività e le ore lavorate (statini) sono quelle di GeCo: il client le mostra in due finestre proprie (**Gestione > Pianificazione delle attività…** e **Gestione > Ore lavorate…**), con gli stessi contenuti delle pagine Pianificazione e Ore lavorate di GeCo2027, e il servizio le legge e le scrive nel database comune (`tblPianificazioneAttivita`, `tblPianificazioneTeamManager`, `tblRilevazioni` e collegate). Le regole non sono scritte qui: il servizio chiama i servizi della libreria GeCo.Dati (`ServizioPianificazione`, `ServizioConsuntivo`), gli stessi usati da GeCo2027, quindi tariffe, periodo di apertura delle commesse, fasi obbligatorie, tetti di valore e di ore, classificazione CDC, rilevazione speculare sulla commessa collegata, conferme e totale della giornata entro 24 ore valgono allo stesso modo nel browser e nel programma.
 
-Il comando è attivo quando in **Gestore server > Configura** è indicato l'**indirizzo di GeCo** (per esempio `http://server:8027`); dopo averlo salvato va riavviato il servizio. Sono accettati solo indirizzi `http` o `https`.
+**Chi è l'utente.** Il servizio prende l'account Windows autenticato sul canale Kerberos (mai un nome inviato dal client) e cerca l'utente di GeCo con la funzione comune `AccountWindows.TrovaUtenteAsync`, la stessa dell'accesso con l'account Windows di GeCo2027: prima l'abbinamento indicato nella pagina **Utenti** di GeCo, poi il nome utente uguale al nome dell'account (o all'indirizzo completo; per gli account fatti del solo cognome, l'unico «nome.cognome» con quel cognome). Le corrispondenze scritte nella configurazione di GeCo2027 non valgono per il programma: se un account non viene riconosciuto, abbinarlo nella pagina Utenti. L'utente deve essere attivo e abilitato alla società di lavoro; da quel momento valgono i suoi permessi di GeCo: la funzione «Ore lavorate» (RilevazioneStatini.aspx), i ruoli della pianificazione (amministratori, team manager, collaboratori) e chi può modificare le ore di chi. Un account senza utente di GeCo vede nelle finestre il motivo e non può fare nulla.
+
+**Società.** Il servizio lavora sulla società indicata dalla proprietà `GeCoCompanyId` di `server-settings.json` (sezione `Server`, il `Soc_Id` della società su cui lavora GeCo2027); senza la proprietà usa la prima società del database, che basta quando ce n'è una sola. La finestra Configura conserva la proprietà quando salva.
+
+**Ruoli e team.** Dalla pianificazione gli amministratori danno o tolgono il ruolo di team manager. I team permanenti e i team per persona (usati dalle ore per proporre le commesse) si gestiscono per ora in GeCo2027, pagina Pianificazione > Ruoli e team: le loro regole non sono ancora nella libreria comune.
+
+**Requisiti.** Il database comune configurato (i quattro campi qui sopra) e aggiornato da GeCo.Dati: pianificazione e team manager richiedono la migrazione 7 e gli abbinamenti della pagina Utenti la migrazione 8 (le ore lavorate usano le tabelle di GeCo2017); con il database non aggiornato le finestre lo dicono. I ruoli SQL sono quelli già indicati (`db_datareader`, `db_datawriter`). Un servizio precedente alla 2.37.0 risponde che il comando non è supportato e il client chiede di aggiornarlo.
+
+L'indirizzo di GeCo in Configura non serve più per la pianificazione: il comando che apriva la pagina nel browser (2.36.0) è stato sostituito dalle finestre del programma.
+
+Le attività, il Gantt e le ore registrate nel vecchio archivio del gestionale (`gestionale.sqlite`) non si mostrano più nel client: erano dati di prova, restano nel file e nei suoi backup e non vengono cancellati.
+
+Verifiche: `tests/GeCoChecks` (identità, permessi e comandi del protocollo su dati sintetici), `tests/TransportChecks` (trasporto del comando), `tests/ClientChecks` e `tests/BusinessUiChecks` (calcoli e finestre del client); le regole stesse sono provate in GeCo2027 (`tests/GeCo.Dati.Checks`).

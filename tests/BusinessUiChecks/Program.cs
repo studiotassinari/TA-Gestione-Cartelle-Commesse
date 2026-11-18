@@ -29,8 +29,9 @@ internal static class Program
         var window = new BusinessWindow(vm); vm.Refresh().GetAwaiter().GetResult();
         var body = (FrameworkElement)window.Content;
         var tabs = Descendants<TabControl>(body).Single();
-        if (tabs.Items.Count != 5) throw new Exception("Schede gestionale mancanti");
-        foreach (var index in new[] { 0, 1, 2, 3, 4 })
+        // Dalla 2.37.0 attività, pianificazione e ore non sono più nel gestionale: restano clienti e commesse.
+        if (tabs.Items.Count != 2) throw new Exception("Schede gestionale mancanti");
+        foreach (var index in new[] { 0, 1 })
         {
             tabs.SelectedIndex = index; body.Measure(new Size(1260, 760)); body.Arrange(new Rect(0, 0, 1260, 760)); body.UpdateLayout();
             var bitmap = new RenderTargetBitmap(1260, 760, 96, 96, PixelFormats.Pbgra32); bitmap.Render(body);
@@ -51,11 +52,8 @@ internal static class Program
         using(var output=File.Create("artifacts/checks/dettaglio-commessa.png"))
         {var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(rendered));png.Save(output);}
         var detailTabs=Descendants<TabControl>(detailBody).Single();
-        if(detailTabs.Items.Count!=2||detailTabs.SelectedIndex!=0)throw new Exception("Dati commessa e pianificazione non separati");
-        detailTabs.SelectedIndex=1;detailBody.Measure(new Size(1210,760));detailBody.Arrange(new Rect(0,0,1210,760));detailBody.UpdateLayout();
-        var planning=new RenderTargetBitmap(1210,760,96,96,PixelFormats.Pbgra32);planning.Render(detailBody);
-        using(var output=File.Create("artifacts/checks/pianificazione-commessa.png"))
-        {var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(planning));png.Save(output);}
+        if(detailTabs.Items.Count!=1||detailTabs.SelectedIndex!=0)throw new Exception("La scheda della commessa mostra ancora fasi e attività del vecchio archivio");
+        GeCoWindowChecks.Run();
         PhaseCreationChecks.Run();
         CustomerSelectorChecks.Run();
         CustomerProjectsChecks.Run();
@@ -70,7 +68,7 @@ internal static class Program
         }
         detail=detail with{CanManage=false};detailVm.Refresh().GetAwaiter().GetResult();
         if(detailVm.SaveProjectCommand.CanExecute(null)||detailVm.NewPhaseCommand.CanExecute(null)||detailVm.CanEdit)throw new Exception("Modifiche abilitate a utente non amministratore");
-        Console.WriteLine("BusinessUiChecks: caricamento senza rete e cinque schede WPF renderizzate."); app.Shutdown();
+        Console.WriteLine("BusinessUiChecks: caricamento senza rete, schede WPF e finestre di pianificazione e ore renderizzate."); app.Shutdown();
     }
     private static IEnumerable<T> Descendants<T>(DependencyObject root) where T:DependencyObject
     {

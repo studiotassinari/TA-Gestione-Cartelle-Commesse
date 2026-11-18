@@ -1,11 +1,16 @@
-# TA-Gestione Cartelle Commesse — 2.36.0
+# TA-Gestione Cartelle Commesse — 2.37.0
+
+## Novità 2.37.0 — pianificazione e ore lavorate di GeCo nel programma
+
+Nel menu **Gestione** ci sono **Pianificazione delle attività…** e **Ore lavorate…**: due finestre del programma, con lo stesso aspetto e lo stesso comportamento delle pagine Pianificazione e Ore lavorate di GeCo2027, che lavorano sullo **stesso database SQL Server** con le **stesse regole** (libreria comune GeCo.Dati). Nella pianificazione i giorni feriali scorrono in orizzontale, settimana per settimana, e le persone stanno una sotto l'altra: una fase si trascina dal pannello «Commesse e fasi» sul giorno, la barra si sposta e si allunga, e sotto ogni persona compaiono le attività in corso e le ore medie; gli amministratori aprono «Ruoli e team». Nelle ore ogni elemento è una giornata commessa · fase con le ore e i km, modificabili nella barra sopra la griglia; più fasi nello stesso giorno stanno su righe parallele, sotto ogni persona c'è il totale del giorno (giallo oltre 8 ore, rosso oltre 10), le attività pianificate compaiono come sagome tratteggiate da consuntivare, e ci sono note e dettagli (classificazione CDC, dati SAL per i centri esterni), la conferma settimanale e la vista da 1 a 8 settimane.
+
+Il servizio riconosce l'utente di GeCo dall'account Windows con cui il programma si collega (abbinamento indicato nella pagina Utenti di GeCo, altrimenti nome utente uguale al nome dell'account) e applica permessi, ruoli e funzioni di GeCo; un account senza utente di GeCo vede solo il motivo e non può fare nulla. Serve il database comune configurato in **Gestore server > Configura** ([dettagli](deployment/DATABASE-COMUNE.md)). Le attività, il Gantt e le ore del vecchio archivio del gestionale non si mostrano più: i dati di prova restano nel file e non vengono cancellati. Il comando che apriva la pianificazione di GeCo nel browser non c'è più. Aggiornare prima GeCo2027, poi il server, poi i client.
+
+[Scarica aggiornatore 2.37.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.37.0/TA-Commesse-Aggiornatore-2.37.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.37.0).
 
 ## Novità 2.36.0 — pianificazione delle attività in GeCo
 
-Nel menu **Gestione** del client c'è il comando **Pianificazione delle attività in GeCo…**: apre nel browser la pagina Pianificazione di GeCo2027, dove le attività sulle commesse si dispongono per giorni, persona per persona. La funzione resta una sola, in GeCo; il client la raggiunge senza duplicarla. Il comando è attivo dopo aver indicato l'**indirizzo di GeCo** in **Gestore server > Configura** (per esempio `http://server:8027`) e riavviato il servizio. In Configura l'esempio del server SQL riporta ora anche la forma con la porta (`NOME-SERVER,1433`). Aggiornare prima il server, poi i client.
-
-[Scarica aggiornatore 2.36.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.36.0/TA-Commesse-Aggiornatore-2.36.0.exe) · [Installatori, pacchetto MCP e impronte SHA256](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/tag/v2.36.0).
-
+Nel menu **Gestione** del client c'è il comando **Pianificazione delle attività in GeCo…**: apre nel browser la pagina Pianificazione di GeCo2027, dove le attività sulle commesse si dispongono per giorni, persona per persona. La funzione resta una sola, in GeCo; il client la raggiunge senza duplicarla. Il comando è attivo dopo aver indicato l'**indirizzo di GeCo** in **Gestore server > Configura** (per esempio `http://server:8027`) e riavviato il servizio. In Configura l'esempio del server SQL riporta ora anche la forma con la porta (`NOME-SERVER,1433`). Aggiornare prima il server, poi i client. Dalla 2.37.0 il comando è sostituito dalle finestre del programma.
 
 ## Novità 2.35.0 — posizione automatica delle relazioni geologiche
 

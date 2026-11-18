@@ -101,7 +101,7 @@ public sealed class ProjectDetailViewModel : Observable
             Notify(nameof(Details));Notify(nameof(Project));Notify(nameof(Customer));
             Notify(nameof(DetailTitle));Notify(nameof(OverviewTitle));Notify(nameof(SaveLabel));
             SelectedPhase=Details.Phases.FirstOrDefault(p=>p.Id==phaseId)??Details.Phases.FirstOrDefault();
-            Status=$"{Details.Phases.Length} fasi · {Details.Activities.Length} attività complessive. Le modifiche riguardano solo il gestionale.";
+            Status="Le modifiche riguardano solo il gestionale. Pianificazione e ore lavorate sono quelle di GeCo (menu Gestione).";
         }
         catch(Exception ex){Status=ex.Message;}
         finally{Busy=false;Notify(nameof(Status));Notify(nameof(CanEdit));Commands();}

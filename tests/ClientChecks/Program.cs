@@ -22,10 +22,7 @@ internal static partial class Program
         Check(ClientPaths.ForExplorer(@"\\INGTASSINARI\DATA\archivio\esempio.zip") == @"Z:\archivio\esempio.zip", "Conversione supporta nome breve e maiuscole");
         Check(ClientPaths.ForExplorer(@"\\ingtassinari.it\database\file") == @"\\ingtassinari.it\database\file", "Condivisioni diverse restano inalterate");
         Check(ClientPaths.ForExplorer(@"Z:\lavori") == @"Z:\lavori", "Percorsi gia mappati invariati");
-        Check(TA_Gestione_Cartelle_Commesse.Services.GeCoLink.Planning("http://server.example:8027") == "http://server.example:8027/Pianificazione.aspx" && TA_Gestione_Cartelle_Commesse.Services.GeCoLink.Planning(" https://geco.example/sito/ ") == "https://geco.example/sito/Pianificazione.aspx",
-            "Pianificazione in GeCo: indirizzo della pagina composto da quello configurato");
-        Check(TA_Gestione_Cartelle_Commesse.Services.GeCoLink.Planning("") == null && TA_Gestione_Cartelle_Commesse.Services.GeCoLink.Planning(null) == null && TA_Gestione_Cartelle_Commesse.Services.GeCoLink.Planning(@"C:\Windows\notepad.exe") == null && TA_Gestione_Cartelle_Commesse.Services.GeCoLink.Planning("file://server/cartella") == null && TA_Gestione_Cartelle_Commesse.Services.GeCoLink.Planning("server:8027") == null,
-            "Pianificazione in GeCo: senza indirizzo http o https il comando non apre nulla");
+        GeCoClientChecks.Run();
         var app = new Application();
         CheckFolderArchiveClient();
         CheckCustomerSearch();

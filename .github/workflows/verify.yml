@@ -29,7 +29,7 @@ jobs:
           sqllocaldb start MSSQLLocalDB | Out-Null
           sqlcmd -S '(localdb)\MSSQLLocalDB' -Q "IF DB_ID('TAProva') IS NOT NULL DROP DATABASE TAProva; CREATE DATABASE TAProva"
           $env:TA_TEST_SQL = 'Server=(localdb)\MSSQLLocalDB;Database=TAProva;Integrated Security=True;TrustServerCertificate=True'
-          foreach ($test in @('SqliteChecks','InventoryChecks','FileSearchChecks','HourlyChecks','NightlyChecks','LiveIndexChecks','ReliabilityChecks','DirectoryProgressChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks','IpripiChecks','BusinessChecks','UpdaterChecks','ClientChecks','TemplateChecks')) {
+          foreach ($test in @('SqliteChecks','InventoryChecks','FileSearchChecks','HourlyChecks','NightlyChecks','LiveIndexChecks','ReliabilityChecks','DirectoryProgressChecks','McpChecks','LocalMcpChecks','DocumentChecks','GeologyChecks','IpripiChecks','BusinessChecks','GeCoChecks','UpdaterChecks','ClientChecks','TemplateChecks')) {
             dotnet run --project "tests/$test" -c Release
             if ($LASTEXITCODE -ne 0) { throw "Verifica fallita: $test" }
           }

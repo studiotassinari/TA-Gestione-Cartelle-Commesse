@@ -1,4 +1,6 @@
-# Gestionale clienti, attività e ore
+# Gestionale clienti e commesse
+
+> Dalla 2.37.0 la pianificazione delle attività e le ore lavorate sono quelle di GeCo sul database comune, nelle finestre **Gestione > Pianificazione delle attività…** e **Gestione > Ore lavorate…** ([dettagli](DATABASE-COMUNE.md#pianificazione-delle-attività-e-ore-lavorate-2370)). Le attività, il Gantt e le ore descritti più sotto («Pianificazione e ore») appartengono al vecchio archivio del gestionale: il client non li mostra più, i dati restano nel file e non vengono cancellati. Il gestionale resta per clienti, commesse e loro dettagli (menu **Gestione > Clienti e autorizzazioni delle commesse…**).
 
 La finestra **Gestionale** del client è a istanza singola. Usa la connessione TCP/Kerberos già configurata. Le anagrafiche, le autorizzazioni, le attività e le ore vengono salvate esclusivamente dal server in `gestionale.sqlite`, nella `DatabaseFolder` configurata (sulla VM: `E:\TA-Commesse\Data`). È un archivio distinto dall'indice ricostruibile dei file.
 
@@ -44,13 +46,13 @@ L'anteprima non scrive dati. Alla conferma, i clienti sono riconciliati per iden
 
 ## Dettaglio commessa (2.24.0)
 
-La scheda Commesse espone codice, anno, numero, cliente associato e argomento. «Apri commessa» o il doppio clic apre le proprietà, le fasi e le attività della commessa. Il dettaglio non applica il filtro temporale del Gantt. Le entità hanno modelli, ViewModel e viste dedicati.
+La scheda Commesse espone codice, anno, numero, cliente associato e argomento. «Apri commessa» o il doppio clic apre le proprietà della commessa (fino alla 2.36.0 anche le fasi e le attività del vecchio archivio). Il dettaglio non applica il filtro temporale del Gantt. Le entità hanno modelli, ViewModel e viste dedicati.
 
 La gerarchia è Commessa → Fase → Attività: nessuna sottofase. Il salvataggio delle proprietà richiede cliente e argomento; luogo e stato sono facoltativi. Anno e numero derivano dal codice e dalla cartella anno. Lo stato aperta/chiusa/fatturata è descrittivo e non cambia l'autorizzazione delle ore. Nessuna modifica dei percorsi sorgente.
 
 Le precedenti fasi testuali sono trasformate in entità distinte, una per commessa e nome, con recupero ripetibile. La rinomina della fase viene riportata nelle attività. Il server vieta fasi di un'altra commessa e impedisce di spostare attività con ore registrate a un'altra commessa o collaboratore. I vecchi client rimangono compatibili; per il dettaglio aggiornare prima il server, poi il client.
 
-## Pianificazione e ore
+## Pianificazione e ore (vecchio archivio, fino alla 2.36.0)
 
 La scheda Commesse associa il cliente e stabilisce l'abilitazione delle ore: bloccate, preventivo accettato, contratto oppure deroga motivata. Il riferimento al documento è dichiarato dal responsabile: questa versione **non verifica automaticamente l'accettazione** del preventivo o la firma del contratto.
 

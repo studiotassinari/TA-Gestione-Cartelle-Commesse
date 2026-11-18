@@ -16,6 +16,7 @@ public sealed class BusinessViewModel : Observable, IDisposable
     private bool busy;
     public bool Busy { get => busy; private set { busy = value; Notify(); Notify(nameof(CanEdit)); } }
     public bool CanEdit => !Busy && Snapshot?.CanManage == true;
+    // Periodo richiesto dal comando Snapshot del servizio; attività e ore del vecchio archivio non si mostrano più.
     public DateTime From { get; set; } = DateTime.Today.AddDays(-(int)(DateTime.Today.DayOfWeek + 6) % 7);
     public DateTime To { get; set; } = DateTime.Today.AddDays(30);
     public event Action? Updated;
@@ -43,7 +44,7 @@ public sealed class BusinessViewModel : Observable, IDisposable
         {
             Snapshot = await Send<BusinessSnapshot>(new("Snapshot", new(DateOnly.FromDateTime(From), DateOnly.FromDateTime(To))));
             Notify(nameof(Snapshot)); Notify(nameof(CanEdit)); Updated?.Invoke();
-            Status = $"{Snapshot.User} · {Snapshot.Customers.Length} clienti · {Snapshot.Activities.Length} attività nel periodo. {Snapshot.BackupStatus}";
+            Status = $"{Snapshot.User} · {Snapshot.Customers.Length} clienti · {Snapshot.Projects.Length} commesse. {Snapshot.BackupStatus}";
         });
     }
     public async Task Run(Func<Task> operation)
