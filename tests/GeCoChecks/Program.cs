@@ -68,12 +68,12 @@ Check(plan.Attivita.Length == 2 && plan.Attivita.Single(a => a.IdCommessa == Com
 var added = await Send<int>(new("AddActivity", Attivita: new(CdcCollab, Comm, Fase2, "2026-11-23", "2026-11-27")), Collab);
 Check(added > 0, "Pianificazione: attività aggiunta, con l'identificativo del database comune");
 var refused = await Fails(() => Send<int>(new("AddActivity", Attivita: new(CdcCollab, CommOther, null, "2026-11-23", "2026-11-23")), Collab));
-Check(refused is UnauthorizedAccessException && refused.Message == "Si può pianificare soltanto sé stessi, sulle commesse di cui si è capocommessa", "Pianificazione: messaggio della libreria per le commesse di altri");
+Check(refused is UnauthorizedAccessException && refused.Message == "Si può pianificare soltanto sé stessi, sulle commesse di cui si è capocommessa o del proprio team", "Pianificazione: messaggio della libreria per le commesse di altri");
 Check((await Fails(() => Send<int>(new("AddActivity", Attivita: new(CdcCollab, Comm, null, "2026-11-27", "2026-11-23")), Collab)))?.Message == "La fine non può precedere l'inizio", "Pianificazione: date controllate dalla libreria");
 Check(await Send<bool>(new("MoveActivity", Id: added, Attivita: new(CdcCollab, Comm, Fase2, "2026-11-24", "2026-11-26")), Collab), "Pianificazione: spostamento");
 using (var db = new TestDb(options)) Check(db.tblPianificazioneAttivita.Single(a => a.Pat_Id == added) is { Pat_DataInizio.Day: 24, Pat_DataFine.Day: 26, Pat_IdUtenteMod: UteCollab }, "Pianificazione: spostamento scritto con l'utente del token");
 Check(await Send<bool>(new("RemoveActivity", Id: added), Collab) && await Fails(() => Send<bool>(new("RemoveActivity", Id: added), Collab)) is KeyNotFoundException, "Pianificazione: attività tolta; una seconda volta non si trova");
-Check((await Send<GeCoPlanProject[]>(new("PlanProjects", Testo: "B26"), Collab)).Select(c => c.Id).SequenceEqual(new[] { Comm }), "Pianificazione: ricerca tra le commesse di cui si è capocommessa");
+Check((await Send<GeCoPlanProject[]>(new("PlanProjects", Testo: "B26"), Collab)).Select(c => c.Id).SequenceEqual(new[] { Comm }), "Pianificazione: ricerca tra le commesse di cui si è capocommessa o del proprio team");
 Check(await Fails(() => Send<GeCoRoles>(new("Roles"), Collab)) is UnauthorizedAccessException, "Ruoli e team: riservati agli amministratori");
 var roles = await Send<GeCoRoles>(new("Roles"), Admin);
 Check(roles.Amministratori.Single().Id == UteAdmin && roles.Utenti.Any(u => u.Id == UteCollab && !u.TeamManager), "Ruoli e team: amministratori e utenti per l'amministratore");
