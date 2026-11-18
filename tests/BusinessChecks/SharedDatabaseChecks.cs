@@ -32,6 +32,25 @@ internal static class SharedDatabaseChecks
         var sql = Environment.GetEnvironmentVariable("TA_TEST_SQL");
         if (string.IsNullOrWhiteSpace(sql)) { Console.WriteLine("SharedDatabaseChecks: conversione verificata; scrittura su SQL Server non provata (TA_TEST_SQL non impostata)."); return; }
 
+        // Il database di prova è vuoto, mentre quello vero contiene già le tabelle di GeCo2017. Alcuni aggiornamenti dello
+        // schema le usano (es. la migrazione 7 toglie le funzioni E-Solver e le loro abilitazioni): qui se ne crea la parte
+        // minima, con una funzione E-Solver, per provare l'aggiornamento come sul database vero.
+        using (var prep = new SqlConnection(sql))
+        {
+            prep.Open();
+            using var command = new SqlCommand(@"
+IF OBJECT_ID('dbo.tblFunzioni') IS NULL
+BEGIN
+    CREATE TABLE dbo.tblFunzioni (Fun_Id INT IDENTITY(1,1) PRIMARY KEY, Fun_Url VARCHAR(200) NULL);
+    INSERT INTO dbo.tblFunzioni (Fun_Url) VALUES ('Commesse_ESolver.aspx'), ('commesse.aspx');
+END
+IF OBJECT_ID('dbo.tblUtenti') IS NULL
+    CREATE TABLE dbo.tblUtenti (Ute_Id INT IDENTITY(1,1) PRIMARY KEY, Ute_IdFunzioneHome INT NULL);
+IF OBJECT_ID('dbo.tblUtentiFunzioni') IS NULL
+    CREATE TABLE dbo.tblUtentiFunzioni (Ufu_Id INT IDENTITY(1,1) PRIMARY KEY, Ufu_IdFunzione INT NOT NULL);", prep);
+            command.ExecuteNonQuery();
+        }
+
         var states = new[] { new CategoryState('C', "", false, "", "", snapshot), new CategoryState('G', "", false, "", "", null) };
         string first = SharedFolders.PushAsync(sql, states, CancellationToken.None).GetAwaiter().GetResult();
         Check(first.Contains("C: 2 cartelle") && !first.Contains("G:"), "Prima sincronizzazione non riuscita: " + first);
@@ -44,6 +63,8 @@ internal static class SharedDatabaseChecks
             && Count("Car_Codice = 'C23007' AND Car_Presente = 0") == 1, "Seconda sincronizzazione: cartelle duplicate o stato non aggiornato");
         using (var command = new SqlCommand("SELECT Cas_Cartelle FROM dbo.tblCartelleSincronizzazioni WHERE Cas_Categoria = 'C'", connection))
             Check((int)command.ExecuteScalar()! == 1, "Registro delle sincronizzazioni non aggiornato");
+        using (var command = new SqlCommand("SELECT COUNT(*) FROM dbo.tblFunzioni WHERE Fun_Url LIKE '%ESolver%'", connection))
+            Check((int)command.ExecuteScalar()! == 0, "Aggiornamento dello schema: funzioni E-Solver non tolte");
         Check(AggiornamentoDatabase.VersioneAttualeAsync(sql).GetAwaiter().GetResult() >= SincronizzazioneCartelle.VersioneRichiesta, "Database comune non aggiornato alla versione richiesta");
         Console.WriteLine("SharedDatabaseChecks: aggiornamento dello schema e sincronizzazione delle cartelle verificati su SQL Server.");
     }
