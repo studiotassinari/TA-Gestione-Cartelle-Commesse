@@ -1,4 +1,10 @@
-# TA-Gestione Cartelle Commesse — 2.37.0
+# TA-Gestione Cartelle Commesse — 2.37.1
+
+## Novità 2.37.1 — account Windows per il raccordo con GeCo
+
+Il servizio annota gli account Windows che aprono le finestre di pianificazione e ore lavorate, anche quando non corrispondono a nessun utente di GeCo: nella pagina **Raccordo utenti Windows** di GeCo2027 gli amministratori li trovano e li abbinano agli utenti. Aggiornare prima GeCo2027, poi il server.
+
+[Scarica aggiornatore 2.37.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.37.1/TA-Commesse-Aggiornatore-2.37.1.exe)
 
 ## Novità 2.37.0 — pianificazione e ore lavorate di GeCo nel programma
 

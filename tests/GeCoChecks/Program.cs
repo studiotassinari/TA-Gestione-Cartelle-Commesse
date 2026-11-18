@@ -41,6 +41,9 @@ const string Collab = @"DOMINIO\collab", Admin = "admin@studio.example";
 var access = await Send<GeCoAccess>(new("Access"), Collab);
 Check(access is { Recognized: true, User: "collab", Name: "Collaboratore", Hours: true, Planning: true, Company: "Studio di prova" } && access.Match == AccountWindows.ComeNome,
     "Accesso: l'account Windows del canale diventa l'utente di GeCo con lo stesso nome");
+using (var db = new TestDb(options))
+    Check(db.tblAccountWindowsVisti.AsNoTracking().Single() is { Awv_Account: Collab, Awv_Applicazione: AccountWindowsVisti.GeCa, Awv_IdUtente: UteCollab, Awv_Volte: 1 },
+        "Accesso: l'account Windows è registrato tra quelli visti da GeCa, con l'utente trovato");
 var unknown = await Send<GeCoAccess>(new("Access"), @"DOMINIO\sconosciuto");
 Check(!unknown.Recognized && unknown.Message.Contains("non corrisponde a nessun utente attivo di GeCo") && !unknown.Hours && !unknown.Planning, "Accesso: account senza utente di GeCo, messaggio chiaro");
 Check(await Fails(() => Send<GeCoPlan>(new("Plan"), @"DOMINIO\sconosciuto")) is UnauthorizedAccessException, "Accesso: senza utente di GeCo nessun comando viene eseguito");

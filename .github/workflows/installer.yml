@@ -73,7 +73,7 @@ jobs:
         # Introduce lo script PowerShell multilinea di pubblicazione.
         run: |
           # Versione della release: uguale per client, servizio, MCP e aggiornatore.
-          $version = "2.37.0"
+          $version = "2.37.1"
           # Rende APP_VERSION disponibile ai passi successivi tramite il file ambiente di GitHub.
           "APP_VERSION=$version" >> $env:GITHUB_ENV
           # Pubblica in Release per Windows x64 con runtime incluso e senza simboli di debug.
@@ -279,6 +279,7 @@ jobs:
         run: |
           # Definisce come testo letterale le note: chiusura del setup, aggiornamento, grafica, comandi e requisiti. Le righe interne sono contenuto, non istruzioni.
           $notes = @'
+          Versione 2.37.1: il servizio annota gli account Windows che aprono pianificazione e ore lavorate, anche quando non corrispondono a un utente di GeCo, così nella pagina «Raccordo utenti Windows» di GeCo2027 gli amministratori li ritrovano e li abbinano. Aggiornare prima GeCo2027, poi il server.
           Versione 2.37.0: pianificazione delle attività e ore lavorate (statini) di GeCo dentro il client, con finestre native nel menu Gestione, sullo stesso database SQL Server di GeCo2027 e con le stesse regole (libreria comune GeCo.Dati): giorni feriali in orizzontale, persone una sotto l'altra, commesse e fasi da trascinare sul giorno, barre che si spostano e si allungano; nelle ore ogni giornata commessa · fase riporta ore e km, con totali del giorno, sagome delle attività pianificate da consuntivare, note e dettagli, conferma settimanale e da 1 a 8 settimane. Il servizio riconosce l'utente di GeCo dall'account Windows (abbinamento della pagina Utenti di GeCo oppure nome utente uguale) e applica permessi e ruoli di GeCo; un account senza utente di GeCo vede solo il motivo. Attività e ore del vecchio archivio del gestionale non si mostrano più (i dati restano nel file, non vengono cancellati); il comando che apriva GeCo nel browser è sostituito. Serve il database comune configurato in Gestore server > Configura. Aggiornare prima GeCo2027, poi il server, poi i client.
           Versione 2.36.0: nuovo comando «Pianificazione delle attività in GeCo» nel menu Gestione del client: apre nel browser la pagina Pianificazione di GeCo2027, dove ogni persona ha le attività sulle commesse disposte per giorni. Il comando compare attivo dopo aver indicato l'indirizzo di GeCo in Gestore server > Configura e riavviato il servizio. In Configura l'esempio del server SQL riporta anche la forma con la porta (NOME-SERVER,1433). Aggiornare prima il server, poi i client.
           Versione 2.35.0: ricerca automatica della posizione delle relazioni geologiche, da attivare in Gestore server > Configura. Il servizio cerca con OpenStreetMap Nominatim l'indirizzo o il comune letti dal documento oppure, in mancanza, la località nel nome della cartella della commessa, e mette la relazione sulla mappa come posizione proposta da verificare. Al servizio esterno arrivano solo località e indirizzo; le posizioni indicate a mano non vengono sostituite. Aggiornare il server e riavviare il servizio dopo aver spuntato la casella. In Configura, sotto i dati del database comune con GeCo, compare ora l'esito dell'ultimo invio delle cartelle, con l'eventuale errore di collegamento.

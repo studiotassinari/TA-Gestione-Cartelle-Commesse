@@ -36,7 +36,7 @@ public sealed class GeCoWorkService
         {
             await using var db = open();
             var current = await version(token);
-            var (access, context) = await IdentifyAsync(db, account, current, token);
+            var (access, context) = await IdentifyAsync(db, account, current, command.Action == "Access", token);
             if (command.Action == "Access") return access;
             if (context == null) throw new UnauthorizedAccessException(access.Message);
             return await HandleAsync(command, context, token);
@@ -58,9 +58,12 @@ public sealed class GeCoWorkService
         _ => new ArgumentException(ex.Message, ex),
     };
 
-    private async Task<(GeCoAccess Access, ContestoRegole? Context)> IdentifyAsync(GeCoDbContext db, string account, int current, CancellationToken token)
+    private async Task<(GeCoAccess Access, ContestoRegole? Context)> IdentifyAsync(GeCoDbContext db, string account, int current, bool register, CancellationToken token)
     {
         var found = await AccountWindows.TrovaUtenteAsync(db, account, current, null, token);
+        // All'accesso (non a ogni comando) l'account finisce tra quelli visti, per il raccordo degli amministratori in GeCo2027.
+        // La funzione della libreria non solleva mai eccezioni: se la scrittura non riesce l'accesso continua lo stesso.
+        if (register) await AccountWindows.RegistraVistoAsync(db, account, AccountWindowsVisti.GeCa, current, found, null, token);
         if (found.Utente is not { } user)
             return (new(false, $"L'account Windows {account} non corrisponde a nessun utente attivo di GeCo: pianificazione e ore lavorate non sono disponibili. Un amministratore di GeCo può abbinarlo nella pagina Utenti.", account, DatabaseVersion: current), null);
         var company = await (companyId > 0 ? db.tblSocieta.AsNoTracking().Where(s => s.Soc_Id == companyId) : db.tblSocieta.AsNoTracking().OrderBy(s => s.Soc_Id)).FirstOrDefaultAsync(token);
