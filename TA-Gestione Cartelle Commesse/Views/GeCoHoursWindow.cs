@@ -30,6 +30,7 @@ public sealed class GeCoHoursWindow : Window
     private readonly StackPanel timeline = new() { Margin = new Thickness(10) };
     private readonly DispatcherTimer searchTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private TextBox? hoursBox;
+    private bool details;
     private double dayWidth = 112;
     private sealed record Dragged(PanelProject Project, GeCoOption? Phase, decimal? Hours);
 
@@ -38,7 +39,13 @@ public sealed class GeCoHoursWindow : Window
         vm = model; Prepare(this, "Ore lavorate — TA");
         vm.Ask = question => MessageBox.Show(this, question, "Ore lavorate", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
         Content = root; root.Background = Back;
-        DockPanel.SetDock(head, Dock.Top); root.Children.Add(head); root.Children.Add(body);
+        DockPanel.SetDock(head, Dock.Top); root.Children.Add(head);
+        // Aggiornamenti esterni (GeCo2027 o un altro client di GeCa): avviso discreto in fondo. La ricarica tiene le modifiche non
+        // salvate e aspetta che l'utente finisca di trascinare, di scrivere in una casella o di compilare i dettagli.
+        var refreshed = Refreshed(out var showRefreshed); DockPanel.SetDock(refreshed, Dock.Bottom); root.Children.Add(refreshed);
+        root.Children.Add(body);
+        vm.Interacting = () => Dragging || details || (IsKeyboardFocusWithin && Keyboard.FocusedElement is TextBox);
+        vm.Live.Refreshed += showRefreshed;
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
         body.ColumnDefinitions.Add(new ColumnDefinition());
@@ -55,7 +62,7 @@ public sealed class GeCoHoursWindow : Window
         vm.Changed += Render;
         Loaded += async (_, _) => { if (vm.Access == null) await vm.StartAsync(); };
         Closing += (_, e) => { if (!vm.CanLeave()) e.Cancel = true; };
-        Closed += (_, _) => { vm.Changed -= Render; searchTimer.Stop(); vm.Dispose(); };
+        Closed += (_, _) => { vm.Changed -= Render; vm.Live.Refreshed -= showRefreshed; searchTimer.Stop(); vm.Dispose(); };
         PreviewKeyDown += Keys;
         head.Children.Add(Caption("Caricamento delle ore lavorate…", 14, false, Grey));
         // Un modello già avviato (dalle verifiche) si disegna subito; altrimenti si parte al caricamento della finestra.
@@ -248,7 +255,9 @@ public sealed class GeCoHoursWindow : Window
     private void Details(HoursViewModel.Element e)
     {
         var p = vm.PersonOf(e.P)!;
-        new GeCoDayDialog(this, vm, p, e).ShowDialog();
+        details = true;
+        try { new GeCoDayDialog(this, vm, p, e).ShowDialog(); }
+        finally { details = false; }
         Render();
     }
 

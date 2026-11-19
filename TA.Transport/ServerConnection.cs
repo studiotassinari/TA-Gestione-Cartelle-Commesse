@@ -35,7 +35,9 @@ public sealed class ServerConnection(string host, int port, NetworkCredential? c
     // Connessione persistente separata dai comandi, sulla stessa porta e con gli stessi controlli AD.
     // geCoEvents (2.38.0): chi lo passa riceve anche le notifiche «GeCo» degli eventi di GeCo2027; deve tornare subito,
     // perché il riscontro al server parte solo dopo, e chiedere gli eventi con un comando separato.
-    public async Task WatchAsync(Func<PushNotice, Task> changed, Action ready, CancellationToken token, Action<PushNotice>? observed = null, Func<PushNotice, Task>? geCoEvents = null)
+    // geCoViews (2.39.0): allo stesso modo le notifiche «GeCoViste» di pianificazione e ore salvate.
+    public async Task WatchAsync(Func<PushNotice, Task> changed, Action ready, CancellationToken token, Action<PushNotice>? observed = null, Func<PushNotice, Task>? geCoEvents = null,
+        Func<PushNotice, Task>? geCoViews = null)
     {
         using var tcp = new TcpClient();
         using var startup = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -48,7 +50,7 @@ public sealed class ServerConnection(string host, int port, NetworkCredential? c
                 "TACommesse/" + host, ProtectionLevel.EncryptAndSign, TokenImpersonationLevel.Identification).WaitAsync(startup.Token);
             if (!authenticated.IsMutuallyAuthenticated || !authenticated.IsEncrypted || !authenticated.IsSigned)
                 throw new AuthenticationException("Autenticazione mutua push non riuscita. Verificare SPN e account.");
-            await WireProtocol.WriteAsync(authenticated, Identify(new Request("Subscribe", SupportsAcknowledgements: true, SupportsGeCoEvents: geCoEvents != null)), startup.Token);
+            await WireProtocol.WriteAsync(authenticated, Identify(new Request("Subscribe", SupportsAcknowledgements: true, SupportsGeCoEvents: geCoEvents != null, SupportsGeCoViews: geCoViews != null)), startup.Token);
             var reply = await WireProtocol.ReadAsync<Reply>(authenticated, startup.Token);
             if (!reply.Success) throw new AuthenticationException(reply.Error ?? "Sottoscrizione rifiutata.");
         }
@@ -61,6 +63,7 @@ public sealed class ServerConnection(string host, int port, NetworkCredential? c
             var notice = await WireProtocol.ReadAsync<PushNotice>(authenticated, read.Token);
             if (notice.Kind == "Changed") await changed(notice);
             else if (notice.Kind == PushNotice.GeCo && geCoEvents != null) await geCoEvents(notice);
+            else if (notice.Kind == PushNotice.GeCoViews && geCoViews != null) await geCoViews(notice);
             else if (notice.Kind != "Heartbeat") throw new InvalidDataException("Notifica push non riconosciuta.");
             if (notice.ProbeId != null)
             {

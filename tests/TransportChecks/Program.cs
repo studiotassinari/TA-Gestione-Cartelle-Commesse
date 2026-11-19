@@ -46,6 +46,17 @@ using (var memory = new MemoryStream())
     var oldAccess = System.Text.Json.JsonSerializer.Deserialize<GeCoAccess>("""{"Recognized":true,"Message":"","Account":"x","Planning":true}""")!;
     Check(oldAccess is { Administrator: false, Links: false }, "Risposta di accesso di un servizio precedente: nessun collegamento cartelle");
 }
+// Pianificazione e ore aggiornate (2.39.0): finestra che salva nel comando, viste nella sottoscrizione, notifica e risposta nuove.
+{
+    var command = System.Text.Json.JsonSerializer.Deserialize<GeCoCommand>(System.Text.Json.JsonSerializer.Serialize(new GeCoCommand("HoursSave", Scheda: "geca-0123abcd")))!;
+    var oldCommand = System.Text.Json.JsonSerializer.Deserialize<GeCoCommand>("""{"Action":"HoursSave"}""")!;
+    Check(command.Scheda == "geca-0123abcd" && oldCommand.Scheda == null, "Comando GeCo con la finestra che salva; un client precedente non la indica");
+    var subscribe = System.Text.Json.JsonSerializer.Deserialize<Request>(System.Text.Json.JsonSerializer.Serialize(new Request("Subscribe", SupportsAcknowledgements: true, SupportsGeCoEvents: true, SupportsGeCoViews: true)))!;
+    var previous = System.Text.Json.JsonSerializer.Deserialize<Request>("""{"Operation":"Subscribe","Version":2,"SupportsAcknowledgements":true,"SupportsGeCoEvents":true}""")!;
+    Check(subscribe.SupportsGeCoViews && !previous.SupportsGeCoViews, "Sottoscrizione con le viste di GeCo solo se il client la dichiara (non i client 2.38.0)");
+    var updates = System.Text.Json.JsonSerializer.Deserialize<GeCoViewUpdates>(System.Text.Json.JsonSerializer.Serialize(new GeCoViewUpdates([new(5, "GeCo2027", "OreModificate", 11, "2026-11-16", "2026-11-20", [1000], false, "ab12", "Persona B")], 5, true)))!;
+    Check(updates is { UltimoId: 5, Parziale: false, Eventi: [{ IdCdc: 11, Dal: "2026-11-16", Scheda: "ab12", Commesse: [1000] }] } && PushNotice.GeCoViews == "GeCoViste", "Eventi tecnici per le viste: round-trip della risposta");
+}
 foreach (var header in new[] { new byte[] { 0, 0, 0, 0 }, new byte[] { 127, 255, 255, 255 }, "GET "u8.ToArray() })
 {
     using var stream = new MemoryStream(header);

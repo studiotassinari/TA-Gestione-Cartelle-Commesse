@@ -20,6 +20,7 @@ public sealed partial class GeCoWorkService
     private static async Task<object> HandleLinksAsync(GeCoCommand c, ContestoRegole context, CancellationToken token)
     {
         if (c.Action == "SyncEvents") return await EventsAsync(context, c.DopoId, token);
+        if (c.Action == "ViewEvents") return await ViewEventsAsync(context, c.DopoId, token);
         // Prima il ruolo, poi lo stato del database: a chi non è amministratore non serve sapere altro.
         Ruoli.RichiediAmministratore(context.Utente);
         if (context.VersioneDatabase < EventiSincronizzazione.VersioneRichiesta) throw new IOException(LinksNotReady);
@@ -74,22 +75,47 @@ public sealed partial class GeCoWorkService
             .ToArray();
     }
 
-    // Eventi scritti da GeCo2027 (commesse e gare create, modificate, eliminate; collegamenti decisi là) dopo DopoId, o gli
-    // ultimi se DopoId manca; sempre entro gli ultimi 200, così un client rimasto spento a lungo non scarica tutto il registro.
-    // UltimoId è l'ultimo evento di GeCo2027 anche se l'utente non lo vede: il client non lo richiede di nuovo.
+    // Eventi scritti da GeCo2027 (commesse e gare create, modificate, eliminate; collegamenti decisi là; richieste di accesso) dopo
+    // DopoId, o gli ultimi se DopoId manca; sempre entro gli ultimi 200, così un client rimasto spento a lungo non scarica tutto il
+    // registro. Solo notifiche: gli eventi tecnici di pianificazione e ore stanno fuori (SenzaTecnici, LeggiDopoAsync con
+    // tecnici: false) e arrivano alle finestre con ViewEvents. Le notifiche con destinatari (richieste di accesso, migrazione 13)
+    // le vedono soltanto i destinatari (NotificheMirate), le altre chi vede la commessa.
+    // UltimoId è l'ultima notifica di GeCo2027 anche se l'utente non la vede: il client non la richiede di nuovo.
     private static async Task<GeCoSyncEvents> EventsAsync(ContestoRegole context, long? after, CancellationToken token)
     {
         if (context.VersioneDatabase < EventiSincronizzazione.VersioneRichiesta) return new([], 0, false, EventsNotReady);
         var db = context.Db;
-        var recent = await db.tblSincronizzazioneEventi.AsNoTracking().Where(e => e.Sev_Origine == EventiSincronizzazione.GeCo2027)
+        var recent = await EventiSincronizzazione.SenzaTecnici(db.tblSincronizzazioneEventi.AsNoTracking()).Where(e => e.Sev_Origine == EventiSincronizzazione.GeCo2027)
             .OrderByDescending(e => e.Sev_Id).Select(e => e.Sev_Id).Take(EventWindow).ToListAsync(token);
         if (recent.Count == 0) return new([], 0, true);
         var from = Math.Max(after ?? 0, recent[^1] - 1);
-        var events = await EventiSincronizzazione.LeggiDopoAsync(db, from, soloOrigine: EventiSincronizzazione.GeCo2027, massimo: EventWindow, stop: token);
+        var events = await EventiSincronizzazione.LeggiDopoAsync(db, from, soloOrigine: EventiSincronizzazione.GeCo2027, massimo: EventWindow, stop: token, tecnici: false);
         var visibility = await EventiSincronizzazione.VisibilitaAsync(db, context.Utente, context.IdSocieta, token);
         var projects = await EventiSincronizzazione.CommesseAsync(db, events, token);
-        var visible = events.Where(e => EventiSincronizzazione.Visibile(e, projects, visibility)).OrderByDescending(e => e.Id).Take(RecentEvents)
+        var recipients = await NotificheMirate.DestinatariAsync(db, context.VersioneDatabase, events.Select(e => e.Id), token);
+        var visible = events.Where(e => NotificheMirate.Visibile(e, projects, visibility, recipients)).OrderByDescending(e => e.Id).Take(RecentEvents)
             .Select(e => new GeCoSyncEvent(e.Id, Date(e.Data), e.Origine, e.Tipo, e.IdCommessa, e.IdGara, e.IdCartella, e.Codice, e.Percorso, e.Testo, e.Utente)).ToArray();
         return new(visible, recent[0], true);
+    }
+
+    // Pianificazione e ore salvate (eventi tecnici di GeCo2027 e di GeCa) dopo DopoId, per le finestre aperte del client, solo
+    // quelli che l'utente può vedere: la propria persona, la pianificazione di tutti per amministratori e team manager, le ore
+    // di tutti per chi le vede (regole della libreria, EventiSincronizzazione.Visibile). Senza DopoId solo l'ultimo Id (punto di
+    // partenza del client). Al massimo gli ultimi 200: chi è rimasto più indietro riceve Parziale e ricarica comunque.
+    private static async Task<GeCoViewUpdates> ViewEventsAsync(ContestoRegole context, long? after, CancellationToken token)
+    {
+        if (context.VersioneDatabase < EventiSincronizzazione.VersioneRichiesta) return new([], 0, false);
+        var db = context.Db;
+        var recent = await db.tblSincronizzazioneEventi.AsNoTracking().Where(e => e.Sev_Codice == EventiSincronizzazione.MarcaTecnica)
+            .OrderByDescending(e => e.Sev_Id).Select(e => e.Sev_Id).Take(EventWindow).ToListAsync(token);
+        if (recent.Count == 0 || after is not long from || from >= recent[0]) return new([], recent.Count == 0 ? 0 : recent[0], true);
+        bool partial = recent.Count == EventWindow && from < recent[^1] - 1;
+        var events = await EventiSincronizzazione.LeggiDopoAsync(db, Math.Max(from, recent[^1] - 1), massimo: EventWindow, stop: token, tecnici: true);
+        var visibility = await EventiSincronizzazione.VisibilitaAsync(db, context.Utente, context.IdSocieta, token);
+        var updates = events.Where(e => EventiSincronizzazione.Visibile(e, new Dictionary<int, InfoCommessaEvento>(), visibility))
+            .Select(e => (Event: e, Data: EventiSincronizzazione.Aggiornamento(e))).Where(x => x.Data != null)
+            .Select(x => new GeCoViewUpdate(x.Event.Id, x.Event.Origine, x.Event.Tipo, x.Data!.IdCdc, DateRegole.Iso(x.Data.Dal), DateRegole.Iso(x.Data.Al),
+                x.Data.Commesse.ToArray(), x.Data.AltreCommesse, x.Data.Scheda, x.Event.Utente)).ToArray();
+        return new(updates, recent[0], true, partial);
     }
 }

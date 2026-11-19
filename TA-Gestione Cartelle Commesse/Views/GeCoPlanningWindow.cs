@@ -37,7 +37,12 @@ public sealed class GeCoPlanningWindow : Window
     {
         vm = model; Prepare(this, "Pianificazione delle attività — TA");
         Content = root; root.Background = Back;
-        DockPanel.SetDock(head, Dock.Top); root.Children.Add(head); root.Children.Add(body);
+        DockPanel.SetDock(head, Dock.Top); root.Children.Add(head);
+        // Aggiornamenti esterni (GeCo2027 o un altro client di GeCa): avviso discreto in fondo; si aspetta la fine di un trascinamento.
+        var refreshed = Refreshed(out var showRefreshed); DockPanel.SetDock(refreshed, Dock.Bottom); root.Children.Add(refreshed);
+        root.Children.Add(body);
+        vm.Interacting = () => pull != null || Dragging;
+        vm.Live.Refreshed += showRefreshed;
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
         body.ColumnDefinitions.Add(new ColumnDefinition());
@@ -59,7 +64,7 @@ public sealed class GeCoPlanningWindow : Window
         scroll.SizeChanged += (_, e) => { if (Math.Abs(e.PreviousSize.Width - e.NewSize.Width) > 1) Render(); };
         vm.Changed += Render;
         Loaded += async (_, _) => { if (vm.Access == null) await vm.StartAsync(); };
-        Closed += (_, _) => { vm.Changed -= Render; searchTimer.Stop(); vm.Dispose(); };
+        Closed += (_, _) => { vm.Changed -= Render; vm.Live.Refreshed -= showRefreshed; searchTimer.Stop(); vm.Dispose(); };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Delete && Keyboard.FocusedElement is not TextBox && Selected() is { } s && s.Item.Modificabile) { e.Handled = true; _ = Remove(s.Item); } };
         head.Children.Add(Caption("Caricamento della pianificazione…", 14, false, Grey));
         // Un modello già avviato (dalle verifiche) si disegna subito; altrimenti si parte al caricamento della finestra.

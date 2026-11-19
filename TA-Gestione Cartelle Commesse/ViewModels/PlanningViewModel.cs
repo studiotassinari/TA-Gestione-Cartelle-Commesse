@@ -8,6 +8,16 @@ public sealed class PlanningViewModel(IGeCoGateway gateway) : IDisposable
 {
     public const string Page = "pianificazione";
     private readonly CancellationTokenSource lifetime = new();
+    // Ogni comando porta l'identificativo di questa finestra: i suoi salvataggi non la fanno ricaricare due volte.
+    private readonly WindowGeCoGateway gateway = new(gateway);
+    public string Window => gateway.Window;
+    // La finestra dice se l'utente sta trascinando una barra o una fase: la ricarica per un aggiornamento esterno aspetta.
+    public Func<bool> Interacting { get; set; } = () => false;
+    private GeCoViewRefresh? live;
+    public GeCoViewRefresh Live => live ??= new(Window, () => Busy || Draft != null || Interacting(), LoadAsync, lifetime.Token);
+    // Pianificazione salvata altrove (GeCo2027 o un'altra finestra di GeCa) per una persona e un giorno mostrati.
+    public void ViewsChanged(GeCoViewUpdates updates) => Live.Arrived(updates, u => u.Tipo == GeCoViewRefresh.Planning && Plan is { } p
+        && GeCoViewRefresh.Touches(u, Shown, p.Dal, GeCoCalendar.AddDays(p.Dal, p.Settimane * 7 - 1)), Access?.Name);
     public GeCoAccess? Access { get; private set; }
     public GeCoPlan? Plan { get; private set; }
     public string Error { get; private set; } = "";
@@ -35,6 +45,7 @@ public sealed class PlanningViewModel(IGeCoGateway gateway) : IDisposable
 
     public async Task LoadAsync()
     {
+        Live.Loaded();
         try
         {
             Busy = true;

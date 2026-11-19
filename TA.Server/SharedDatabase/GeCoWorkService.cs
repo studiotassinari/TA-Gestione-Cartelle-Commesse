@@ -37,7 +37,7 @@ public sealed partial class GeCoWorkService
         {
             await using var db = open();
             var current = await version(token);
-            var (access, context) = await IdentifyAsync(db, account, current, command.Action == "Access", token);
+            var (access, context) = await IdentifyAsync(db, account, current, command.Action == "Access", command.Scheda, token);
             if (command.Action == "Access") return access;
             if (context == null) throw new UnauthorizedAccessException(access.Message);
             return await HandleAsync(command, context, token);
@@ -59,7 +59,7 @@ public sealed partial class GeCoWorkService
         _ => new ArgumentException(ex.Message, ex),
     };
 
-    private async Task<(GeCoAccess Access, ContestoRegole? Context)> IdentifyAsync(GeCoDbContext db, string account, int current, bool register, CancellationToken token)
+    private async Task<(GeCoAccess Access, ContestoRegole? Context)> IdentifyAsync(GeCoDbContext db, string account, int current, bool register, string? window, CancellationToken token)
     {
         var found = await AccountWindows.TrovaUtenteAsync(db, account, current, null, token);
         // All'accesso (non a ogni comando) l'account finisce tra quelli visti, per il raccordo degli amministratori in GeCo2027.
@@ -73,7 +73,9 @@ public sealed partial class GeCoWorkService
         string name = string.IsNullOrWhiteSpace(user.Ute_Descrizione) ? user.Ute_Username : user.Ute_Descrizione;
         if (!await enabled(db, user.Ute_Id, company.Soc_Id))
             return (new(false, $"L'utente {user.Ute_Username} di GeCo non è abilitato alla società {company.Soc_RagSoc}.", account, user.Ute_Username, name, found.Come ?? "", company.Soc_RagSoc, current), null);
-        var context = new ContestoRegole(db, user, company.Soc_Id, company, current);
+        // Origine GeCa: ogni salvataggio di pianificazione e ore registra l'evento tecnico che aggiorna subito GeCo2027 e gli altri
+        // client di GeCa; la scheda è la finestra che ha salvato (la libreria scarta un valore non valido), che non si ricarica da sé.
+        var context = new ContestoRegole(db, user, company.Soc_Id, company, current) { Origine = EventiSincronizzazione.GeCa, Scheda = EventiSincronizzazione.Scheda(window) };
         bool hours = await HasHoursAsync(db, user);
         bool planning = current >= Pianificazione.VersioneRichiesta;
         var message = planning ? "" : "Pianificazione non disponibile: il database non è stato aggiornato. Aggiornare prima GeCo2027 o riavviare il servizio.";
@@ -85,6 +87,10 @@ public sealed partial class GeCoWorkService
         try { await PermessiFunzioni.PerPaginaAsync(db, user, ServizioConsuntivo.Pagina); return true; }
         catch (RegolaException ex) when (ex.Stato == 403) { return false; }
     }
+
+    // Comandi che salvano pianificazione o ore (e quindi registrano un evento tecnico): dopo di essi il lettore del registro
+    // rilegge subito (GeCoEventHub.Wake), così gli altri client aperti si aggiornano senza aspettare il giro successivo.
+    public static bool Saves(string action) => action is "AddActivity" or "MoveActivity" or "RemoveActivity" or "HoursSave" or "HoursConfirm";
 
     private static async Task<object> HandleAsync(GeCoCommand c, ContestoRegole context, CancellationToken token)
     {
@@ -121,7 +127,7 @@ public sealed partial class GeCoWorkService
             case "HoursConfirm":
                 var k = c.Conferma ?? throw new ArgumentException("Settimana mancante.");
                 return As<GeCoConfirmResult>(await hours.ConfermaAsync(new RichiestaConferma { IdCdc = k.IdCdc, Dal = k.Dal, Voci = k.Voci?.ToList(), Conferma = k.Conferma }));
-            case "Links" or "Link" or "Unlink" or "ConfirmSafe" or "Folders" or "SyncEvents": return await HandleLinksAsync(c, context, token);
+            case "Links" or "Link" or "Unlink" or "ConfirmSafe" or "Folders" or "SyncEvents" or "ViewEvents": return await HandleLinksAsync(c, context, token);
             default: throw new ArgumentException("Comando GeCo sconosciuto.");
         }
     }

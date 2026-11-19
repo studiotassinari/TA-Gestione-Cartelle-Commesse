@@ -10,6 +10,13 @@ public sealed class ServerGeCoGateway(TA.Transport.ServerConnection server) : IG
 {
     public Task<T> Send<T>(GeCoCommand command, CancellationToken token = default) => server.SendAsync<T>(new("GeCo", GeCo: command), token);
 }
+// Canale di una finestra: ogni comando porta l'identificativo della finestra (Scheda), che il servizio scrive negli eventi
+// tecnici dei salvataggi; quando l'evento torna indietro, la finestra che ha salvato lo riconosce e non si ricarica.
+public sealed class WindowGeCoGateway(IGeCoGateway inner) : IGeCoGateway
+{
+    public string Window { get; } = "geca-" + Guid.NewGuid().ToString("N")[..12];
+    public Task<T> Send<T>(GeCoCommand command, CancellationToken token = default) => inner.Send<T>(command.Scheda == null ? command with { Scheda = Window } : command, token);
+}
 
 // Calcoli di sola presentazione comuni alle due finestre, come nelle pagine di GeCo2027: le date viaggiano come testo
 // aaaa-mm-gg, la pianificazione conta i soli giorni feriali dal lunedì iniziale. Le regole restano sul servizio.

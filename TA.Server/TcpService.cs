@@ -92,11 +92,11 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
                     slots.Release(); commandSlot = false;
                     timeout.CancelAfter(Timeout.InfiniteTimeSpan);
                     Trace("Subscribe", "Accettata", (request.SupportsAcknowledgements ? "Riscontro viste e heartbeat richiesto" : "Client precedente: riscontro non disponibile")
-                        + (request.SupportsGeCoEvents && geCoEvents != null ? "; eventi di GeCo2027" : ""));
+                        + (request.SupportsGeCoEvents && geCoEvents != null ? "; eventi di GeCo2027" : "") + (request.SupportsGeCoViews && request.SupportsGeCoEvents && geCoEvents != null ? "; pianificazione e ore aggiornate" : ""));
                     await PushSession.RunAsync(authenticated, changes, shutdown, request.SupportsAcknowledgements,
                         (notice, acknowledged) => Trace(notice.Kind, acknowledged ? "Riscontro ricevuto" : "Inviata",
                             "Revisione=" + notice.Revision + "; prova=" + notice.ProbeId + (acknowledged && notice.Kind == "Changed" ? "; viste applicate dal client" : "")),
-                        request.SupportsGeCoEvents ? geCoEvents : null);
+                        request.SupportsGeCoEvents ? geCoEvents : null, request.SupportsGeCoViews);
                     return;
                 }
                 Reply reply;
@@ -140,7 +140,12 @@ public sealed class TcpService(ServerSettings settings, ScanCoordinator scans, A
             case "ReadDocument": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,request.Document,null,token)).Document);
             case "ListDocuments": return Reply.Ok((await (documents ?? throw new IOException("Lettore documenti non configurato.")).ExecuteAsync(request.Category,null,request.Documents,token)).Listing);
             // Pianificazione, ore e collegamento cartelle di GeCo: l'utente è quello del token Windows del canale, mai un nome scritto nella richiesta.
-            case "GeCo": return Reply.Ok(await (geCoWork ?? throw new IOException("Pianificazione e ore lavorate di GeCo non disponibili sul server.")).ExecuteAsync(request.GeCo ?? throw new ArgumentException("Comando mancante."), user, token));
+            case "GeCo":
+                var geCoCommand = request.GeCo ?? throw new ArgumentException("Comando mancante.");
+                var geCoResult = await (geCoWork ?? throw new IOException("Pianificazione e ore lavorate di GeCo non disponibili sul server.")).ExecuteAsync(geCoCommand, user, token);
+                // Pianificazione o ore appena salvate: il lettore del registro rilegge subito e avvisa gli altri client aperti.
+                if (SharedDatabase.GeCoWorkService.Saves(geCoCommand.Action)) geCoEvents?.Wake();
+                return Reply.Ok(geCoResult);
             case "Info": return Reply.Ok(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "Sconosciuta");
             case "TemplatePreview":
                 if (request.Category is not ("C" or "G")) return Reply.Fail("La creazione da modello e disponibile solo per commesse e gare.");

@@ -8,10 +8,12 @@ namespace TA_Gestione_Cartelle_Commesse.Contracts;
 // Comando verso il servizio. Persone null = solo la persona dell'utente; Settimane null = quelle predefinite.
 // Collegamento cartelle (2.38.0): Tipo "commessa" o "gara", Id dell'elemento, IdCartella, Valore = sostituire il collegamento
 // esistente, Collegamenti = anteprima delle proposte sicure, DopoId = ultimo evento già ricevuto (null = gli ultimi).
+// Scheda (2.39.0, facoltativa): finestra del client che chiede, scritta negli eventi tecnici dei salvataggi; la finestra che ha
+// salvato non si ricarica per il proprio salvataggio (lettere, cifre, - e _, al massimo 40 caratteri, altrimenti ignorata).
 public sealed record GeCoCommand(string Action, string? Dal = null, int? Settimane = null, int[]? Persone = null, int? IdCdc = null, int[]? Voci = null,
     string? Testo = null, int Id = 0, int IdCommessa = 0, int IdVdc = 0, int? IdFase = null, bool Valore = false,
     GeCoActivityRequest? Attivita = null, GeCoSaveRequest? Salvataggio = null, GeCoConfirmRequest? Conferma = null,
-    string? Tipo = null, int IdCartella = 0, GeCoLinkItem[]? Collegamenti = null, long? DopoId = null);
+    string? Tipo = null, int IdCartella = 0, GeCoLinkItem[]? Collegamenti = null, long? DopoId = null, string? Scheda = null);
 
 // Chi è l'utente per GeCo, deciso dal servizio dal token Windows. Recognized falso: le finestre mostrano Message e non permettono nulla.
 // Match: come è stato trovato l'utente (abbinamento della pagina Utenti di GeCo, nome uguale...). Hours: funzione delle ore assegnata.

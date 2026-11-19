@@ -53,6 +53,21 @@ internal static class GeCoUi
     }
     // Trascinamento di una fase (o di una sagoma) dal pannello verso il giorno di una persona; il clic semplice resta un clic.
     public const string DragFormat = "TA.GeCo.Trascinamento";
+    // Trascinamento in corso (DoDragDrop lascia lavorare il dispatcher): una ricarica per un aggiornamento esterno aspetta la fine.
+    public static bool Dragging { get; private set; }
+    // Avviso discreto «Aggiornato da …» in fondo alla finestra, che sparisce da solo dopo qualche secondo: non sposta la griglia
+    // come farebbe un messaggio in testa e non chiede nulla all'utente.
+    public static Border Refreshed(out Action<string> show)
+    {
+        var text = Caption("", 12.5, false, Night, false);
+        var border = new Border { Background = Brushes.White, BorderBrush = Teal, BorderThickness = new Thickness(4, 0, 0, 0), CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(10, 5, 12, 5), Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, Visibility = Visibility.Collapsed, Child = text };
+        System.Windows.Automation.AutomationProperties.SetLiveSetting(text, System.Windows.Automation.AutomationLiveSetting.Polite);
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+        timer.Tick += (_, _) => { timer.Stop(); border.Visibility = Visibility.Collapsed; };
+        show = message => { text.Text = "↻ " + message + " alle " + DateTime.Now.ToString("HH:mm:ss"); border.Visibility = Visibility.Visible; timer.Stop(); timer.Start(); };
+        return border;
+    }
     public static void DragSource(FrameworkElement element, object data)
     {
         Point? start = null;
@@ -62,7 +77,9 @@ internal static class GeCoUi
             if (start is not { } s || e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
             var p = e.GetPosition(element);
             if (Math.Abs(p.X - s.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(p.Y - s.Y) < SystemParameters.MinimumVerticalDragDistance) return;
-            start = null; DragDrop.DoDragDrop(element, new DataObject(DragFormat, data), DragDropEffects.Copy);
+            start = null; Dragging = true;
+            try { DragDrop.DoDragDrop(element, new DataObject(DragFormat, data), DragDropEffects.Copy); }
+            finally { Dragging = false; }
         };
         element.PreviewMouseLeftButtonUp += (_, _) => start = null;
     }

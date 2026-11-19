@@ -13,7 +13,7 @@ internal static class GeCoClientChecks
         public List<GeCoCommand> Sent { get; } = [];
         public Task<T> Send<T>(GeCoCommand command, CancellationToken token = default)
         {
-            Sent.Add(command);
+            lock (Sent) Sent.Add(command);
             return Task.FromResult(JsonSerializer.Deserialize<T>(JsonSerializer.SerializeToUtf8Bytes(answer(command)))!);
         }
     }
@@ -96,7 +96,59 @@ internal static class GeCoClientChecks
         var denied = new HoursViewModel(new Fake(c => new GeCoAccess(false, "L'account Windows DOM\\x non corrisponde a nessun utente attivo di GeCo", "DOM\\x")));
         denied.StartAsync().GetAwaiter().GetResult();
         Check(denied.Start == null && denied.AccessMessage.Contains("non corrisponde") && denied.People.Count == 0, "Ore: senza utente di GeCo la finestra mostra il motivo e non permette nulla");
+        LiveUpdates(planning, pvm, hours, hvm);
         FolderLinks();
+    }
+
+    // Pianificazione e ore aggiornate subito (2.39.0): le finestre si ricaricano per i salvataggi fatti altrove che toccano
+    // persone e giorni mostrati, una volta per raffica, aspettando che l'utente finisca, tenendo le modifiche non salvate.
+    private static void LiveUpdates(Fake planning, PlanningViewModel pvm, Fake hours, HoursViewModel hvm)
+    {
+        GeCoViewRefresh.Quiet = TimeSpan.FromMilliseconds(20); GeCoViewRefresh.Retry = TimeSpan.FromMilliseconds(20);
+        static void Until(Func<bool> condition) { for (int i = 0; i < 200 && !condition(); i++) Thread.Sleep(10); }
+        static void Pause() => Thread.Sleep(150);
+        static GeCoViewUpdates Of(params GeCoViewUpdate[] u) => new(u, u.Length == 0 ? 0 : u[^1].Id, true);
+        static GeCoViewUpdate U(long id, string origin, string type, int person, string from, string to, string? window, string? user = "Persona A") => new(id, origin, type, person, from, to, [1000], false, window, user);
+        const string Plan = GeCoViewRefresh.Planning, Ore = GeCoViewRefresh.Hours;
+        Check(planning.Sent.Last().Scheda == pvm.Window && hours.Sent.Last().Scheda == hvm.Window && pvm.Window.StartsWith("geca-") && pvm.Window != hvm.Window,
+            "Viste: ogni comando porta l'identificativo della propria finestra, diverso per ciascuna");
+        int Plans() { lock (planning.Sent) return planning.Sent.Count(c => c.Action == "Plan"); }
+        var start = Plans(); var shown = new List<string>(); pvm.Live.Refreshed += shown.Add;
+        pvm.ViewsChanged(Of(U(1, "GeCa", Plan, 11, "2026-11-17", "2026-11-17", pvm.Window)));
+        pvm.ViewsChanged(Of(U(2, "GeCo2027", Plan, 12, "2026-11-17", "2026-11-17", null)));
+        pvm.ViewsChanged(Of(U(3, "GeCo2027", Plan, 11, "2026-12-07", "2026-12-08", null)));
+        pvm.ViewsChanged(Of(U(4, "GeCo2027", Ore, 11, "2026-11-17", "2026-11-17", null)));
+        Pause();
+        Check(Plans() == start && shown.Count == 0 && !pvm.Live.Pending, "Pianificazione: nessuna ricarica per il proprio salvataggio, altre persone, altre settimane o le sole ore");
+        bool dragging = true; pvm.Interacting = () => dragging;
+        pvm.ViewsChanged(Of(U(5, "GeCo2027", Plan, 11, "2026-11-14", "2026-11-16", "scheda-browser")));
+        pvm.ViewsChanged(Of(U(6, "GeCa", Plan, 11, "2026-11-20", "2026-11-20", "geca-altra", "Persona C")));
+        Pause();
+        Check(Plans() == start && pvm.Live.Pending, "Pianificazione: mentre l'utente trascina la ricarica aspetta");
+        dragging = false; Until(() => shown.Count > 0); Pause();
+        Check(Plans() == start + 1 && shown.SequenceEqual(new[] { "Aggiornato da un altro utente di GeCa (Persona C)" }) && !pvm.Live.Pending,
+            "Pianificazione: più salvataggi ravvicinati, una sola ricarica a trascinamento finito, con l'avviso di chi ha salvato");
+        Check(GeCoViewRefresh.Text(U(7, "GeCo2027", Plan, 11, "", "", null, "Persona A"), "Persona B") == "Aggiornato da GeCo2027 (Persona A)"
+            && GeCoViewRefresh.Text(U(8, "GeCa", Plan, 11, "", "", "geca-x", "Persona B"), "Persona B") == "Aggiornato da un'altra finestra di GeCa",
+            "Viste: avviso per GeCo2027 e per un'altra finestra dello stesso utente");
+
+        int Periods() { lock (hours.Sent) return hours.Sent.Count(c => c.Action == "HoursPeriod"); }
+        var edits = hvm.Edits.ToDictionary(e => e.Key, e => e.Value.ToDictionary(x => x.Key, x => x.Value)); var open = hvm.Open.ToHashSet();
+        var before = Periods(); var hoursShown = new List<string>(); hvm.Live.Refreshed += hoursShown.Add;
+        hvm.ViewsChanged(Of(U(9, "GeCa", Ore, 11, "2026-11-17", "2026-11-17", hvm.Window)));
+        Pause();
+        Check(Periods() == before && hoursShown.Count == 0, "Ore: nessuna ricarica per il salvataggio della stessa finestra");
+        hvm.ViewsChanged(Of(U(10, "GeCo2027", Ore, 11, "2026-11-22", "2026-11-23", null)));
+        Until(() => hoursShown.Count > 0); Pause();
+        Check(Periods() == before + 1 && hoursShown.Single() == "Aggiornato da GeCo2027 (Persona A)" && edits.Count > 0
+            && hvm.Edits.Count == edits.Count && edits.All(e => hvm.Edits.TryGetValue(e.Key, out var v) && v.SequenceEqual(e.Value)) && open.SetEquals(hvm.Open),
+            "Ore: ore salvate in GeCo2027 nella settimana mostrata, ricarica che tiene le modifiche non salvate e le giornate aperte");
+        hvm.ViewsChanged(Of(U(11, "GeCo2027", Plan, 11, "2026-11-18", "2026-11-18", null)));
+        Until(() => hoursShown.Count > 1);
+        Check(Periods() == before + 2, "Ore: anche la pianificazione salvata altrove ricarica (sagome delle ore stimate)");
+        hvm.ViewsChanged(new([], 99, true, Parziale: true));
+        Until(() => hoursShown.Count > 2);
+        Check(Periods() == before + 3 && hoursShown[^1] == "Dati aggiornati", "Ore: client rimasto troppo indietro, si ricarica comunque");
     }
 
     // Collegamento cartelle (2.38.0): testi delle righe (collegamento confermato o soltanto proposta), filtri, richieste inviate,

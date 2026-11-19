@@ -1,4 +1,10 @@
-# TA-Gestione Cartelle Commesse — 2.38.0
+# TA-Gestione Cartelle Commesse — 2.39.0
+
+## Novità 2.39.0 — pianificazione e ore aggiornate subito
+
+Quando una persona salva pianificazione o ore lavorate in GeCo2027, o in un altro client di GeCa, le finestre **Pianificazione delle attività** e **Ore lavorate** aperte si aggiornano da sole entro pochi secondi, e i salvataggi fatti nel client arrivano allo stesso modo a GeCo2027. Si ricaricano solo se il salvataggio tocca persone e giorni mostrati e l'utente li può vedere (regole comuni di GeCo.Dati); mentre si trascina, si scrive o si salva la ricarica aspetta, e le ore non ancora salvate restano. In fondo alla finestra compare per qualche secondo chi ha aggiornato («Aggiornato da GeCo2027 (nome)», «Aggiornato da un altro utente di GeCa»). Le richieste di accesso alle commesse arrivate da GeCo2027 le vedono soltanto i loro destinatari. Aggiornare prima GeCo2027, poi il server, poi i client. Dettagli in [deployment/DATABASE-COMUNE.md](deployment/DATABASE-COMUNE.md#pianificazione-e-ore-aggiornate-subito-2390).
+
+[Scarica aggiornatore 2.39.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.39.0/TA-Commesse-Aggiornatore-2.39.0.exe)
 
 ## Novità 2.38.0 — collegamento delle cartelle con GeCo
 

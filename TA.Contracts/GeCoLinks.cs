@@ -31,3 +31,12 @@ public sealed record GeCoSyncEvent(long Id, string Data, string Origine, string 
     string? Percorso, string Testo, string? Utente);
 // Disponibile falso: database senza la migrazione 12 (Message spiega). UltimoId: ultimo evento di GeCo2027 nel registro.
 public sealed record GeCoSyncEvents(GeCoSyncEvent[] Eventi, long UltimoId, bool Disponibile, string Message = "");
+
+// Pianificazione o ore salvate (2.39.0, eventi tecnici del registro comune, scritti da GeCo2027 o da GeCa): non sono notifiche,
+// servono a ricaricare le finestre aperte. Tipo: PianificazioneModificata o OreModificate. IdCdc: persona toccata; Dal e Al
+// (aaaa-mm-gg): primo e ultimo giorno; Commesse: commesse coinvolte (AltreCommesse: elenco accorciato); Scheda: finestra o
+// scheda del browser che ha salvato; Utente: chi ha salvato.
+public sealed record GeCoViewUpdate(long Id, string Origine, string Tipo, int IdCdc, string Dal, string Al, int[] Commesse, bool AltreCommesse, string? Scheda, string? Utente);
+// Eventi tecnici dopo DopoId che l'utente può vedere (persona propria o, secondo il ruolo, di tutti). UltimoId: ultimo evento
+// tecnico del registro. Parziale: ne sono arrivati più di quelli restituiti (client rimasto indietro): ricaricare comunque.
+public sealed record GeCoViewUpdates(GeCoViewUpdate[] Eventi, long UltimoId, bool Disponibile, bool Parziale = false);

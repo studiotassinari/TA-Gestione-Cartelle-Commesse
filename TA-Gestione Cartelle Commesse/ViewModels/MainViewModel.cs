@@ -179,7 +179,7 @@ public sealed partial class MainViewModel : Observable
                 {
                     CommunicationStatus = $"Canale verificato alle {DateTime.Now:HH:mm:ss}: {notice.Kind}; " + (notice.ProbeId != null ? "riscontro inviato al server." : "server precedente senza riscontro.");
                     ClientLog.Write(CommunicationStatus);
-                }, GeCoEventsArrived);
+                }, GeCoEventsArrived, GeCoViewsArrived);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
             catch (System.Security.Authentication.AuthenticationException ex)

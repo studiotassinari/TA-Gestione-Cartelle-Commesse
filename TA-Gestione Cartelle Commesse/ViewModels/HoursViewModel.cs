@@ -11,6 +11,20 @@ public sealed partial class HoursViewModel(IGeCoGateway gateway) : IDisposable
 {
     public const string Page = "ore";
     private readonly CancellationTokenSource lifetime = new();
+    // Ogni comando porta l'identificativo di questa finestra: i suoi salvataggi non la fanno ricaricare due volte.
+    private readonly WindowGeCoGateway gateway = new(gateway);
+    public string Window => gateway.Window;
+    // La finestra dice se l'utente sta trascinando, scrivendo nelle caselle o compilando i dettagli: la ricarica aspetta.
+    public Func<bool> Interacting { get; set; } = () => false;
+    private GeCoViewRefresh? live;
+    public GeCoViewRefresh Live => live ??= new(Window, () => Saving || pendingRows.Count > 0 || Interacting(), ReloadKeepingAsync, lifetime.Token);
+    // Ore o pianificazione (che dà le sagome) salvate altrove per una persona e un giorno mostrati.
+    public void ViewsChanged(GeCoViewUpdates updates) => Live.Arrived(updates, u => u.Tipo is GeCoViewRefresh.Hours or GeCoViewRefresh.Planning && Start != null && Dal.Length > 0
+        && GeCoViewRefresh.Touches(u, People.Select(p => p.Id), Dal, GeCoCalendar.AddDays(Dal, DayCount - 1)), Access?.Name);
+    // Ricarica per un aggiornamento esterno: come dopo un salvataggio restano modifiche, esiti, giornate aperte e righe nuove
+    // non salvate (copiate, perché LoadAsync svuota gli originali prima di rimetterle).
+    private Task ReloadKeepingAsync() => LoadAsync(Rows.ToDictionary(r => r.Key, r => r.Value.Where(x => x.New).ToList()),
+        Edits.ToDictionary(e => e.Key, e => new Dictionary<string, string?>(e.Value)), new(Errors), new(Open));
     public GeCoAccess? Access { get; private set; }
     public GeCoHoursStart? Start { get; private set; }
     public string Error { get; private set; } = "";
@@ -76,6 +90,7 @@ public sealed partial class HoursViewModel(IGeCoGateway gateway) : IDisposable
     public async Task LoadAsync(Dictionary<int, List<Row>>? keep = null, Dictionary<string, Dictionary<string, string?>>? edits = null, Dictionary<string, string>? errors = null, HashSet<string>? open = null)
     {
         if (Start == null) return;
+        Live.Loaded();
         var ids = Ids();
         try
         {

@@ -3,13 +3,14 @@ namespace TA.Server;
 public static class PushSession
 {
     // geCo: solo per i client che dichiarano SupportsGeCoEvents (2.38.0); gli altri non conoscono le notifiche «GeCo».
+    // views: il client dichiara anche SupportsGeCoViews (2.39.0) e riceve le notifiche «GeCoViste» di pianificazione e ore.
     public static async Task RunAsync(Stream stream, ChangeHub hub, CancellationToken shutdown,
-        bool requireAcknowledgement = false, Action<PushNotice, bool>? trace = null, SharedDatabase.GeCoEventHub? geCo = null)
+        bool requireAcknowledgement = false, Action<PushNotice, bool>? trace = null, SharedDatabase.GeCoEventHub? geCo = null, bool views = false)
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(shutdown);
         lifetime.CancelAfter(TimeSpan.FromMinutes(5));
         using var subscription = hub.Subscribe();
-        using var events = geCo?.Subscribe();
+        using var events = geCo?.Subscribe(views);
         await WireProtocol.WriteAsync(stream, Reply.Ok(true), lifetime.Token);
         while (!lifetime.IsCancellationRequested)
         {
@@ -38,8 +39,9 @@ public static class PushSession
             trace?.Invoke(notice, true);
         }
     }
-    // Prima notifica disponibile tra le modifiche delle cartelle e gli eventi di GeCo. Le attese non consumano nulla (si legge
-    // solo con TryRead), quindi quella che non vince non perde la sua notifica; all'uscita si annullano entrambe.
+    // Prima notifica disponibile tra le modifiche delle cartelle, gli eventi di GeCo e quelli tecnici. Le attese non consumano
+    // nulla (si legge solo con TryRead), quindi quella che non vince non perde la sua notifica; all'uscita si annullano tutte.
+    // La corsia delle viste di chi non l'ha chiesta non riceve mai nulla: la sua attesa resta semplicemente aperta.
     private static async Task<PushNotice> NextAsync(ChangeHub.Subscription changes, ChangeHub hub, SharedDatabase.GeCoEventHub.Subscription events,
         SharedDatabase.GeCoEventHub geCo, CancellationToken token)
     {
@@ -50,7 +52,9 @@ public static class PushSession
             {
                 if (changes.TryRead(out var revision)) return new("Changed", revision, hub.Summary);
                 if (events.TryRead(out var last)) return new(PushNotice.GeCo, last, geCo.Summary);
-                var first = await Task.WhenAny(changes.WaitToReadAsync(waiting.Token).AsTask(), events.WaitToReadAsync(waiting.Token).AsTask());
+                if (events.TryReadViews(out var view)) return new(PushNotice.GeCoViews, view);
+                var first = await Task.WhenAny(changes.WaitToReadAsync(waiting.Token).AsTask(), events.WaitToReadAsync(waiting.Token).AsTask(),
+                    events.WaitToReadViewsAsync(waiting.Token).AsTask());
                 token.ThrowIfCancellationRequested();
                 if (!await first) throw new InvalidOperationException("Sottoscrizione push chiusa.");
             }

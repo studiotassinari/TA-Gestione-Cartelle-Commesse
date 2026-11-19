@@ -1,3 +1,5 @@
+using TA.Transport;
+using TA_Gestione_Cartelle_Commesse.Contracts;
 using TA_Gestione_Cartelle_Commesse.Infrastructure;
 using TA_Gestione_Cartelle_Commesse.Services;
 namespace TA_Gestione_Cartelle_Commesse.ViewModels;
@@ -8,22 +10,54 @@ public sealed partial class MainViewModel
     public Command GeCoHoursCommand { get; private set; } = null!;
     private Views.GeCoPlanningWindow? planningWindow;
     private Views.GeCoHoursWindow? hoursWindow;
+    private PlanningViewModel? planningModel;
+    private HoursViewModel? hoursModel;
+    private long viewRevision;
     private void ShowGeCoPlanning()
     {
         if (connection == null) return;
         if (planningWindow != null) { planningWindow.Activate(); return; }
-        planningWindow = new(new PlanningViewModel(new ServerGeCoGateway(connection))) { Owner = System.Windows.Application.Current.MainWindow };
-        planningWindow.Closed += (_, _) => planningWindow = null;
+        planningModel = new PlanningViewModel(new ServerGeCoGateway(connection));
+        planningWindow = new(planningModel) { Owner = System.Windows.Application.Current.MainWindow };
+        planningWindow.Closed += (_, _) => { planningWindow = null; planningModel = null; };
         planningWindow.Show();
     }
     private void ShowGeCoHours()
     {
         if (connection == null) return;
         if (hoursWindow != null) { hoursWindow.Activate(); return; }
-        hoursWindow = new(new HoursViewModel(new ServerGeCoGateway(connection))) { Owner = System.Windows.Application.Current.MainWindow };
-        hoursWindow.Closed += (_, _) => hoursWindow = null;
+        hoursModel = new HoursViewModel(new ServerGeCoGateway(connection));
+        hoursWindow = new(hoursModel) { Owner = System.Windows.Application.Current.MainWindow };
+        hoursWindow.Closed += (_, _) => { hoursWindow = null; hoursModel = null; };
         hoursWindow.Show();
     }
     // Al cambio di connessione l'utente può essere un altro: le finestre si chiudono (le ore non salvate vengono chieste prima).
-    private void CloseGeCoWindows() { planningWindow?.Close(); hoursWindow?.Close(); folderLinksWindow?.Close(); geCoRevision = 0; }
+    private void CloseGeCoWindows() { planningWindow?.Close(); hoursWindow?.Close(); folderLinksWindow?.Close(); geCoRevision = 0; viewRevision = 0; }
+
+    // Notifica push «GeCoViste» (2.39.0): pianificazione o ore salvate in GeCo2027 o in un altro client di GeCa. Come per le
+    // notifiche, torna subito (il riscontro al server parte dopo) e il lavoro si fa sul thread dell'interfaccia. La prima
+    // notifica di ogni collegamento è solo il punto di partenza; senza finestre aperte non si chiede nulla al servizio, dopo
+    // una riconnessione si chiedono gli eventi persi. Gli eventi arrivano già filtrati per ciò che l'utente può vedere.
+    private Task GeCoViewsArrived(PushNotice notice)
+    {
+        System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            if (notice.Revision <= viewRevision) return;
+            var from = viewRevision; viewRevision = notice.Revision;
+            if (from == 0 || connection == null || (planningModel == null && hoursModel == null)) return;
+            try
+            {
+                var updates = await new ServerGeCoGateway(connection).Send<GeCoViewUpdates>(new("ViewEvents", DopoId: from));
+                viewRevision = Math.Max(viewRevision, updates.UltimoId);
+                planningModel?.ViewsChanged(updates); hoursModel?.ViewsChanged(updates);
+            }
+            catch (Exception ex)
+            {
+                // Alla notifica successiva si richiedono anche questi eventi.
+                if (viewRevision == notice.Revision) viewRevision = from;
+                ClientLog.Write("Aggiornamento di pianificazione e ore non riuscito: " + ex.Message);
+            }
+        });
+        return Task.CompletedTask;
+    }
 }

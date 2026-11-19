@@ -162,18 +162,76 @@ var foreign = Register(EventiSincronizzazione.Tipi.CommessaEliminata, "Commessa 
 using var watching = hub.Subscribe(); watching.TryRead(out _);
 using (var db = new TestDb(options))
 {
-    await EventiSincronizzazione.RegistraAsync(db, version, EventiSincronizzazione.GeCa, new NuovoEvento(EventiSincronizzazione.Tipi.CartellaNuova, "Nuova cartella."), null, "TA-Gestione");
-    Check(await reader.PollAsync(db, version, default) == 2 && reader.Position == foreign && watching.TryRead(out var pushed) && pushed == foreign && hub.Summary == "2 novità da GeCo2027"
-        && await EventiSincronizzazione.PosizioneAsync(db, GeCoEventsService.Consumer) == foreign, "Lettore degli eventi: solo quelli di GeCo2027, client avvisati, posizione salvata");
+    var folder = await EventiSincronizzazione.RegistraAsync(db, version, EventiSincronizzazione.GeCa, new NuovoEvento(EventiSincronizzazione.Tipi.CartellaNuova, "Nuova cartella."), null, "TA-Gestione");
+    Check(await reader.PollAsync(db, version, default) == 2 && reader.Position == folder && watching.TryRead(out var pushed) && pushed == foreign && hub.Summary == "2 novità da GeCo2027"
+        && await EventiSincronizzazione.PosizioneAsync(db, GeCoEventsService.Consumer) == folder, "Lettore degli eventi: notifiche solo da quelli di GeCo2027, client avvisati, posizione salvata dopo l'ultimo letto");
     Check(await reader.PollAsync(db, version, default) == 0 && !watching.TryRead(out _), "Lettore degli eventi: nessuna notifica ripetuta");
 }
 var restarted = new GeCoEventsService(new TA.Server.ServerSettings(), new GeCoEventHub(), Microsoft.Extensions.Logging.Abstractions.NullLogger<GeCoEventsService>.Instance);
-using (var db = new TestDb(options)) Check(await restarted.PollAsync(db, version, default) == 0 && restarted.Position == foreign, "Lettore degli eventi: dopo un riavvio riprende dalla posizione salvata");
+using (var db = new TestDb(options)) Check(await restarted.PollAsync(db, version, default) == 0 && restarted.Position == reader.Position, "Lettore degli eventi: dopo un riavvio riprende dalla posizione salvata");
 var notices = await Send<GeCoSyncEvents>(new("SyncEvents"), Collab);
 Check(notices is { Disponibile: true, UltimoId: var lastGeCo } && lastGeCo == foreign && notices.Eventi.Any(e => e.Id == created && e.Tipo == "CommessaCreata" && e.Utente == "Amministratore" && e.Data.Length == 16)
     && notices.Eventi.All(e => e.Origine == EventiSincronizzazione.GeCo2027 && e.Id != foreign), "Notifiche: eventi di GeCo2027, senza quelli di commesse che l'utente non può vedere (eliminate)");
 Check((await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: foreign), Collab)).Eventi.Length == 0 && (await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: created - 1), Admin)).Eventi.Select(e => e.Id).SequenceEqual(new[] { foreign, created }),
     "Notifiche: solo quelle dopo l'ultima ricevuta; l'amministratore vede anche le commesse eliminate");
+
+// ---------------------------------------------------------------- pianificazione e ore aggiornate subito (eventi tecnici, 2.39.0)
+async Task<long> Last() { using var db = new TestDb(options); return await EventiSincronizzazione.UltimoIdAsync(db); }
+EventoSincronizzazione LastEvent() { using var db = new TestDb(options); var r = db.tblSincronizzazioneEventi.AsNoTracking().OrderByDescending(e => e.Sev_Id).First();
+    return new(r.Sev_Id, r.Sev_Data, r.Sev_Origine, r.Sev_Tipo, r.Sev_IdCommessa, r.Sev_IdGara, r.Sev_IdCartella, r.Sev_Codice, r.Sev_Percorso, r.Sev_Testo, r.Sev_IdUtente, r.Sev_Utente); }
+var beforeSaves = await Last();
+var startView = await Send<GeCoViewUpdates>(new("ViewEvents"), Collab);
+Check(startView is { Disponibile: true, Eventi.Length: 0 }, "Viste: senza DopoId solo il punto di partenza");
+Check(await Send<int>(new("AddActivity", Attivita: new(CdcCollab, Comm, Fase1, "2026-11-23", "2026-11-25"), Scheda: "geca-prova1"), Collab) > 0, "Viste: attività aggiunta dalla finestra che salva");
+var movedEvent = LastEvent();
+Check(movedEvent is { Origine: EventiSincronizzazione.GeCa, Tipo: EventiSincronizzazione.Tipi.PianificazioneModificata, Codice: EventiSincronizzazione.MarcaTecnica, IdUtente: UteCollab }
+    && EventiSincronizzazione.Aggiornamento(movedEvent) is { IdCdc: CdcCollab, Scheda: "geca-prova1" } m && m.Dal == new DateTime(2026, 11, 23) && m.Al == new DateTime(2026, 11, 25) && m.Commesse.Contains(Comm),
+    "Viste: l'attività aggiunta in GeCa registra un evento tecnico di origine GeCa con persona, giorni, commessa e finestra");
+var hoursSaved = await Send<GeCoSaveResult>(new("HoursSave", Salvataggio: new(null, "2026-11-16", 1, [new(Comm, VoceOre, "2026-11-18", "3", Fase1)]), Scheda: "non valida!"), Collab);
+var hoursEvent = LastEvent();
+Check(hoursSaved.Salvate == 1 && hoursEvent is { Origine: EventiSincronizzazione.GeCa, Tipo: EventiSincronizzazione.Tipi.OreModificate } && EventiSincronizzazione.Aggiornamento(hoursEvent) is { IdCdc: CdcCollab, Scheda: null },
+    "Viste: le ore salvate in GeCa registrano un evento tecnico; una scheda non valida viene ignorata");
+Check(GeCoWorkService.Saves("HoursSave") && GeCoWorkService.Saves("MoveActivity") && !GeCoWorkService.Saves("Plan") && !GeCoWorkService.Saves("ViewEvents"), "Viste: solo i salvataggi anticipano la lettura del registro");
+long otherPerson;
+using (var db = new TestDb(options))
+{
+    // Ore di un'altra persona salvate in GeCo2027 da una scheda del browser.
+    var adminUser = db.tblUtenti.AsNoTracking().Single(u => u.Ute_Id == UteAdmin);
+    EventiSincronizzazione.AggiungiAggiornamento(new ContestoRegole(db, adminUser, Soc, null, version) { Origine = EventiSincronizzazione.GeCo2027, Scheda = "scheda-browser" },
+        EventiSincronizzazione.Tipi.OreModificate, CdcAdmin, new DateTime(2026, 11, 17), new DateTime(2026, 11, 17), [Comm], "Ore di Persona A modificate");
+    await db.SaveChangesAsync();
+    otherPerson = await EventiSincronizzazione.UltimoIdAsync(db);
+}
+var collabViews = await Send<GeCoViewUpdates>(new("ViewEvents", DopoId: beforeSaves), Collab);
+Check(collabViews is { Disponibile: true, Parziale: false } && collabViews.UltimoId == otherPerson && collabViews.Eventi.Select(e => e.Id).SequenceEqual(new[] { movedEvent.Id, hoursEvent.Id })
+    && collabViews.Eventi[0] is { Origine: "GeCa", Tipo: "PianificazioneModificata", IdCdc: CdcCollab, Dal: "2026-11-23", Al: "2026-11-25", Scheda: "geca-prova1", Utente: "Collaboratore" },
+    "Viste: il collaboratore riceve i dati dei salvataggi della propria persona, non le ore di un altro");
+var adminViews = await Send<GeCoViewUpdates>(new("ViewEvents", DopoId: beforeSaves), Admin);
+Check(adminViews.Eventi.Length == 3 && adminViews.Eventi[^1] is { Origine: "GeCo2027", IdCdc: CdcAdmin, Scheda: "scheda-browser" } && adminViews.Eventi[^1].Commesse.SequenceEqual(new[] { Comm }),
+    "Viste: l'amministratore riceve anche i salvataggi delle altre persone, con origine e scheda");
+Check((await Send<GeCoViewUpdates>(new("ViewEvents", DopoId: otherPerson), Admin)).Eventi.Length == 0, "Viste: nulla dopo l'ultimo evento ricevuto");
+var syncAfter = await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: beforeSaves), Admin);
+Check(syncAfter.Eventi.Length == 0 && syncAfter.UltimoId == foreign, "Notifiche: gli eventi tecnici di pianificazione e ore non sono notifiche e non spostano l'ultima");
+using var views = hub.Subscribe(views: true); views.TryReadViews(out _); views.TryRead(out _);
+using var oldClient = hub.Subscribe();
+using (var db = new TestDb(options))
+{
+    var summary = hub.Summary;
+    Check(await reader.PollAsync(db, version, default) == 0 && views.TryReadViews(out var viewId) && viewId == otherPerson && !views.TryRead(out _) && !oldClient.TryReadViews(out _)
+        && hub.Summary == summary && reader.Position == otherPerson,
+        "Lettore degli eventi: gli eventi tecnici di GeCa e di GeCo2027 aggiornano le viste dei client che le chiedono, non sono novità");
+}
+// Richieste di accesso (migrazione 13): notifiche rivolte a utenti precisi, solo per loro anche se altri vedono la commessa.
+long aimed;
+using (var db = new TestDb(options))
+    aimed = (await NotificheMirate.RegistraAsync(db, version, EventiSincronizzazione.GeCo2027, new NuovoEvento(EventiSincronizzazione.Tipi.AccessoRichiesto, "Richiesta di accesso a B260001.", Comm),
+        UteCollab, "Collaboratore", [UteAdmin]))!.Value;
+Check((await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: beforeSaves), Admin)).Eventi.Select(e => e.Id).SequenceEqual(new[] { aimed })
+    && (await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: beforeSaves), Collab)).Eventi.Length == 0,
+    "Notifiche mirate: la richiesta di accesso la vede solo il destinatario, non chi vede la commessa");
+using (var db = new TestDb(options))
+    Check(await reader.PollAsync(db, version, default) == 1 && watching.TryRead(out var aimedPush) && aimedPush == aimed && hub.Summary == null,
+        "Lettore degli eventi: una notifica mirata avvisa i client senza riepilogo per tutti (i destinatari la vedono nell'elenco)");
 Console.WriteLine("GeCoChecks: pianificazione, ore, collegamento cartelle e notifiche di GeCo verificati su dati sintetici.");
 
 static void Check(bool condition, string message) { if (!condition) throw new Exception("FAIL: " + message); Console.WriteLine("PASS: " + message); }
