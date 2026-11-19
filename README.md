@@ -1,4 +1,14 @@
-# TA-Gestione Cartelle Commesse — 2.39.0
+# TA-Gestione Cartelle Commesse — 2.40.0
+
+## Novità 2.40.0 — allineamento tra GeCo e GeCa
+
+Nel menu **Gestione** c'è la finestra **Allineamento GeCo e GeCa…**, per gli amministratori di GeCo, con le stesse regole della pagina Allineamento di GeCo2027 (libreria comune GeCo.Dati, database alla migrazione 14). Mostra le commesse con le loro cartelle, comprese quelle **in archivio** (una copia ZIP vale come cartella della commessa; filtro «Comprese archiviate»), le cartelle senza commessa né gara, i clienti di GeCo da sistemare (nome breve usato nei nomi delle cartelle, P.IVA e codice fiscale, doppioni), i committenti delle cartelle senza cliente e le cartelle chieste. Da qui si conferma il nome breve proposto, si **crea in GeCo la commessa o la gara** da una cartella (dati proposti, modificabili, con conferma), si **chiede la cartella** di una commessa che non ce l'ha (o la si crea subito) con l'anteprima del nome secondo le regole della creazione da modello, e si abbinano o si **importano in GeCo** i clienti che ci sono solo in GeCa. Le proposte restano proposte finché non vengono confermate.
+
+Il servizio esegue le **cartelle chieste da GeCo2027**: una alla volta, con la creazione da modello (mai sovrascritture: una cartella con lo stesso codice fa rifiutare la richiesta), scrive l'esito, che arriva come notifica a chi l'ha chiesta, e la cartella si collega alla commessa alla scansione successiva. Le **copie ZIP** create da «Archivia cartella in ZIP» accanto alle cartelle e le **gare in archivio** arrivano nel database comune come cartelle archiviate, lette solo per nome e metadati, senza aprirle.
+
+Il **catalogo dei clienti** di progetti, curriculum e creazione da modello è quello di GeCo, riconosciuto per partita IVA e codice fiscale; i clienti dell'archivio locale restano consultabili come storico e non si modificano più (si inseriscono in GeCo2027 o si importano dall'Allineamento). Nella **creazione da modello** la parte «Cliente» del nome si propone dal nome breve del cliente di GeCo. Aggiornare prima GeCo2027, poi il server, poi i client ([dettagli](deployment/DATABASE-COMUNE.md)).
+
+[Scarica aggiornatore 2.40.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.40.0/TA-Commesse-Aggiornatore-2.40.0.exe)
 
 ## Novità 2.39.0 — pianificazione e ore aggiornate subito
 

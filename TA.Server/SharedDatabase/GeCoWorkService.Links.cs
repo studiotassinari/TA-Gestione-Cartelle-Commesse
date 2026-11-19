@@ -17,6 +17,15 @@ public sealed partial class GeCoWorkService
     public const int RecentEvents = 50;
     private const int EventWindow = 200;
 
+    // Notifiche per i client di GeCa: gli eventi di GeCo2027 e, dalla 2.40.0, gli esiti delle cartelle chieste scritti da GeCa
+    // (CartellaCreata e CartellaNonCreata, con i destinatari di NotificheMirate: li vede soltanto chi aveva chiesto la cartella).
+    // Gli altri eventi di GeCa (scansioni, collegamenti decisi qui) sono già noti a chi li ha fatti e non diventano notifiche.
+    public static bool Notice(string origin, string type) => origin == EventiSincronizzazione.GeCo2027
+        || origin == EventiSincronizzazione.GeCa && type is EventiSincronizzazione.Tipi.CartellaCreata or EventiSincronizzazione.Tipi.CartellaNonCreata;
+    private static IQueryable<tblSincronizzazioneEventi> Notices(GeCoDbContext db) => EventiSincronizzazione.SenzaTecnici(db.tblSincronizzazioneEventi.AsNoTracking())
+        .Where(e => e.Sev_Origine == EventiSincronizzazione.GeCo2027 || e.Sev_Origine == EventiSincronizzazione.GeCa
+            && (e.Sev_Tipo == EventiSincronizzazione.Tipi.CartellaCreata || e.Sev_Tipo == EventiSincronizzazione.Tipi.CartellaNonCreata));
+
     private static async Task<object> HandleLinksAsync(GeCoCommand c, ContestoRegole context, CancellationToken token)
     {
         if (c.Action == "SyncEvents") return await EventsAsync(context, c.DopoId, token);
@@ -44,7 +53,7 @@ public sealed partial class GeCoWorkService
     private static string Date(DateTime value) => value.ToString("dd/MM/yyyy HH:mm");
     public static GeCoFolder? Folder(CartellaCollegabile? c) => c is null ? null
         : new(c.Id, c.Percorso, EventiSincronizzazione.NomeCartella(c.Percorso), c.Categoria, c.Codice, c.Anno, c.Committente, c.Oggetto, c.Presente,
-            c.UltimaRilevazione is { } d ? Date(d) : null);
+            c.UltimaRilevazione is { } d ? Date(d) : null, c.InArchivio);
     private static GeCoLinkConflict Conflict(ConflittoCollegamento x) => new(x.Tipo, x.TipoElemento, x.IdElemento, x.IdCartella, x.IdCartellaNuova, x.Testo);
     public static string Level(LivelloProposta level) => level switch { LivelloProposta.Sicura => "sicura", LivelloProposta.DaVerificare => "daverificare", _ => "" };
 
@@ -85,11 +94,12 @@ public sealed partial class GeCoWorkService
     {
         if (context.VersioneDatabase < EventiSincronizzazione.VersioneRichiesta) return new([], 0, false, EventsNotReady);
         var db = context.Db;
-        var recent = await EventiSincronizzazione.SenzaTecnici(db.tblSincronizzazioneEventi.AsNoTracking()).Where(e => e.Sev_Origine == EventiSincronizzazione.GeCo2027)
-            .OrderByDescending(e => e.Sev_Id).Select(e => e.Sev_Id).Take(EventWindow).ToListAsync(token);
+        var recent = await Notices(db).OrderByDescending(e => e.Sev_Id).Select(e => e.Sev_Id).Take(EventWindow).ToListAsync(token);
         if (recent.Count == 0) return new([], 0, true);
         var from = Math.Max(after ?? 0, recent[^1] - 1);
-        var events = await EventiSincronizzazione.LeggiDopoAsync(db, from, soloOrigine: EventiSincronizzazione.GeCo2027, massimo: EventWindow, stop: token, tecnici: false);
+        var events = (await Notices(db).Where(e => e.Sev_Id > from).OrderBy(e => e.Sev_Id).Take(EventWindow).ToListAsync(token))
+            .Select(r => new EventoSincronizzazione(r.Sev_Id, r.Sev_Data, r.Sev_Origine, r.Sev_Tipo, r.Sev_IdCommessa, r.Sev_IdGara, r.Sev_IdCartella,
+                r.Sev_Codice, r.Sev_Percorso, r.Sev_Testo, r.Sev_IdUtente, r.Sev_Utente)).ToList();
         var visibility = await EventiSincronizzazione.VisibilitaAsync(db, context.Utente, context.IdSocieta, token);
         var projects = await EventiSincronizzazione.CommesseAsync(db, events, token);
         var recipients = await NotificheMirate.DestinatariAsync(db, context.VersioneDatabase, events.Select(e => e.Id), token);

@@ -21,8 +21,12 @@ public sealed class TemplateCreationService(ServerSettings settings)
         var root = Path.GetFullPath(bid ? settings.BidsRoot : settings.JobsRoot);
         var yearRoot = Path.Combine(root, year);
         CheckAncestors(root); CheckAncestors(yearRoot);
-        if (Directory.EnumerateDirectories(yearRoot).Any(p => Path.GetFileName(p).StartsWith(code, StringComparison.OrdinalIgnoreCase)))
-            throw new IOException("Esiste gia una cartella con il codice " + code + ". Nessuna cartella e stata modificata.");
+        // Anche la copia ZIP/7z di una cartella archiviata accanto alle altre (2.40.0) occupa il codice: una seconda cartella
+        // con lo stesso codice renderebbe ambiguo il riscontro della commessa.
+        var existing = Directory.EnumerateDirectories(yearRoot).Where(p => Path.GetFileName(p).StartsWith(code, StringComparison.OrdinalIgnoreCase))
+            .Concat(Directory.EnumerateFiles(yearRoot).Where(p => Path.GetFileName(p).StartsWith(code, StringComparison.OrdinalIgnoreCase)
+                && Path.GetExtension(p) is { } e && (e.Equals(".zip", StringComparison.OrdinalIgnoreCase) || e.Equals(".7z", StringComparison.OrdinalIgnoreCase)))).ToArray();
+        if (existing.Length > 0) throw new FolderExistsException(code, existing);
         var name = code + " - " + client + (place.Length > 0 ? " - " + place : "") + " - " + subject;
         if (name.Length > 200) throw new ArgumentException("Nome cartella troppo lungo (massimo 200 caratteri).");
         var destination = Path.Combine(yearRoot, name);
@@ -86,6 +90,13 @@ public sealed class TemplateCreationService(ServerSettings settings)
                 throw new IOException("Creazione non completata. Verificare i permessi dell'account del servizio sulla cartella annuale." + residue, ex);
             }
         }
+    }
+    // Codice già usato nella cartella annuale: Existing sono i percorsi trovati (cartelle o copie archiviate), per chi deve
+    // distinguere una cartella creata da una richiesta precedente da una cartella diversa con lo stesso codice.
+    public sealed class FolderExistsException(string code, string[] existing)
+        : IOException("Esiste gia una cartella con il codice " + code + ". Nessuna cartella e stata modificata.")
+    {
+        public string[] Existing { get; } = existing;
     }
     private static string Segment(string? value, string label)
     {

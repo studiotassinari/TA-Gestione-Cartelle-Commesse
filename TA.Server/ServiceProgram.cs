@@ -59,7 +59,16 @@ builder.Services.AddSingleton<TemplateCreationService>();
 builder.Services.AddSingleton<ScanCoordinator>();
 builder.Services.AddSingleton<TA.Server.Business.BusinessService>();
 builder.Services.AddSingleton<TA.Server.Business.CurriculumService>();
-builder.Services.AddSingleton(new TA.Server.SharedDatabase.GeCoWorkService(settings));
+// Clienti di GeCo (2.40.0): una sola lettura in memoria per il gestionale e per il modulo Allineamento.
+var geCoCustomers = new TA.Server.SharedDatabase.GeCoCustomerSource(settings);
+builder.Services.AddSingleton(geCoCustomers);
+builder.Services.AddSingleton<TA.Server.SharedDatabase.GeCoFolderRequestsService>();
+builder.Services.AddHostedService(p => p.GetRequiredService<TA.Server.SharedDatabase.GeCoFolderRequestsService>());
+builder.Services.AddSingleton(p => new TA.Server.SharedDatabase.GeCoWorkService(settings)
+{
+    FolderRequests = p.GetRequiredService<TA.Server.SharedDatabase.GeCoFolderRequestsService>(),
+    Customers = p.GetRequiredService<TA.Server.Business.BusinessService>(), CustomerSource = geCoCustomers,
+});
 builder.Services.AddSingleton<TA.Server.SharedDatabase.GeCoEventHub>();
 // Eventi di GeCo2027 dal registro comune verso i client (consumatore «GeCa»); senza database comune non fa nulla.
 builder.Services.AddHostedService<TA.Server.SharedDatabase.GeCoEventsService>();

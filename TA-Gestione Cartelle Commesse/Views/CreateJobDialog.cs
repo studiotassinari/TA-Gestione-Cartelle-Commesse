@@ -25,12 +25,13 @@ public sealed class CreateJobDialog : Window
         var code = Field("Codice " + letter + "XXYYY", letter + DateTime.Now.ToString("yy"));
         panel.Children.Add(new TextBlock { Text = "Cerca il committente nel catalogo clienti (facoltativo): nome, partita IVA o codice fiscale" });
         var search = new TextBox { Margin = new Thickness(0, 4, 0, 4) }; panel.Children.Add(search);
-        var customer = new ListBox { DisplayMemberPath = "Name", Height = 120, Margin = new Thickness(0, 0, 0, 8) }; panel.Children.Add(customer);
+        // Dalla 2.40.0 il catalogo è quello di GeCo: accanto al nome si vede il nome breve, che diventa la parte «Cliente» del nome.
+        var customer = new ListBox { Height = 120, Margin = new Thickness(0, 0, 0, 8), ItemTemplate = CustomerTemplate() }; panel.Children.Add(customer);
         Customer[] catalog = [];
         var customerStatus = new TextBlock { Text = "Caricamento anagrafiche…", TextWrapping = TextWrapping.Wrap }; panel.Children.Add(customerStatus);
         var client = Field("Denominazione da usare nella cartella"); var place = Field("Luogo (facoltativo)"); var subject = Field("Argomento / cosa");
-        customer.SelectionChanged += (_, _) => { if (customer.SelectedItem is Customer selected) client.Text = selected.Name; };
-        const string customerHelp = "La denominazione resta modificabile. L'associazione gestionale si imposta nella scheda Commesse e autorizzazioni.";
+        customer.SelectionChanged += (_, _) => { if (customer.SelectedItem is Customer selected) client.Text = FolderClient(selected); };
+        const string customerHelp = "Per i clienti di GeCo si propone il nome breve usato nei nomi delle cartelle (senza nome breve, la ragione sociale): la denominazione resta modificabile. L'associazione gestionale si imposta nella scheda Commesse e autorizzazioni.";
         void ShowCustomers()
         {
             var found = MatchCustomers(catalog, search.Text);
@@ -120,12 +121,27 @@ public sealed class CreateJobDialog : Window
             finally { Busy(false); }
         };
     }
-    // Ricerca senza distinzione di maiuscole e accenti: ogni parola scritta deve comparire in nome, partita IVA o codice fiscale.
+    // Parte «Cliente» del nome della cartella: il nome breve del cliente di GeCo, se c'è (lo stesso che GeCo2027 usa nelle cartelle
+    // che chiede), altrimenti la ragione sociale. Solo una proposta: la casella resta modificabile.
+    public static string FolderClient(Customer c) => string.IsNullOrWhiteSpace(c.ShortName) ? c.Name : c.ShortName.Trim();
+    private static DataTemplate CustomerTemplate()
+    {
+        var text = new FrameworkElementFactory(typeof(TextBlock));
+        text.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding { Converter = new CustomerLabel() });
+        return new DataTemplate { VisualTree = text };
+    }
+    private sealed class CustomerLabel : System.Windows.Data.IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => value is Customer c
+            ? c.Name + (string.IsNullOrWhiteSpace(c.ShortName) ? "" : "  «" + c.ShortName + "»") : "";
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotSupportedException();
+    }
+    // Ricerca senza distinzione di maiuscole e accenti: ogni parola scritta deve comparire in nome, nome breve, partita IVA o codice fiscale.
     public static Customer[] MatchCustomers(IReadOnlyCollection<Customer> customers, string text)
     {
         var words = Plain(text).Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length == 0) return customers.ToArray();
-        return customers.Where(c => { var target = Plain(c.Name + " " + c.Vat + " " + c.TaxCode); return words.All(word => target.Contains(word)); }).ToArray();
+        return customers.Where(c => { var target = Plain(c.Name + " " + c.ShortName + " " + c.Vat + " " + c.TaxCode); return words.All(word => target.Contains(word)); }).ToArray();
     }
     private static string Plain(string value) => string.Concat((value ?? "").Normalize(System.Text.NormalizationForm.FormD)
         .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)).ToUpperInvariant();

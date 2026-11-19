@@ -48,7 +48,7 @@ public sealed partial class BusinessService
     {
         var known=GetProject(project.Id);
         Required(project.CustomerId,"Cliente associato",200);Required(project.Subject,"Argomento",1000);
-        var customer=Store.Find<Customer>("customer",project.CustomerId)??throw new ArgumentException("Cliente non presente.");
+        var customer=FindCustomer(project.CustomerId)??throw new ArgumentException("Cliente non presente.");
         if(project.Location==null||project.Location.Length>1000||project.Status is not ("" or "Open" or "Closed" or "Invoiced"))throw new ArgumentException("Luogo o stato non validi.");
         // L'aggiornamento descrittivo non modifica le autorizzazioni per l'inserimento ore.
         var saved=known with{CustomerId=customer.Id,Subject=project.Subject.Trim(),Title=customer.Name+" — "+project.Subject.Trim(),Location=project.Location.Trim(),Status=project.Status,Revision=project.Revision+1};

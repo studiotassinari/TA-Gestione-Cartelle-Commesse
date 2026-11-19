@@ -83,7 +83,10 @@ public sealed class GeCoEventHub
 // anche un salvataggio fatto da un client di GeCa aggiorna gli altri client aperti, e non contano tra le novità.
 // Il database è l'unico canale con GeCo2027: nessuna chiamata tra i due server. Senza la migrazione 12 aspetta senza errori
 // (il database si aggiorna con GeCo2027 o con l'invio delle cartelle); un database irraggiungibile non ferma il servizio.
-public sealed class GeCoEventsService(ServerSettings settings, GeCoEventHub hub, ILogger<GeCoEventsService> logger) : BackgroundService
+// Dalla 2.40.0: l'evento «CartellaRichiesta» (cartella chiesta da GeCo2027 o da un client di GeCa) fa partire subito l'esecuzione
+// delle richieste (GeCoFolderRequestsService); gli esiti «CartellaCreata» e «CartellaNonCreata», scritti da GeCa per chi aveva
+// chiesto la cartella (NotificheMirate), sono notifiche come quelle di GeCo2027, visibili ai soli destinatari.
+public sealed class GeCoEventsService(ServerSettings settings, GeCoEventHub hub, ILogger<GeCoEventsService> logger, GeCoFolderRequestsService? requests = null) : BackgroundService
 {
     public const string Consumer = EventiSincronizzazione.GeCa;
     public const int Batch = 500;
@@ -114,6 +117,7 @@ public sealed class GeCoEventsService(ServerSettings settings, GeCoEventHub hub,
             hub.PublishViews(current);
         }
         long start = current, lastNotice = 0, lastView = 0;
+        bool asked = false;
         var notices = new List<EventoSincronizzazione>();
         while (true)
         {
@@ -121,12 +125,16 @@ public sealed class GeCoEventsService(ServerSettings settings, GeCoEventHub hub,
             if (events.Count == 0) break;
             current = events[^1].Id;
             foreach (var e in events)
+            {
+                if (e.Tipo == EventiSincronizzazione.Tipi.CartellaRichiesta) asked = true;
                 if (EventiSincronizzazione.Tecnico(e)) lastView = e.Id;
-                else if (e.Origine == EventiSincronizzazione.GeCo2027) { notices.Add(e); lastNotice = e.Id; }
+                else if (GeCoWorkService.Notice(e.Origine, e.Tipo)) { notices.Add(e); lastNotice = e.Id; }
+            }
             if (events.Count < Batch) break;
         }
         if (current > start || save) await EventiSincronizzazione.SalvaPosizioneAsync(db, Consumer, current, EventiSincronizzazione.GeCo2027, token);
         position = current;
+        if (asked) requests?.Wake();
         if (lastView > 0) hub.PublishViews(lastView);
         if (notices.Count > 0)
         {

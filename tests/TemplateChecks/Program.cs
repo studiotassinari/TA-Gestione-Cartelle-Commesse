@@ -29,6 +29,9 @@ try
     Check(File.ReadAllText(Path.Combine(model, "documento.xlsx")) == "non copiare", "Modello originale preservato");
     Expect<IOException>(() => service.Create(input with { TemplateStamp = preview.Stamp }), "Duplicato rifiutato senza sovrascrivere");
     Expect<IOException>(() => service.Preview(input with { Client = "Diverso" }), "Codice duplicato rifiutato anche con nome diverso");
+    // Una copia ZIP archiviata accanto alle cartelle occupa il codice come la cartella (2.40.0).
+    File.WriteAllText(Path.Combine(jobs, "2026", "C26050 - Cliente - Archiviata.zip"), "");
+    Check(Throws<TemplateCreationService.FolderExistsException>(() => service.Preview(input with { Code = "C26050" })) is { Existing.Length: 1 }, "Codice di una copia ZIP archiviata rifiutato, con il percorso trovato");
     foreach (var invalid in new[] { input with { Code = ".." }, input with { Code = "G26001" }, input with { Code = "C26002", Client = "..\\esterno" }, input with { Code = "C26002", Subject = "nome:stream" }, input with { Code = "C26002", Client = "" } })
         Expect<ArgumentException>(() => service.Preview(invalid), "Campi non validi rifiutati");
     Expect<DirectoryNotFoundException>(() => service.Preview(input with { Code = "C27001" }), "Cartella annuale mancante non creata implicitamente");
@@ -65,3 +68,4 @@ finally
 Console.WriteLine("TUTTI I CONTROLLI TEMPLATE SUPERATI; nessuna commessa reale creata.");
 static void Check(bool condition, string message) { if (!condition) throw new Exception(message); Console.WriteLine("PASS: " + message); }
 static void Expect<T>(Action action, string message) where T : Exception { try { action(); } catch (T) { Console.WriteLine("PASS: " + message); return; } throw new Exception(message); }
+static T? Throws<T>(Action action) where T : Exception { try { action(); } catch (T ex) { return ex; } return null; }

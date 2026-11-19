@@ -32,7 +32,7 @@ public sealed partial class MainViewModel
         hoursWindow.Show();
     }
     // Al cambio di connessione l'utente può essere un altro: le finestre si chiudono (le ore non salvate vengono chieste prima).
-    private void CloseGeCoWindows() { planningWindow?.Close(); hoursWindow?.Close(); folderLinksWindow?.Close(); geCoRevision = 0; viewRevision = 0; }
+    private void CloseGeCoWindows() { planningWindow?.Close(); hoursWindow?.Close(); folderLinksWindow?.Close(); alignmentWindow?.Close(); geCoRevision = 0; viewRevision = 0; }
 
     // Notifica push «GeCoViste» (2.39.0): pianificazione o ore salvate in GeCo2027 o in un altro client di GeCa. Come per le
     // notifiche, torna subito (il riscontro al server parte dopo) e il lavoro si fa sul thread dell'interfaccia. La prima

@@ -82,6 +82,8 @@ public sealed class FolderArchiveService(ServerSettings settings, ScanCoordinato
                 job.Receipt = receipt; job.State = "ZIP verificato"; job.Expires = DateTime.UtcNow.AddHours(1);
                 job.Message = "Tutti i file e le sottocartelle verificati con SHA-256. Originali ancora presenti. Richiedere conferma per eliminarli. Lo ZIP non conserva autorizzazioni NTFS e tutti gli attributi del filesystem.";
             }
+            // La copia archiviata è già un riscontro della commessa per GeCo: si invia senza aspettare l'eliminazione o la notte.
+            scans.SharedChanged();
         }
         catch (Exception ex) { lock (gate) { job.State = "Errore"; job.Message = ex.Message + " Nessun originale eliminato."; } }
         finally { lock (gate) { job.Running = false; job.Finished = DateTime.UtcNow; } }

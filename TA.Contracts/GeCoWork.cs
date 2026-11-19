@@ -13,7 +13,8 @@ namespace TA_Gestione_Cartelle_Commesse.Contracts;
 public sealed record GeCoCommand(string Action, string? Dal = null, int? Settimane = null, int[]? Persone = null, int? IdCdc = null, int[]? Voci = null,
     string? Testo = null, int Id = 0, int IdCommessa = 0, int IdVdc = 0, int? IdFase = null, bool Valore = false,
     GeCoActivityRequest? Attivita = null, GeCoSaveRequest? Salvataggio = null, GeCoConfirmRequest? Conferma = null,
-    string? Tipo = null, int IdCartella = 0, GeCoLinkItem[]? Collegamenti = null, long? DopoId = null, string? Scheda = null);
+    string? Tipo = null, int IdCartella = 0, GeCoLinkItem[]? Collegamenti = null, long? DopoId = null, string? Scheda = null,
+    GeCoAlignmentRequest? Allineamento = null);
 
 // Chi è l'utente per GeCo, deciso dal servizio dal token Windows. Recognized falso: le finestre mostrano Message e non permettono nulla.
 // Match: come è stato trovato l'utente (abbinamento della pagina Utenti di GeCo, nome uguale...). Hours: funzione delle ore assegnata.

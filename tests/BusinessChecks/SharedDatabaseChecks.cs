@@ -75,6 +75,19 @@ IF OBJECT_ID('dbo.tblUtentiFunzioni') IS NULL
             Check(first.Contains("2 eventi per GeCo2027") && Events("Sev_Tipo = 'CartellaNuova'") == 2 && Events("Sev_Tipo = 'CartellaSparita' AND Sev_Codice = 'C23007'") == 1
                 && Events("Sev_Tipo = 'CartellaModificata' AND Sev_Codice = 'C24031'") == 1, "Eventi della scansione delle cartelle non registrati per GeCo2027: " + first);
         }
+        // Migrazione 14 (2.40.0) anche su un database senza le tabelle di GeCo2017 (tblClienti manca): le copie ZIP delle gare
+        // arrivano come archiviate, le cartelle no; la tabella delle richieste di cartella esiste.
+        if (AggiornamentoDatabase.VersioneAttualeAsync(sql).GetAwaiter().GetResult() >= GeCo.Dati.Regole.ServizioRichiesteCartelle.VersioneRichiesta)
+        {
+            var bids = new ArchiveSnapshot { Prefix = 'G', Records = [
+                new FolderRecord("G26001", "26", "001", "Ente", "Gara aperta", @"\\server\gare\2026\G26001 - Ente - Gara aperta", "Valido"),
+                new FolderRecord("G25002", "25", "002", "Ente", "Gara chiusa", @"\\server\gare\2025\G25002 - Ente - Gara chiusa.zip", "Archiviata") { ArchiveBytes = 10 }] };
+            string pushed = SharedFolders.PushAsync(sql, new[] { new CategoryState('G', "", false, "", "", bids) }, CancellationToken.None).GetAwaiter().GetResult();
+            Check(pushed.Contains("G: 2 cartelle (di cui 1 copie ZIP)") && Count("Car_Codice = 'G25002' AND Car_Archiviata = 1") == 1 && Count("Car_Codice = 'G26001' AND Car_Archiviata = 0") == 1,
+                "Migrazione 14: copia ZIP della gara archiviata, cartella no: " + pushed);
+            using var requests = new SqlCommand("SELECT CASE WHEN OBJECT_ID('dbo.tblRichiesteCartelle') IS NOT NULL THEN 1 ELSE 0 END", connection);
+            Check((int)requests.ExecuteScalar()! == 1, "Migrazione 14: tabella delle richieste di cartella creata anche su un database senza le tabelle di GeCo2017");
+        }
         Console.WriteLine("SharedDatabaseChecks: aggiornamento dello schema e sincronizzazione delle cartelle verificati su SQL Server.");
     }
 }

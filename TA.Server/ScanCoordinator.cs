@@ -71,6 +71,8 @@ public sealed class ScanCoordinator(ServerSettings settings, ILogger<ScanCoordin
     // l'elenco completo va subito nel database comune, così GeCo2027 riceve gli eventi senza aspettare la notte. Le modifiche
     // ravvicinate si raccolgono in un solo invio dopo 15 secondi; una modifica durante l'invio ne programma un altro.
     private int sharedPending;
+    // Una copia ZIP appena creata accanto alla cartella non cambia l'elenco delle cartelle, ma va nel database comune (2.40.0).
+    public void SharedChanged() => SharedListChanged();
     private void SharedListChanged()
     {
         if (settings.SharedDatabase.Trim().Length == 0 || Interlocked.Exchange(ref sharedPending, 1) == 1) return;

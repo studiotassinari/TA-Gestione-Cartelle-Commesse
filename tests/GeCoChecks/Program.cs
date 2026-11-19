@@ -232,7 +232,8 @@ Check((await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: beforeSaves), Admin)
 using (var db = new TestDb(options))
     Check(await reader.PollAsync(db, version, default) == 1 && watching.TryRead(out var aimedPush) && aimedPush == aimed && hub.Summary == null,
         "Lettore degli eventi: una notifica mirata avvisa i client senza riepilogo per tutti (i destinatari la vedono nell'elenco)");
-Console.WriteLine("GeCoChecks: pianificazione, ore, collegamento cartelle e notifiche di GeCo verificati su dati sintetici.");
+await AlignmentChecks.RunAsync();
+Console.WriteLine("GeCoChecks: pianificazione, ore, collegamento cartelle, notifiche e allineamento di GeCo verificati su dati sintetici.");
 
 static void Check(bool condition, string message) { if (!condition) throw new Exception("FAIL: " + message); Console.WriteLine("PASS: " + message); }
 

@@ -2,15 +2,17 @@ using TA_Gestione_Cartelle_Commesse.Contracts;
 using System.Security.Principal;
 namespace TA.Server.Business;
 
-public sealed partial class BusinessService
+public sealed partial class BusinessService : TA.Server.SharedDatabase.ICustomerArchive
 {
     public BusinessStore Store {get;}
     private readonly Func<WorkProject[]> available;
     private readonly Func<string,string> resolve;
     private readonly Func<string[]>? collaborators;
-    public BusinessService(ServerSettings settings,ScanCoordinator scans):this(new(settings.InventoryFolder),()=>
+    // geCo: clienti di GeCo (2.40.0), presente se il database comune è configurato.
+    public BusinessService(ServerSettings settings,ScanCoordinator scans,TA.Server.SharedDatabase.GeCoCustomerSource? geCo=null):this(new(settings.InventoryFolder),()=>
         new[]{"C","G","A"}.SelectMany(category=>(scans.Get(category).State.Snapshot?.Records??[])
-            .Select(row=>ProjectMetadata.FromFolder(row,category))).DistinctBy(p=>p.Id).ToArray(),input=>CanonicalUser(input,settings),Members(settings)){}
+            .Select(row=>ProjectMetadata.FromFolder(row,category))).DistinctBy(p=>p.Id).ToArray(),input=>CanonicalUser(input,settings),Members(settings))
+    {GeCoCustomers=geCo is {Configured:true}?geCo:null;}
     public BusinessService(BusinessStore store,Func<WorkProject[]> projects,Func<string,string> resolver,Func<string[]>? members=null){Store=store;available=projects;resolve=resolver;collaborators=members;}
     // Senza gruppo collaboratori configurato l'elenco non viene letto da Active Directory.
     private static Func<string[]>? Members(ServerSettings settings)
@@ -33,7 +35,9 @@ public sealed partial class BusinessService
             if(!saved.TryGetValue(p.Id,out var old))saved.Add(p.Id,p);
             else saved[p.Id]=old with{Category=p.Category,Year=old.Year==0?p.Year:old.Year,Number=old.Number==0?p.Number:old.Number,SourceCustomerName=string.IsNullOrEmpty(old.SourceCustomerName)?p.SourceCustomerName:old.SourceCustomerName,LastActivityUtc=p.LastActivityUtc};
         var activity=Store.ProjectActivity();
-        return saved.Values.Select(ProjectMetadata.Normalize).Select(p=>activity.TryGetValue(p.Id,out var at)&&(!p.LastActivityUtc.HasValue||at>p.LastActivityUtc)?p with{LastActivityUtc=at}:p).OrderByDescending(p=>p.Code,StringComparer.Ordinal).ToArray();
+        // Clienti locali ritrovati in GeCo: la commessa mostra il cliente di GeCo (la scrittura cambia solo al salvataggio successivo).
+        var alias=CustomerCatalog().Alias;
+        return saved.Values.Select(p=>alias.TryGetValue(p.CustomerId??"",out var to)?p with{CustomerId=to}:p).Select(ProjectMetadata.Normalize).Select(p=>activity.TryGetValue(p.Id,out var at)&&(!p.LastActivityUtc.HasValue||at>p.LastActivityUtc)?p with{LastActivityUtc=at}:p).OrderByDescending(p=>p.Code,StringComparer.Ordinal).ToArray();
     }
     public object Execute(BusinessCommand command,string actor,bool manager)
     {
@@ -48,15 +52,15 @@ public sealed partial class BusinessService
         {
             var category=c.Category??"C";
             if(category is not ("C" or "G" or "A"))throw new ArgumentException("Categoria non valida.");
-            return new ProjectCatalog(Projects().Where(p=>p.Category==category).ToArray(),Store.All<Customer>("customer"),manager);
+            return new ProjectCatalog(Projects().Where(p=>p.Category==category).ToArray(),Customers(),manager);
         }
         EnsurePhases();
         if(c.Action=="ProjectDetail")
         {
             var project=GetProject(c.Id??"");
-            return new ProjectDetails(project,Store.Find<Customer>("customer",project.CustomerId),
+            return new ProjectDetails(project,FindCustomer(project.CustomerId),
                 Phases().Where(p=>p.ProjectId==project.Id).ToArray(),Activities().Where(a=>a.ProjectId==project.Id).ToArray(),
-                Store.All<Customer>("customer"),collaborators?.Invoke()??[],manager);
+                Customers(),collaborators?.Invoke()??[],manager);
         }
         if(c.Action=="Snapshot")
         {
@@ -64,7 +68,7 @@ public sealed partial class BusinessService
             if(q.To<q.From || q.To.DayNumber-q.From.DayNumber>366)throw new ArgumentException("Selezionare un periodo fino a un anno.");
             var activities=Activities();
             var times=Store.All<WorkTime>("time");
-            return new BusinessSnapshot(actor,manager,Store.All<Customer>("customer"),Projects(),activities.Where(a=>a.Start<=q.To&&a.End>=q.From).ToArray(),
+            return new BusinessSnapshot(actor,manager,Customers(),Projects(),activities.Where(a=>a.Start<=q.To&&a.End>=q.From).ToArray(),
                 times.Where(t=>t.Day>=q.From&&t.Day<=q.To&&(manager||t.User.Equals(actor,StringComparison.OrdinalIgnoreCase))).ToArray(),
                 collaborators?.Invoke() ?? activities.Select(a=>a.Assignee).Concat(times.Select(t=>t.User)).Append(actor).Where(s=>s.Length>0).Distinct(StringComparer.OrdinalIgnoreCase).Order().ToArray(),Store.BackupStatus,Phases());
         }
@@ -88,7 +92,7 @@ public sealed partial class BusinessService
                 if(p.HoursMode is "Quote" or "Contract")Required(p.Evidence,"Riferimento al documento accettato",1000);
                 if(p.HoursMode=="Override")Required(p.Reason,"Motivazione della deroga",1000);
                 if(p.CustomerId==null||p.Evidence==null||p.Reason==null||p.Evidence.Length>1000||p.Reason.Length>1000)throw new ArgumentException("Dati autorizzazione non validi.");
-                if(p.CustomerId.Length>0&&Store.Find<Customer>("customer",p.CustomerId)==null)throw new ArgumentException("Cliente non presente.");
+                if(p.CustomerId.Length>0&&FindCustomer(p.CustomerId)==null)throw new ArgumentException("Cliente non presente.");
                 var saved=known with{CustomerId=p.CustomerId,HoursMode=p.HoursMode,Evidence=p.Evidence,Reason=p.Reason,Until=p.Until,Revision=p.Revision+1};
                 Store.Save("project",p.Id,p.Revision,saved,actor,"ProjectAuthorization");return saved;
             case "SaveActivity":
@@ -105,15 +109,16 @@ public sealed partial class BusinessService
                 var phase=ResolvePhase(activity.ProjectId,activity.PhaseId,activity.Phase,actor);
                 activity=activity with{PhaseId=phase.Id,Phase=phase.Name};
                 Store.Save("activity",activity.Id,a.Revision,activity,actor,"Activity");return activity;
-            case "ImportMagoot":return CustomerImport.ImportCsv(this,c.Csv??"",actor);
+            case "ImportMagoot":LocalCustomersWritable();return CustomerImport.ImportCsv(this,c.Csv??"",actor);
             case "PreviewMagoot":return CustomerImport.ImportCsv(this,c.Csv??"",actor,preview:true);
-            case "ImportFatture":return c.Excel is {} book ? FattureExcelImport.Import(this,book,actor,false) : CustomerImport.ImportCsv(this,c.Csv??"",actor,"FattureInCloud");
+            case "ImportFatture":LocalCustomersWritable();return c.Excel is {} book ? FattureExcelImport.Import(this,book,actor,false) : CustomerImport.ImportCsv(this,c.Csv??"",actor,"FattureInCloud");
             case "PreviewFatture":return c.Excel is {} previewBook ? FattureExcelImport.Import(this,previewBook,actor,true) : CustomerImport.ImportCsv(this,c.Csv??"",actor,"FattureInCloud",true);
             default:throw new ArgumentException("Comando gestionale sconosciuto.");
         }
     }
     public Customer SaveCustomer(Customer input,string actor)
     {
+        LocalCustomersWritable();
         Required(input.Name,"Ragione sociale",200);
         foreach(var s in new[]{input.Vat,input.TaxCode,input.Address,input.Email})if(s==null||s.Length>1000)throw new ArgumentException("Campo cliente non valido o troppo lungo.");
         var old=Store.Find<Customer>("customer",input.Id);

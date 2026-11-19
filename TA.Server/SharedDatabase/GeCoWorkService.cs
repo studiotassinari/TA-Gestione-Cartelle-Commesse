@@ -6,9 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using TA_Gestione_Cartelle_Commesse.Contracts;
 namespace TA.Server.SharedDatabase;
 
-// Pianificazione delle attività, ore lavorate e collegamento delle cartelle (GeCoWorkService.Links.cs) di GeCo per il client
+// Pianificazione delle attività, ore lavorate, collegamento delle cartelle (GeCoWorkService.Links.cs) e allineamento
+// (GeCoWorkService.Alignment.cs, 2.40.0) di GeCo per il client
 // WPF, sullo stesso database SQL Server di GeCo2027 e con le stesse regole: quelle dei servizi della libreria GeCo.Dati
-// (ServizioPianificazione, ServizioConsuntivo, ServizioCollegamentiCartelle), mai riscritte qui.
+// (ServizioPianificazione, ServizioConsuntivo, ServizioCollegamentiCartelle, ServizioAllineamento), mai riscritte qui.
 // Il servizio decide soltanto chi è l'utente: l'account Windows autenticato sul canale (mai un nome inviato dal client)
 // diventa un utente di GeCo con AccountWindows.TrovaUtenteAsync, la stessa funzione dell'accesso dal browser di GeCo2027.
 // Senza utente corrispondente, o senza la società abilitata, nessun comando viene eseguito.
@@ -40,7 +41,7 @@ public sealed partial class GeCoWorkService
             var (access, context) = await IdentifyAsync(db, account, current, command.Action == "Access", command.Scheda, token);
             if (command.Action == "Access") return access;
             if (context == null) throw new UnauthorizedAccessException(access.Message);
-            return await HandleAsync(command, context, token);
+            return IsAlignment(command.Action) ? await HandleAlignmentAsync(command, context, token) : await HandleAsync(command, context, token);
         }
         catch (RegolaException ex) { throw Translate(ex); }
         catch (DbException ex) { throw new IOException("Database comune con GeCo non raggiungibile: " + ex.Message, ex); }

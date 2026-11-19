@@ -6,8 +6,9 @@ namespace TA_Gestione_Cartelle_Commesse.Contracts;
 // Tipo: "commessa" o "gara". Livello: "sicura", "daverificare" o "" (nessuna proposta).
 
 // Cartella rilevata (tblCartelle). Categoria: C commesse, G gare, A archivio. Presente falso: non trovata dall'ultima scansione.
+// Archiviata (2.40.0): copia ZIP/7z in archivio o accanto alla cartella, riscontro valido della commessa.
 public sealed record GeCoFolder(int Id, string Percorso, string Nome, string Categoria, string Codice, int? Anno, string? Committente, string? Oggetto,
-    bool Presente, string? UltimaRilevazione);
+    bool Presente, string? UltimaRilevazione, bool Archiviata = false);
 // Cartella candidata con punteggio (0–100) e motivo leggibile: un candidato non è mai un collegamento accertato.
 public sealed record GeCoFolderCandidate(int IdCartella, int Punteggio, string Motivo, GeCoFolder? Cartella);
 // Collegamento confermato: dove (GeCo2027 o GeCa), quando (gg/mm/aaaa hh:mm) e da chi.

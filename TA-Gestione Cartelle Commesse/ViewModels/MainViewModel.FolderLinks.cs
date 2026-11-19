@@ -27,6 +27,7 @@ public sealed partial class MainViewModel
         {
             bool first = geCoRevision == 0, fresh = notice.Revision > geCoRevision;
             geCoRevision = Math.Max(geCoRevision, notice.Revision);
+            if (alignment is { } aligned) await aligned.PushedAsync(notice.Revision);
             if (folderLinks is { } open) { await open.PushedAsync(notice.Revision); return; }
             if (fresh && !first && !string.IsNullOrWhiteSpace(notice.Summary))
             {
