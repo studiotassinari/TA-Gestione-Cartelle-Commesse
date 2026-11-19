@@ -24,7 +24,12 @@ internal static class AlignmentChecks
         var root = Path.Combine(Path.GetTempPath(), "TA-AlignmentChecks-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try { await RunAsync(root); }
-        finally { if (Path.GetFileName(root).StartsWith("TA-AlignmentChecks-")) Directory.Delete(root, true); }
+        finally
+        {
+            // Su Windows il gestionale SQLite resta aperto nel pool delle connessioni: va chiuso prima di cancellare la cartella.
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            if (Path.GetFileName(root).StartsWith("TA-AlignmentChecks-")) Directory.Delete(root, true);
+        }
     }
 
     private static async Task RunAsync(string root)
