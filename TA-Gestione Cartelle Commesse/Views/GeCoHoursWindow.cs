@@ -13,8 +13,10 @@ namespace TA_Gestione_Cartelle_Commesse.Views;
 
 // Ore lavorate di GeCo con l'impostazione della Pianificazione: giorni feriali in orizzontale (sabato e domenica solo se
 // contengono ore), persone una sotto l'altra, ogni elemento è una giornata commessa · fase del colore della commessa con
-// sotto ore e km; più fasi nello stesso giorno stanno su righe parallele. Ore e km si modificano nella barra sopra la
-// griglia quando l'elemento è scelto; le sagome tratteggiate sono le attività pianificate da consuntivare.
+// sotto ore e km; più fasi nello stesso giorno stanno su righe parallele. Come nella pagina di GeCo2027 le ore si scrivono
+// sulla giornata stessa: un clic la sceglie e porta il cursore nella casella delle ore dentro l'elemento; la barra sopra la
+// griglia resta come alternativa e per i km. Le due caselle scrivono la stessa modifica del modello (un solo stato). Le
+// sagome tratteggiate sono le attività pianificate da consuntivare.
 public sealed class GeCoHoursWindow : Window
 {
     private readonly HoursViewModel vm;
@@ -29,7 +31,13 @@ public sealed class GeCoHoursWindow : Window
     private readonly ScrollViewer scroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     private readonly StackPanel timeline = new() { Margin = new Thickness(10) };
     private readonly DispatcherTimer searchTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
-    private TextBox? hoursBox;
+    private TextBox? hoursBox, inlineBox;
+    // Elementi che possono avere il cursore (giornate e caselle), per rimetterlo dov'era dopo ogni ridisegno: a ogni tasto
+    // griglia e barra si ricostruiscono, e la casella in cui si scrive deve restare quella, con il cursore al suo posto.
+    private sealed record FocusKey(string Key, string Where);
+    private readonly Dictionary<FocusKey, FrameworkElement> focusables = [];
+    // Ore della casella prima di cominciare a scrivere, per Esc.
+    private (string Key, HoursViewModel.EditMark Mark)? editStart;
     private bool details;
     private double dayWidth = 112;
     private sealed record Dragged(PanelProject Project, GeCoOption? Phase, decimal? Hours);
@@ -53,7 +61,7 @@ public sealed class GeCoHoursWindow : Window
         var right = new DockPanel(); Grid.SetColumn(right, 2); body.Children.Add(right);
         var infoCard = Card(info, new Thickness(12, 6, 12, 6)); infoCard.MinHeight = 50; infoCard.Margin = new Thickness(0, 0, 0, 10);
         DockPanel.SetDock(infoCard, Dock.Top); right.Children.Add(infoCard);
-        var note = Caption("Tab per passare da un controllo all'altro · Invio per scrivere le ore della giornata scelta · F2 o doppio clic per note e dettagli · Canc per togliere la giornata · Ctrl+S per salvare. Sotto ogni persona il totale ore del giorno: in giallo oltre 8, in rosso oltre 10.", 12, false, Grey);
+        var note = Caption("Clic su una giornata per scriverne le ore sull'attività · Invio o Esc (annulla) per tornare alla giornata · con la giornata scelta Invio o una cifra iniziano a scrivere le ore · F2 o doppio clic per note e dettagli · Canc per togliere la giornata · Ctrl+S per salvare. Sotto ogni persona il totale ore del giorno: in giallo oltre 8, in rosso oltre 10.", 12, false, Grey);
         note.Margin = new Thickness(0, 8, 0, 0); DockPanel.SetDock(note, Dock.Bottom); right.Children.Add(note);
         scroll.Content = timeline; right.Children.Add(Card(scroll, new Thickness(0)));
         search.TextChanged += (_, _) => { searchTimer.Stop(); searchTimer.Start(); };
@@ -64,6 +72,7 @@ public sealed class GeCoHoursWindow : Window
         Closing += (_, e) => { if (!vm.CanLeave()) e.Cancel = true; };
         Closed += (_, _) => { vm.Changed -= Render; vm.Live.Refreshed -= showRefreshed; searchTimer.Stop(); vm.Dispose(); };
         PreviewKeyDown += Keys;
+        PreviewTextInput += Digit;
         head.Children.Add(Caption("Caricamento delle ore lavorate…", 14, false, Grey));
         // Un modello già avviato (dalle verifiche) si disegna subito; altrimenti si parte al caricamento della finestra.
         if (vm.Access != null) Render();
@@ -73,16 +82,28 @@ public sealed class GeCoHoursWindow : Window
     {
         bool typing = Keyboard.FocusedElement is TextBox;
         if (e.Key == Key.S && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) { e.Handled = true; _ = vm.SaveAsync(); return; }
-        if (typing || vm.SelectedElement is not { } s) return;
+        if (vm.SelectedElement is not { } s) return;
+        // F2 apre i dettagli anche mentre si scrivono ore o km della giornata (non dalla ricerca delle commesse).
+        if (e.Key == Key.F2 && (!typing || Keyboard.FocusedElement is TextBox { Tag: FocusKey })) { e.Handled = true; Details(s); return; }
+        if (typing) return;
         var p = vm.PersonOf(s.P);
         if (e.Key == Key.Delete && vm.Modifiable(p, s.Cell)) { e.Handled = true; vm.Remove(s); }
-        else if (e.Key == Key.F2) { e.Handled = true; Details(s); }
-        else if (e.Key == Key.Enter && hoursBox is { IsReadOnly: false } box) { e.Handled = true; box.Focus(); box.SelectAll(); }
+        else if (e.Key == Key.Enter && Writable is { } box) { e.Handled = true; box.Focus(); box.SelectAll(); }
+    }
+    // Casella delle ore in cui scrivere: quella sulla giornata, altrimenti quella della barra.
+    private TextBox? Writable => inlineBox ?? (hoursBox is { IsReadOnly: false } b ? b : null);
+    // Una cifra premuta con la giornata scelta (cursore non in una casella) comincia a scrivere le ore sulla giornata.
+    private void Digit(object sender, TextCompositionEventArgs e)
+    {
+        if (Keyboard.FocusedElement is TextBox || e.Text.Length != 1 || !char.IsAsciiDigit(e.Text[0]) || vm.SelectedElement == null || inlineBox is not { } box) return;
+        e.Handled = true; box.Focus(); box.Text = e.Text;
+        // Il ridisegno dopo il tasto ha sostituito la casella: il cursore va in fondo a quella nuova.
+        inlineBox?.Select(inlineBox.Text.Length, 0);
     }
 
-    private void Render()
+    private void Render() => Keeping(() =>
     {
-        head.Children.Clear(); panel.Children.Clear(); info.Children.Clear(); timeline.Children.Clear(); hoursBox = null;
+        head.Children.Clear(); panel.Children.Clear(); info.Children.Clear(); timeline.Children.Clear();
         if (vm.Start == null)
         {
             body.Visibility = Visibility.Collapsed;
@@ -93,9 +114,33 @@ public sealed class GeCoHoursWindow : Window
         }
         body.Visibility = Visibility.Visible;
         RenderHead(); RenderPanel(); RenderInfo(); RenderTimeline();
+    });
+    // Dopo ogni tasto nelle caselle si aggiornano intestazione, barra e griglia (totali, testo della giornata e l'altra
+    // casella delle stesse ore), non il pannello delle commesse; caret: posizione del cursore dopo una ripulitura del testo.
+    private void RenderAfterEdit(int? caret = null) => Keeping(() =>
+    {
+        head.Children.Clear(); info.Children.Clear(); timeline.Children.Clear();
+        RenderHead(); RenderInfo(); RenderTimeline();
+    }, caret);
+    // Ridisegna e rimette il cursore sull'elemento equivalente (stessa giornata o stessa casella, con la stessa selezione).
+    private void Keeping(Action draw, int? caret = null)
+    {
+        var focused = IsKeyboardFocusWithin ? Keyboard.FocusedElement as FrameworkElement : null;
+        var where = focused?.Tag as FocusKey; var text = focused as TextBox;
+        int start = caret ?? text?.SelectionStart ?? 0, length = caret != null ? 0 : text?.SelectionLength ?? 0;
+        hoursBox = null; inlineBox = null; focusables.Clear();
+        draw();
+        if (where == null || !focusables.TryGetValue(where, out var again)) return;
+        again.Focus();
+        if (again is TextBox box) { start = Math.Min(start, box.Text.Length); box.Select(start, Math.Min(length, box.Text.Length - start)); }
     }
-    // Dopo ogni tasto nelle caselle della barra si aggiornano griglia e intestazione, non la barra: il cursore resta dov'è.
-    private void RenderAfterEdit() { head.Children.Clear(); timeline.Children.Clear(); RenderHead(); RenderTimeline(); }
+    private void Register(FrameworkElement element, FocusKey key) { element.Tag = key; focusables[key] = element; }
+    // Invio o Esc riportano il cursore sulla giornata, dove Invio, Canc, F2 e le cifre tornano a valere e la ricarica può partire.
+    private void BackToDay(string day)
+    {
+        RenderAfterEdit();
+        if (focusables.TryGetValue(new(day, "giornata"), out var visual)) visual.Focus(); else scroll.Focus();
+    }
 
     private void RenderHead()
     {
@@ -148,7 +193,7 @@ public sealed class GeCoHoursWindow : Window
         var title = new TextBlock { Inlines = { new Bold(new Run("Commesse e fasi")) }, FontSize = 14 };
         if (vm.People.Count > 1) title.Inlines.Add(new Run(" di " + p!.Nome) { Foreground = Grey });
         panel.Children.Add(title);
-        panel.Children.Add(Caption("Trascina una fase sul giorno in cui hai lavorato, oppure premila per aggiungerla al giorno scelto; poi scrivi le ore sulla giornata.", 12, false, Grey).With(t => t.Margin = new Thickness(0, 2, 0, 8)));
+        panel.Children.Add(Caption("Trascina una fase sul giorno in cui hai lavorato, oppure premila per aggiungerla al giorno scelto; poi scrivi le ore direttamente sulla giornata.", 12, false, Grey).With(t => t.Margin = new Thickness(0, 2, 0, 8)));
         var items = vm.NewItems();
         if (items.Length > 1)
         {
@@ -211,7 +256,7 @@ public sealed class GeCoHoursWindow : Window
         if (vm.SelectedElement is not { } e)
         {
             bool km = vm.People.Any(p => HoursViewModel.KmOf(p) != null);
-            info.Children.Add(Caption($"Ogni elemento è una giornata di lavoro su una commessa · fase: sceglila e scrivi qui le ore (anche 7:30){(km ? " e i km percorsi" : "")}. Le sagome tratteggiate sono le attività pianificate: premile o trascinale per consuntivarle con le ore stimate.", 13, false, Grey));
+            info.Children.Add(Caption($"Ogni elemento è una giornata di lavoro su una commessa · fase: fai clic e scrivi le ore direttamente sull'attività (anche 7:30){(km ? "; i km qui in alto" : "")}. Con la tastiera Invio porta alle ore e una cifra inizia a scriverle. Le sagome tratteggiate sono le attività pianificate: premile o trascinale per consuntivarle con le ore stimate.", 13, false, Grey));
             return;
         }
         var p = vm.PersonOf(e.P)!; var km0 = HoursViewModel.KmOf(p);
@@ -222,27 +267,56 @@ public sealed class GeCoHoursWindow : Window
         what.Children.Add(Caption((vm.People.Count > 1 ? p.Nome + " · " : "") + GeCoCalendar.Long(e.Cell.Data) + (confirmed ? " · confermata" : "") + (e.Cell.Bloccata != null && !confirmed ? " · " + e.Cell.Bloccata : "") + (string.IsNullOrEmpty(nota) ? "" : " · nota: " + nota), 12, false, Grey));
         foreach (var m in Errors(e)) what.Children.Add(Caption("⚠ " + m, 12, true, Error));
         info.Children.Add(what);
-        hoursBox = Box(vm.Value(e.Key, e.Cell), !editable, text => vm.Modify(e.Key, "Qta", text));
+        hoursBox = Box(e, e.Key, e.Cell, !editable, "barra");
         info.Children.Add(Labelled(HoursViewModel.CountsHours(p, e.Row.IdVdc) ? "Ore" : e.Row.Voce, hoursBox));
         if (e.KmKey != null)
         {
-            var kmBox = Box(vm.Value(e.KmKey, e.KmCell), !kmEditable, text => vm.Modify(e.KmKey, "Qta", text));
+            var kmBox = Box(e, e.KmKey, e.KmCell, !kmEditable, "km");
             if (km0 is { Disponibile: false }) kmBox.ToolTip = $"Nessuna tariffa valida per la voce {km0.Codice} nel periodo";
             info.Children.Add(Labelled("Km", kmBox));
         }
         info.Children.Add(Push("Note e dettagli", () => Details(e)));
         if (editable) info.Children.Add(Push("Togli la giornata", () => vm.Remove(e)).With(b => b.Foreground = Danger));
     }
-    private TextBox Box(string value, bool readOnly, Action<string> changed)
+    // Casella di ore o km di una giornata, nella barra o sull'elemento («ore»): stesse ripuliture (solo cifre e separatori, anche
+    // 7:30) e stessa modifica del modello, quindi scrivere in una aggiorna subito l'altra e la griglia.
+    private TextBox Box(HoursViewModel.Element e, string key, GeCoCell? cell, bool readOnly, string where)
     {
-        var box = new TextBox { Text = value, IsReadOnly = readOnly, Width = 70, MinHeight = 30, Padding = new Thickness(6, 2, 6, 2), FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right, Background = readOnly ? Brushes.Transparent : Brushes.White };
+        bool inline = where == "ore";
+        var box = new TextBox { Text = vm.Value(key, cell), IsReadOnly = readOnly, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right, Background = readOnly ? Brushes.Transparent : Brushes.White };
+        if (inline)
+        {
+            box.Width = 52; box.Height = 20; box.MinHeight = 0; box.FontSize = 12; box.Padding = new Thickness(3, 0, 3, 0); box.VerticalContentAlignment = VerticalAlignment.Center;
+            box.BorderBrush = Selection; box.BorderThickness = new Thickness(1); box.Foreground = Night;
+        }
+        else { box.Width = 70; box.MinHeight = 30; box.Padding = new Thickness(6, 2, 6, 2); }
+        Register(box, new(key, where));
         box.TextChanged += (_, _) =>
         {
+            if (readOnly) return;
             var clean = GeCoCalendar.Clean(box.Text);
-            if (clean != box.Text) { int caret = Math.Min(box.CaretIndex, clean.Length); box.Text = clean; box.CaretIndex = caret; return; }
-            if (!readOnly) { changed(clean); RenderAfterEdit(); }
+            // Il cursore resta dopo l'ultimo carattere scritto anche quando la ripulitura toglie lettere o simboli.
+            int? caret = clean == box.Text ? null : Math.Clamp(box.CaretIndex - (box.Text.Length - clean.Length), 0, clean.Length);
+            if (clean != vm.Value(key, cell)) vm.Modify(key, "Qta", clean);
+            else if (caret == null) return;
+            RenderAfterEdit(caret);
         };
-        box.KeyDown += (_, k) => { if (k.Key is Key.Enter or Key.Escape) { k.Handled = true; scroll.Focus(); } };
+        box.GotKeyboardFocus += (_, _) => { if (!readOnly && editStart?.Key != key) editStart = (key, vm.Mark(key)); };
+        // Dopo un ridisegno il cursore passa alla casella nuova della stessa giornata: l'inizio resta quello di prima.
+        box.LostKeyboardFocus += (_, k) =>
+        {
+            bool same = (k.NewFocus as FrameworkElement)?.Tag is FocusKey { Where: not "giornata" } next && next.Key == key;
+            if (editStart?.Key == key && !same) editStart = null;
+        };
+        box.KeyDown += (_, k) =>
+        {
+            if (k.Key is not (Key.Enter or Key.Escape)) return;
+            k.Handled = true;
+            if (k.Key == Key.Escape && editStart is { } s && s.Key == key) vm.Restore(key, s.Mark);
+            editStart = null; BackToDay(e.Key);
+        };
+        // Doppio clic sulla casella della giornata: i dettagli, come sul resto dell'elemento.
+        if (inline) box.PreviewMouseLeftButtonDown += (_, m) => { if (m.ClickCount == 2) { m.Handled = true; Details(e); } };
         return box;
     }
     private static StackPanel Labelled(string label, UIElement control)
@@ -335,6 +409,9 @@ public sealed class GeCoHoursWindow : Window
             target.Visibility = ok ? Visibility.Visible : Visibility.Collapsed; Canvas.SetLeft(target, ColumnAt(e) * dayWidth);
         };
         track.DragLeave += (_, _) => target.Visibility = Visibility.Collapsed;
+        // Clic sullo sfondo della riga: il cursore esce dalla casella delle ore, così una ricarica per un salvataggio fatto
+        // altrove (che aspetta mentre si scrive) non resta in attesa finché la casella ha il cursore.
+        track.MouseLeftButtonDown += (_, _) => { if (Keyboard.FocusedElement is TextBox { Tag: FocusKey }) scroll.Focus(); };
         track.Drop += (_, e) => { target.Visibility = Visibility.Collapsed; if (e.Data.GetData(DragFormat) is Dragged d) _ = vm.AddAsync(p.Id, d.Project, d.Phase, days[ColumnAt(e)], d.Hours); };
         box.Children.Add(new Border { BorderBrush = Rule, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Child = track, Width = width + 2, HorizontalAlignment = HorizontalAlignment.Left });
         // Totali del giorno: giallo oltre 8 ore, rosso oltre 10.
@@ -388,19 +465,35 @@ public sealed class GeCoHoursWindow : Window
         if (marks.Length > 0) { var m = Caption(marks, 11, true, error ? Error : foreground, false); DockPanel.SetDock(m, Dock.Right); top.Children.Add(m); }
         top.Children.Add(Caption(Label(e) + voce, 11.5, true, foreground, false));
         text.Children.Add(top);
-        text.Children.Add(Caption((hours.Length > 0 ? hours : "–") + " " + unit + (e.KmKey != null && kmValue.Length > 0 ? " · " + kmValue + " km" : ""), 12, false, foreground, false));
         bool selected = vm.Selected == e.Key || vm.Selected == e.KmKey;
+        var kmText = e.KmKey != null && kmValue.Length > 0 ? " · " + kmValue + " km" : "";
+        if (selected && vm.Modifiable(p, e.Cell))
+        {
+            // Giornata scelta e modificabile: le ore si scrivono qui, nella casella al posto del testo delle ore.
+            inlineBox = Box(e, e.Key, e.Cell, false, "ore");
+            AutomationName(inlineBox, $"{(unit == "h" ? "Ore" : unit)} di {Label(e)}, {GeCoCalendar.Long(e.Cell.Data)}");
+            inlineBox.ToolTip = "Scrivi le ore (anche 7:30) · Invio per confermare · Esc per annullare · F2 per note e dettagli";
+            var line = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 1, 0, 0) };
+            line.Children.Add(inlineBox);
+            line.Children.Add(Caption(" " + unit + kmText, 12, false, foreground, false).With(t => t.VerticalAlignment = VerticalAlignment.Center));
+            text.Children.Add(line);
+        }
+        else text.Children.Add(Caption((hours.Length > 0 ? hours : "–") + " " + unit + kmText, 12, false, foreground, false));
         var visual = new Border { Child = text, Width = dayWidth - 4, Height = rowHeight - 6, CornerRadius = new CornerRadius(7), Cursor = Cursors.Hand, Focusable = true,
             Background = error ? ErrorBack : Hex(back), BorderBrush = selected ? Selection : error ? Error : modified ? Selection : Brushes.Transparent,
             BorderThickness = new Thickness(selected ? 3 : error || modified ? 2 : 0),
             ToolTip = errors.FirstOrDefault() ?? e.Cell.Bloccata ?? (missing.Length > 0 ? missing : null) ?? (string.IsNullOrEmpty(nota) ? Label(e) + " – " + e.Row.Descrizione : "Nota: " + nota) };
         AutomationName(visual, $"{Label(e)}, {GeCoCalendar.Long(e.Cell.Data)}: {(hours.Length > 0 ? hours : "0")} {(unit == "h" ? "ore" : unit)}{(e.KmKey != null ? $", {(kmValue.Length > 0 ? kmValue : "0")} km" : "")}{(confirmed ? ", confermata" : "")}{(error ? ", non salvata: " + errors[0] : "")}");
         Canvas.SetLeft(visual, column * dayWidth + 2); Canvas.SetTop(visual, 4 + lane * rowHeight);
+        Register(visual, new(e.Key, "giornata"));
         visual.MouseLeftButtonDown += (_, m) =>
         {
             m.Handled = true;
             if (m.ClickCount == 2) { Details(e); return; }
             vm.Selected = e.Key; vm.PersonId = p.Id; Render();
+            // Un clic porta subito alle ore, scritte sulla giornata; se non sono modificabili il cursore resta sulla giornata.
+            if (inlineBox is { } box) { box.Focus(); box.SelectAll(); }
+            else if (focusables.TryGetValue(new(e.Key, "giornata"), out var again)) again.Focus();
         };
         return visual;
     }

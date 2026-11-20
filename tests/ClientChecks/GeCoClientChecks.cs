@@ -82,6 +82,19 @@ internal static class GeCoClientChecks
         Check(ghosts.Single() is { Index: 2, Hours: 8 } && ghosts[0].Phase?.Value == 2000, "Ore: sagoma dalla pianificazione dove non c'è ancora la giornata");
         var lanes = HoursViewModel.Lanes(elements.Select(e => (e.Key, $"{e.Row.IdCommessa}|{e.Row.IdFase ?? 0}", e.Index, false)), 7);
         Check(lanes.Count == 2 && lanes.Row[elements.Single(e => e.Index == 5).Key] == lanes.Row[withKm.Key], "Ore: più fasi nello stesso giorno su righe parallele, la stessa fase resta sulla sua riga");
+        // Ore scritte sulla giornata (2.42.2): la casella sull'elemento e quella della barra scrivono la stessa modifica; Esc
+        // rimette le ore com'erano all'inizio senza lasciare modifiche fittizie, anche dopo più tasti, e non tocca le note.
+        var mark = hvm.Mark(withKm.Key);
+        hvm.Modify(withKm.Key, "Qta", "7"); hvm.Modify(withKm.Key, "Qta", "7:30");
+        Check(hvm.Value(withKm.Key, withKm.Cell) == "7:30" && hvm.HoursOf(p, hvm.Elements(p), 1) == 12.5m && hvm.Changes == 1, "Ore: casella sulla giornata e barra con un solo stato, totale del giorno aggiornato");
+        hvm.Restore(withKm.Key, mark);
+        Check(hvm.Value(withKm.Key, withKm.Cell) == "6" && hvm.Changes == 0 && hvm.Elements(p).Count == 3, "Ore: Esc ripristina le ore salvate senza lasciare modifiche");
+        hvm.Modify(withKm.Key, "Note", "nota"); hvm.Modify(withKm.Key, "Qta", "4"); var edited = hvm.Mark(withKm.Key);
+        hvm.Modify(withKm.Key, "Qta", "9"); hvm.Restore(withKm.Key, edited);
+        Check(hvm.Value(withKm.Key, withKm.Cell) == "4" && hvm.Field(withKm.Key, withKm.Cell, "Note") == "nota" && hvm.Changes == 1, "Ore: Esc torna alla modifica non salvata di prima");
+        hvm.Restore(withKm.Key, mark);
+        Check(hvm.Value(withKm.Key, withKm.Cell) == "6" && hvm.Field(withKm.Key, withKm.Cell, "Note") == "nota" && hvm.Changes == 1, "Ore: Esc non tocca note e dettagli della giornata");
+        hvm.Edits.Remove(withKm.Key);
         hvm.Modify(withKm.Key, "Qta", "20");
         hvm.SaveAsync().GetAwaiter().GetResult();
         var sent = hours.Sent.Last(c => c.Action == "HoursSave").Salvataggio!;
@@ -89,6 +102,10 @@ internal static class GeCoClientChecks
             "Ore: si inviano solo le caselle modificate, con la fase nella chiave");
         Check(hvm.Errors.Values.Single() == "Il totale delle ore della giornata supera 24" && hvm.Edits.ContainsKey(withKm.Key) && hvm.Note?.Kind == "danger",
             "Ore: la casella rifiutata resta modificata con il motivo del servizio");
+        var refused = hvm.Mark(withKm.Key); hvm.Modify(withKm.Key, "Qta", "21");
+        Check(hvm.Errors.Count == 0, "Ore: scrivendo le ore il motivo del rifiuto sparisce");
+        hvm.Restore(withKm.Key, refused);
+        Check(hvm.Value(withKm.Key, withKm.Cell) == "20" && hvm.Errors.GetValueOrDefault(withKm.Key) == "Il totale delle ore della giornata supera 24", "Ore: Esc rimette le ore rifiutate con il loro motivo");
         hvm.Remove(hvm.Elements(p).Single(e => e.Index == 5));
         Check(hvm.Edits.Values.Any(e => e.TryGetValue("Qta", out var q) && q == ""), "Ore: togliere una giornata salvata la azzera al salvataggio");
         Check(hvm.AddAsync(11, ghosts[0].Project, ghosts[0].Phase, ghosts[0].Index, ghosts[0].Hours).GetAwaiter().GetResult() && hvm.Elements(p).Any(e => e.Index == 2 && hvm.Value(e.Key, e.Cell) == "8"),
@@ -175,6 +192,14 @@ internal static class GeCoClientChecks
         hvm.ViewsChanged(Of(U(9, "GeCa", Ore, 11, "2026-11-17", "2026-11-17", hvm.Window)));
         Pause();
         Check(Periods() == before && hoursShown.Count == 0, "Ore: nessuna ricarica per il salvataggio della stessa finestra");
+        // Cursore in una casella delle ore (sulla giornata o nella barra): la finestra lo segnala e la ricarica aspetta Invio o Esc.
+        bool typing = true; hvm.Interacting = () => typing;
+        hvm.ViewsChanged(Of(U(12, "GeCo2027", Ore, 11, "2026-11-17", "2026-11-17", null)));
+        Pause();
+        Check(Periods() == before && hvm.Live.Pending, "Ore: mentre si scrivono le ore sulla giornata la ricarica aspetta");
+        typing = false; Until(() => hoursShown.Count > 0); Pause();
+        Check(Periods() == before + 1 && hoursShown.Single() == "Aggiornato da GeCo2027 (Persona A)", "Ore: tornati alla giornata, una sola ricarica");
+        hoursShown.Clear(); before = Periods(); hvm.Interacting = () => false;
         hvm.ViewsChanged(Of(U(10, "GeCo2027", Ore, 11, "2026-11-22", "2026-11-23", null)));
         Until(() => hoursShown.Count > 0); Pause();
         Check(Periods() == before + 1 && hoursShown.Single() == "Aggiornato da GeCo2027 (Persona A)" && edits.Count > 0

@@ -188,6 +188,17 @@ public sealed partial class HoursViewModel(IGeCoGateway gateway) : IDisposable
         if (!Edits.TryGetValue(key, out var e)) Edits[key] = e = [];
         e[name] = value; Errors.Remove(key);
     }
+    // Stato delle ore di una casella quando si comincia a scriverle (sulla giornata o nella barra): Esc lo rimette com'era,
+    // senza lasciare una modifica fittizia uguale al valore salvato e con l'eventuale motivo del rifiuto del servizio.
+    public sealed record EditMark(bool Edited, string? Qta, string? Error);
+    public EditMark Mark(string key) => Edits.TryGetValue(key, out var e) && e.TryGetValue("Qta", out var q)
+        ? new(true, q, Errors.GetValueOrDefault(key)) : new(false, null, Errors.GetValueOrDefault(key));
+    public void Restore(string key, EditMark mark)
+    {
+        if (mark.Edited) Modify(key, "Qta", mark.Qta);
+        else if (Edits.TryGetValue(key, out var e)) { e.Remove("Qta"); if (e.Count == 0) Edits.Remove(key); }
+        if (mark.Error is { } error) Errors[key] = error; else Errors.Remove(key);
+    }
     private void Forget(string key) => Edits.Remove(key);
     private static bool Confirmed(GeCoCell? c) => c is { Conf: true, Qta: decimal q } && q != 0;
 
