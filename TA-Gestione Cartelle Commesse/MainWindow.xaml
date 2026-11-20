@@ -173,7 +173,19 @@
                 <MenuItem Header="Pianificazione delle attività…" Command="{Binding GeCoPlanningCommand}" ToolTip="Pianificazione di GeCo sul database comune"/>
                 <MenuItem Header="Ore lavorate…" Command="{Binding GeCoHoursCommand}" ToolTip="Ore lavorate (statini) di GeCo sul database comune"/>
                 <MenuItem Header="Collegamento cartelle…" Command="{Binding GeCoFolderLinksCommand}" ToolTip="Cartelle collegate a commesse e gare di GeCo e notifiche da GeCo2027 (amministratori di GeCo)"/>
+                <MenuItem Header="Commesse di GeCo (le mie e tutte)…" Command="{Binding GeCoProjectsCommand}" ToolTip="Le tue commesse di GeCo e tutte quelle che puoi vedere, con team e cartella: le stesse della pagina iniziale di GeCo2027"/>
+                <MenuItem Header="Scheda GeCo della commessa selezionata…" Command="{Binding GeCoProjectCardCommand}" ToolTip="Dati generali, fasi, team, cartella e accesso della commessa di GeCo con lo stesso codice"/>
                 <MenuItem Header="Team della commessa selezionata (GeCo)…" Command="{Binding GeCoTeamCommand}" ToolTip="Persone del team della commessa di GeCo con lo stesso codice: elenco e modifica per chi può"/>
+                <MenuItem Header="Richieste di accesso alle commesse…" Command="{Binding GeCoAccessRequestsCommand}" ToolTip="Le tue richieste di accesso e, per chi decide, quelle da concedere o rifiutare"/>
+                <MenuItem Header="Apri in GeCo2027" ItemsSource="{Binding GeCoPageCommands}" ToolTip="Pagine di GeCo2027 nel browser (fatture, SAL, analisi, WIP, clienti, raccordo utenti Windows): l'indirizzo si configura in Gestore server > Configura">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Header" Value="{Binding Text}"/>
+                            <Setter Property="Command" Value="{Binding Command}"/>
+                            <Setter Property="ToolTip" Value="{Binding Tip}"/>
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
+                </MenuItem>
                 <MenuItem Header="Allineamento GeCo e GeCa…" Command="{Binding GeCoAlignmentCommand}" ToolTip="Commesse e cartelle, clienti di GeCo e di GeCa, cartelle chieste (amministratori di GeCo)"/>
                 <MenuItem Header="Clienti e autorizzazioni delle commesse…" Command="{Binding BusinessCommand}"/>
                 <MenuItem Header="Curriculum dello studio…" Command="{Binding CurriculumCommand}"/>

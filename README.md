@@ -1,4 +1,17 @@
-# TA-Gestione Cartelle Commesse — 2.41.0
+# TA-Gestione Cartelle Commesse — 2.42.0
+
+## Novità 2.42.0 — le commesse di GeCo nel programma
+
+Il lavoro quotidiano sulle commesse di GeCo si fa anche in GeCa, con le stesse regole di GeCo2027 (libreria comune GeCo.Dati). Nel menu **Gestione**:
+
+- **Commesse di GeCo (le mie e tutte)…**: le stesse commesse della pagina iniziale di GeCo2027. «Le mie commesse» sono quelle attribuite a te, con il motivo (capocommessa, manager, responsabile di controllo, team, accesso concesso); «Tutte» sono quelle che puoi vedere, comprese le cartelle senza commessa. Ricerca per parole, colonne del team e della cartella (collegata, o soltanto con lo stesso codice);
+- **Scheda GeCo della commessa selezionata…** (o doppio clic nell'elenco): dati generali, fasi, team, cartella, commesse collegate e stato dell'accesso, **senza costi e ricavi**. Chi può farlo in GeCo2027 modifica descrizione, note, capocommessa, responsabili, tipologia e date e aggiunge, modifica o elimina le fasi: gli stessi controlli della scheda di GeCo2027, e una modifica fatta nel frattempo da un altro utente fa rifiutare il salvataggio invece di sovrascriverla. Le modifiche valgono subito in GeCo2027 e nelle altre finestre aperte, che si aggiornano da sole;
+- le commesse che non sono tue si vedono **in sola lettura**, con **Richiedi accesso…**; **Richieste di accesso alle commesse…** mostra le tue richieste e, a chi decide (amministratori, capocommessa, team manager), quelle da concedere o rifiutare e gli accessi da revocare;
+- **Apri in GeCo2027**: fatture, importi, SAL, analisi, WIP, clienti e il **raccordo degli utenti Windows** si aprono nel browser (dalla scheda, già sulla commessa), all'indirizzo di GeCo indicato in Gestore server > Configura.
+
+Le **sottocommesse** non esistono più: ogni commessa ha il proprio codice e la propria cartella; le vecchie commesse con il postfisso (C26001/01) restano commesse normali. Le relazioni tra commesse sono le **commesse collegate**, visibili nella scheda. Nessuna modifica al database; aggiornare prima GeCo2027, poi il server, poi i client ([dettagli](deployment/DATABASE-COMUNE.md#commesse-di-geco-in-geca-2420)).
+
+[Scarica aggiornatore 2.42.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.42.0/TA-Commesse-Aggiornatore-2.42.0.exe)
 
 ## Novità 2.41.0 — team della commessa
 

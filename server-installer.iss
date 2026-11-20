@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "2.41.0"
+  #define AppVersion "2.42.0"
 #endif
 #ifndef PublishDir
   #define PublishDir "artifacts\server"

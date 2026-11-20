@@ -3,7 +3,7 @@ namespace TA_Gestione_Cartelle_Commesse.Contracts;
 // Team della commessa di GeCo (2.41.0), lo stesso della sezione «Team» della scheda della commessa di GeCo2027: le regole
 // (chi lo modifica, chi si può aggiungere, eventi e notifiche) sono di ServizioTeamCommessa nella libreria GeCo.Dati, applicate
 // dal servizio. I nomi delle proprietà sono quelli dei record della libreria (PersonaTeam, ComponenteTeam, TeamDellaCommessa).
-// Comandi: «ProjectTeam» con IdCommessa (o Testo = codice della cartella, per la commessa principale con quel codice);
+// Comandi: «ProjectTeam» con IdCommessa (o Testo = codice della cartella, per la commessa con quel codice completo: ogni commessa ha la propria cartella);
 // «SetTeamMember» con IdCommessa, IdCdc e Valore (aggiungere o togliere); «SetPermanentTeam» con IdCommessa, Id del team e Valore.
 
 public sealed record GeCoTeamPerson(int Id, string Nome, bool Attiva = true);

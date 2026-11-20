@@ -101,7 +101,7 @@ public sealed class FolderLinksViewModel(IGeCoGateway gateway) : IDisposable
     public sealed record Item(GeCoLinkRow Row, string Elemento, string Codice, string Anno, string Descrizione, string Cartella, string Stato, string Motivo, string Segnalazioni);
     public static Item Describe(GeCoLinkRow r)
     {
-        string kind = r.Tipo == "gara" ? "Gara" : r.Sottocommessa ? "Sottocommessa" : "Commessa";
+        string kind = r.Tipo == "gara" ? "Gara" : "Commessa";
         string description = string.Join(" – ", new[] { r.Descrizione, r.Cliente }.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t!.Trim()));
         string folder, state, reason = "";
         if (r.Collegamento != null)

@@ -193,12 +193,12 @@ internal static class GeCoClientChecks
     private static void FolderLinks()
     {
         GeCoFolder F(int id, string name, bool present = true) => new(id, @"\\server\lavori\2026\" + name, name, "C", name[..7], 2026, null, null, present, "01/11/2026 08:00");
-        var safeRow = new GeCoLinkRow("commessa", 1000, "B260001", 2026, "Progetto", "Cliente", false, null, null, new(1, 100, "stesso codice della commessa", F(1, "B260001 - Cliente - Progetto")),
+        var safeRow = new GeCoLinkRow("commessa", 1000, "B260001", 2026, "Progetto", "Cliente", null, null, new(1, 100, "stesso codice della commessa", F(1, "B260001 - Cliente - Progetto")),
             [new(1, 100, "stesso codice della commessa", F(1, "B260001 - Cliente - Progetto"))], "sicura", []);
-        var movedRow = new GeCoLinkRow("gara", 3, "G26001", 2026, "Gara", "Ente", false, new(5, 2, "01/11/2026 09:00", "GeCo2027", "Amministratore"), F(2, "G26001 - Vecchia", false),
+        var movedRow = new GeCoLinkRow("gara", 3, "G26001", 2026, "Gara", "Ente", new(5, 2, "01/11/2026 09:00", "GeCo2027", "Amministratore"), F(2, "G26001 - Vecchia", false),
             new(4, 80, "stesso codice della gara", F(4, "G26001 - Nuova")), [new(4, 80, "stesso codice della gara", F(4, "G26001 - Nuova"))], "daverificare",
             [new("CartellaSpostata", "gara", 3, 2, 4, "La cartella collegata alla gara G26001 non è più sul disco.")]);
-        var plainRow = new GeCoLinkRow("commessa", 1001, "N260001", 2026, "Altro", null, false, null, null, null, [], "", [new("SenzaCartella", "commessa", 1001, null, null, "La commessa N260001 non ha una cartella.")]);
+        var plainRow = new GeCoLinkRow("commessa", 1001, "N260001", 2026, "Altro", null, null, null, null, [], "", [new("SenzaCartella", "commessa", 1001, null, null, "La commessa N260001 non ha una cartella.")]);
         var links = new GeCoLinks([safeRow, movedRow, plainRow], [], [], [new("commessa", 1000, 1)], [new("C", "01/11/2026 08:00", "TA-Gestione", 3)]);
         long last = 10;
         var events = new List<GeCoSyncEvent> { new(10, "18/11/2026 09:00", "GeCo2027", "CommessaCreata", 1000, null, null, "B260001", null, "Commessa B260001 creata.", "Amministratore") };

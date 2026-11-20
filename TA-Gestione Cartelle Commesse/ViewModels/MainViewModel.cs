@@ -52,6 +52,7 @@ public sealed partial class MainViewModel : Observable
         GeCoAlignmentCommand = new(ShowGeCoAlignment, () => connection != null);
         GeCoTeamCommand = new(ShowGeCoTeam, () => connection != null && ActiveCategory.SelectedProject?.Model.Category == "C");
         foreach (var category in new[] { Commesse, Gare, Archivio }) category.PropertyChanged += (_, _) => GeCoTeamCommand.Refresh();
+        InitializeGeCoProjects();
         foreach (var category in new[] { Commesse, Gare, Archivio }) category.CurriculumRequested += project => ShowCurriculum(project);
         CustomersCommand = new(() => ShowCustomers(""), () => connection != null);
         Commesse.ProjectRequested += ShowProject;
@@ -108,7 +109,7 @@ public sealed partial class MainViewModel : Observable
         CloseProjectWindows(); businessWindow?.Close(); CloseGeCoWindows(); curriculumWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
         Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); GeCoPlanningCommand.Refresh(); GeCoHoursCommand.Refresh(); GeCoFolderLinksCommand.Refresh(); GeCoAlignmentCommand.Refresh(); GeCoTeamCommand.Refresh(); CurriculumCommand.Refresh(); NonconformityReportCommand.Refresh();
-        CustomersCommand.Refresh(); ArchiveFolderCommand.Refresh();
+        RefreshGeCoProjectCommands(); CustomersCommand.Refresh(); ArchiveFolderCommand.Refresh();
         try { new ClientSettings(host.Trim(), number, UseCurrentAccount, accountName).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }
         ReportStatus = "Connessione TCP/Kerberos a " + host.Trim() + ":" + number + "; autenticazione Windows aziendale.";
@@ -136,9 +137,11 @@ public sealed partial class MainViewModel : Observable
     private async Task RefreshManagementAccessAsync(ServerConnection current)
     {
         bool allowed = false;
-        try { var permissions = await current.SendAsync<TA_Gestione_Cartelle_Commesse.Contracts.ServerPermissions>(new("Permissions")); allowed = permissions.DomainAdministrator; }
+        string address = "";
+        // Dalla 2.42.0 l'indirizzo di GeCo serve di nuovo: le pagine non portate nel programma si aprono in GeCo2027 nel browser.
+        try { var permissions = await current.SendAsync<TA_Gestione_Cartelle_Commesse.Contracts.ServerPermissions>(new("Permissions")); allowed = permissions.DomainAdministrator; address = permissions.GeCoAddress; }
         catch (Exception ex) { ClientLog.Write("Permessi di gestione non disponibili", ex); }
-        if (ReferenceEquals(current, connection)) ApplyManagementAccess(allowed);
+        if (ReferenceEquals(current, connection)) { ApplyManagementAccess(allowed); SetGeCoAddress(address); }
     }
     private void ApplyManagementAccess(bool allowed)
     {

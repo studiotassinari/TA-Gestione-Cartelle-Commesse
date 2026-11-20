@@ -14,7 +14,8 @@ public sealed record GeCoFolderCandidate(int IdCartella, int Punteggio, string M
 // Collegamento confermato: dove (GeCo2027 o GeCa), quando (gg/mm/aaaa hh:mm) e da chi.
 public sealed record GeCoLinkInfo(int IdRiga, int IdCartella, string Data, string Origine, string? Utente);
 public sealed record GeCoLinkConflict(string Tipo, string? TipoElemento, int? IdElemento, int? IdCartella, int? IdCartellaNuova, string Testo);
-public sealed record GeCoLinkRow(string Tipo, int Id, string Codice, int? Anno, string? Descrizione, string? Cliente, bool Sottocommessa,
+// Dalla 2.42.0 nessuna distinzione per le sottocommesse: ogni commessa ha la propria cartella (codice completo).
+public sealed record GeCoLinkRow(string Tipo, int Id, string Codice, int? Anno, string? Descrizione, string? Cliente,
     GeCoLinkInfo? Collegamento, GeCoFolder? Cartella, GeCoFolderCandidate? Proposta, GeCoFolderCandidate[] Candidati, string Livello, GeCoLinkConflict[] Conflitti);
 public sealed record GeCoLinkElement(string Tipo, int Id, string Codice);
 // Cartella presente non collegata, con gli elementi per cui è candidata (nessuno: cartella senza commessa né gara).

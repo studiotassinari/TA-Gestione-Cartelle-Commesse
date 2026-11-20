@@ -64,7 +64,7 @@ public sealed partial class GeCoWorkService
     {
         GeCoFolder? F(int? id) => id is int i ? Folder(e.Cartelle.GetValueOrDefault(i)) : null;
         GeCoFolderCandidate Candidate(CandidatoCartella c) => new(c.IdCartella, c.Punteggio, c.Motivo, F(c.IdCartella));
-        var rows = e.Elementi.Select(r => new GeCoLinkRow(r.Elemento.Tipo, r.Elemento.Id, r.Elemento.Codice, r.Anno, r.Descrizione, r.Cliente, r.Sottocommessa,
+        var rows = e.Elementi.Select(r => new GeCoLinkRow(r.Elemento.Tipo, r.Elemento.Id, r.Elemento.Codice, r.Anno, r.Descrizione, r.Cliente,
             r.Collegamento is { } l ? new GeCoLinkInfo(l.IdRiga, l.IdCartella, Date(l.Data), l.Origine, l.Utente) : null, F(r.Collegamento?.IdCartella),
             r.Proposta is { } p ? Candidate(p) : null, r.Candidati.Select(Candidate).ToArray(), Level(r.Livello), r.Conflitti.Select(Conflict).ToArray())).ToArray();
         var free = e.CartelleLibere.Select(l => new GeCoFreeFolder(F(l.IdCartella)!, l.CandidataPer.Select(x => new GeCoLinkElement(x.Tipo, x.Id, x.Codice)).ToArray())).ToArray();
@@ -110,12 +110,16 @@ public sealed partial class GeCoWorkService
         return new(visible, recent[0], true);
     }
 
-    // Evento tecnico come lo riceve il client: pianificazione e ore con persona e giorni; team della commessa (2.41.0) con
-    // IdCdc 0, senza giorni e con la sola commessa in Commesse. Eventi tecnici di tipi che questa versione non conosce: nessuno.
+    // Evento tecnico come lo riceve il client: pianificazione e ore con persona e giorni; team della commessa (2.41.0) e dati o
+    // fasi della commessa (CommessaAggiornata, 2.42.0) con IdCdc 0, senza giorni e con la sola commessa in Commesse. Eventi
+    // tecnici di tipi che questa versione non conosce: nessuno.
     public static GeCoViewUpdate? View(EventoSincronizzazione e)
     {
         if (EventiSincronizzazione.ModificaTeam(e) is { } t)
             return new GeCoViewUpdate(e.Id, e.Origine, e.Tipo, 0, "", "", [t.IdCommessa], false, t.Scheda, e.Utente);
+        // Dati generali o fasi della commessa salvati (2.42.0): come il team, la sola commessa.
+        if (EventiSincronizzazione.AggiornamentoCommessa(e) is { } m)
+            return new GeCoViewUpdate(e.Id, e.Origine, e.Tipo, 0, "", "", [m.IdCommessa], false, m.Scheda, e.Utente);
         return EventiSincronizzazione.Aggiornamento(e) is { } a
             ? new GeCoViewUpdate(e.Id, e.Origine, e.Tipo, a.IdCdc, DateRegole.Iso(a.Dal), DateRegole.Iso(a.Al), a.Commesse.ToArray(), a.AltreCommesse, a.Scheda, e.Utente) : null;
     }
@@ -134,8 +138,8 @@ public sealed partial class GeCoWorkService
         bool partial = recent.Count == EventWindow && from < recent[^1] - 1;
         var events = await EventiSincronizzazione.LeggiDopoAsync(db, Math.Max(from, recent[^1] - 1), massimo: EventWindow, stop: token, tecnici: true);
         var visibility = await EventiSincronizzazione.VisibilitaAsync(db, context.Utente, context.IdSocieta, token);
-        // Il team della commessa (2.41.0) lo vede chi vede la commessa: per questi eventi servono società e area delle commesse.
-        var projects = await EventiSincronizzazione.CommesseAsync(db, events.Where(e => e.Tipo == EventiSincronizzazione.Tipi.TeamModificato), token);
+        // Team, dati e fasi della commessa (2.41.0, 2.42.0) li vede chi vede la commessa: per questi eventi servono società e area.
+        var projects = await EventiSincronizzazione.CommesseAsync(db, events.Where(e => e.Tipo is EventiSincronizzazione.Tipi.TeamModificato or EventiSincronizzazione.Tipi.CommessaAggiornata), token);
         var updates = events.Where(e => EventiSincronizzazione.Visibile(e, projects, visibility)).Select(View).Where(u => u != null).Select(u => u!).ToArray();
         return new(updates, recent[0], true, partial);
     }

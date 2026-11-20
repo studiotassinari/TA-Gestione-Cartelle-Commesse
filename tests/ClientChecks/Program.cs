@@ -24,10 +24,12 @@ internal static partial class Program
         Check(ClientPaths.ForExplorer(@"Z:\lavori") == @"Z:\lavori", "Percorsi gia mappati invariati");
         GeCoClientChecks.Run();
         AlignmentClientChecks.Run();
+        ProjectClientChecks.Run();
         var app = new Application();
         CheckFolderArchiveClient();
         CheckCustomerSearch();
         CheckProjectList(app);
+        ProjectClientChecks.Render();
         foreach (var prefix in new[] { 'C', 'G', 'A' })
         {
             var vm = new CategoryViewModel(prefix == 'C' ? "Commesse" : prefix == 'G' ? "Gare" : "Archivio", prefix);

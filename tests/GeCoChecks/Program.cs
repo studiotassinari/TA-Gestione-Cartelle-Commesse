@@ -271,8 +271,63 @@ Check(await Fails(() => Send<GeCoProjectTeam>(new("SetPermanentTeam", IdCommessa
     "Team permanente: team inesistente = non trovato; database prima della migrazione 9 = non disponibile");
 var removed = await Send<GeCoProjectTeam>(new("SetTeamMember", IdCommessa: Comm, IdCdc: CdcAdmin, Valore: false), Admin);
 Check(removed.Membri.Length == 0 && GeCoWorkService.View(LastEvent()) is { Tipo: "TeamModificato", Commesse: [Comm] }, "Team: persona tolta dall'amministratore, evento per le viste");
+
+// ---------------------------------------------------------------- commesse di GeCo in GeCa (2.42.0)
+// Le regole sono di ElencoCommesse, ServizioCommessa e ServizioRichiesteAccesso (provate in GeCo2027): qui i comandi, i permessi
+// dal token, l'origine «GeCa», gli eventi per le viste aperte e i dati che non devono arrivare (importi).
+var mine = await Send<GeCoProjectList>(new("Projects", Valore: true), Collab);
+var all = await Send<GeCoProjectList>(new("Projects", Valore: false), Collab);
+Check(mine.Mie && mine.Righe.Single() is { IdCommessa: Comm, Attribuita: true, Attribuzione: "Capocommessa", Percorso: not null } m1 && m1.Team!.Single().Capocommessa
+      && all.Righe.Any(r => r.IdCommessa == CommOther && !r.Attribuita) && all.Righe.Single(r => r.Codice == "C26999").Stato == "Cartella senza commessa"
+      && (await Send<GeCoProjectList>(new("Projects", Testo: "altri"), Collab)).Righe.Single().IdCommessa == CommOther,
+    "Commesse: le mie con il motivo, il team e la cartella; tutte con le non attribuite e le cartelle senza commessa; ricerca");
+var card = await Send<GeCoProjectCardResult>(new("ProjectCard", Testo: "B260001"), Collab);
+Check(card is { Trovata: true, Scheda: { Id: Comm, Codice: "B260001", Permessi: { Modifica: true, InsFasi: true }, Attribuzione.SolaLettura: false }, Accesso.Attribuita: true, Cartella: { Collegamento: null, Proposta.IdCartella: CarComm } }
+      && card.Scheda.Fasi!.Length == 2 && card.Scheda.Capicommessa!.Length == 2,
+    "Scheda: la commessa dal codice della cartella, con fasi, permessi, stato dell'accesso e cartella");
+var otherCard = await Send<GeCoProjectCardResult>(new("ProjectCard", IdCommessa: CommOther), Collab);
+Check(otherCard.Scheda is { Permessi.Modifica: false, Attribuzione.SolaLettura: true, Capicommessa: null } && otherCard.Accesso is { PuoRichiedere: true, Attribuita: false }
+      && (await Send<GeCoProjectCardResult>(new("ProjectCard", Testo: "C26999"), Collab)) is { Trovata: false, Scheda: null },
+    "Scheda: commessa non attribuita in sola lettura con «Richiedi accesso»; codice senza commessa con il motivo");
+Check(!JsonSerializer.Serialize(card).Contains("Ricavi") && !JsonSerializer.Serialize(card).Contains("Importo"), "Scheda: nessun importo (costi e ricavi restano in GeCo2027)");
+var beforeProject = await Last();
+var savedCard = await Send<GeCoProjectCardResult>(new("SaveProject", IdCommessa: Comm, Scheda: "geca-c1", Commessa: new(card.Scheda!.Versione, "Progetto di prova (rev.)", "Nota da GeCa",
+    CdcCollab, null, null, null, "", "", "01/01/2026", "")), Collab);
+Check(savedCard.Scheda is { Descrizione: "Progetto di prova (rev.)", Note: "Nota da GeCa" } && savedCard.Scheda.Versione != card.Scheda.Versione
+      && GeCoWorkService.Saves("SaveProject") && GeCoWorkService.Saves("AddPhase") && GeCoWorkService.Saves("RequestAccess") && !GeCoWorkService.Saves("ProjectCard"),
+    "Scheda: dati generali salvati da GeCa con le regole di GeCo2027; il salvataggio anticipa la lettura del registro");
+Check(await Fails(() => Send<GeCoProjectCardResult>(new("SaveProject", IdCommessa: Comm, Commessa: new(card.Scheda.Versione, "Altro", "", CdcCollab, null, null, null, "", "", "01/01/2026", "")), Collab))
+      is ArgumentException { Message: VersioniRecord.MessaggioConflitto }
+      && await Fails(() => Send<GeCoProjectCardResult>(new("SaveProject", IdCommessa: CommOther, Commessa: new(otherCard.Scheda!.Versione, "Altro", "", CdcAdmin, null, null, null, "", "", "01/01/2026", "")), Collab))
+      is UnauthorizedAccessException,
+    "Scheda: modifica concorrente rifiutata (versione), commessa non modificabile dall'utente rifiutata");
+var withPhase = await Send<GeCoProjectCardResult>(new("AddPhase", IdCommessa: Comm, Scheda: "geca-c1", Fase: new(7, "Rilievi", "30", CdcCollab, "")), Collab);
+var phase = withPhase.Scheda!.Fasi!.Single(f => f.Descrizione == "Rilievi");
+var renamed = await Send<GeCoProjectCardResult>(new("SavePhase", Id: phase.Id, IdCommessa: Comm, Fase: new(7, "Rilievi in sito", "30", null, "C")), Collab);
+Check(renamed.Scheda!.Fasi!.Any(f => f is { Descrizione: "Rilievi in sito", Stato: "C" })
+      && (await Fails(() => Send<GeCoProjectCardResult>(new("AddPhase", IdCommessa: Comm, Fase: new(7, "", "30", null, "")), Collab)))?.Message == "Ordinamento già in uso",
+    "Fasi: aggiunta e modificata da GeCa con le regole della scheda Fasi");
+var projectViews = await Send<GeCoViewUpdates>(new("ViewEvents", DopoId: beforeProject), Collab);
+Check(projectViews.Eventi.Length == 3 && projectViews.Eventi.All(u => u is { Tipo: "CommessaAggiornata", IdCdc: 0, Origine: "GeCa" } && u.Commesse.SequenceEqual(new[] { Comm }))
+      && projectViews.Eventi[0].Scheda == "geca-c1",
+    "Scheda: ogni salvataggio arriva alle viste aperte (GeCo2027 e altri client) come «CommessaAggiornata», con la finestra che ha salvato");
+Check((await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: beforeProject), Admin)).Eventi.Length == 0,
+    "Scheda: la notifica «CommessaModificata» scritta da GeCa resta per GeCo2027 (non torna come novità ai client di GeCa)");
+await Send<GeCoProjectCardResult>(new("RemovePhase", Id: phase.Id, IdCommessa: Comm), Collab);
+var asked = await Send<GeCoProjectCardResult>(new("RequestAccess", IdCommessa: CommOther, Testo: "Devo preparare il preventivo"), Collab);
+var requests = await Send<GeCoAccessRequests>(new("AccessRequests"), Collab);
+var toDecide = await Send<GeCoAccessRequests>(new("AccessRequests"), Admin);
+Check(asked.Accesso is { PuoRichiedere: false, Richiesta.Stato: "InAttesa" } && requests.DaDecidere.Length == 0 && requests.Mie.Single().Motivo == "Devo preparare il preventivo"
+      && toDecide.Decide && toDecide.DaDecidere.Single().IdCommessa == CommOther,
+    "Accesso: richiesto da GeCa, nell'elenco del richiedente e da decidere per gli amministratori");
+var granted = await Send<GeCoAccessRequests>(new("DecideAccess", Id: toDecide.DaDecidere[0].Id, Valore: true, Versione: toDecide.DaDecidere[0].Versione), Admin);
+Check(granted.Concessi.Single().Stato == "Concessa" && (await Send<GeCoProjectCardResult>(new("ProjectCard", IdCommessa: CommOther), Collab)).Scheda!.Attribuzione is { Attribuita: true, SolaLettura: false }
+      && await Fails(() => Send<GeCoAccessRequests>(new("DecideAccess", Id: toDecide.DaDecidere[0].Id, Valore: false, Versione: toDecide.DaDecidere[0].Versione), Collab)) is not null,
+    "Accesso: concesso da chi decide, la commessa diventa dell'utente; chi non decide non può decidere");
+await Send<GeCoAccessRequests>(new("RevokeAccess", Id: granted.Concessi[0].Id, Testo: "Lavoro concluso", Versione: granted.Concessi[0].Versione), Admin);
+Check((await Send<GeCoProjectCardResult>(new("ProjectCard", IdCommessa: CommOther), Collab)).Scheda!.Attribuzione.SolaLettura, "Accesso: revocato, la commessa torna in sola lettura");
 await AlignmentChecks.RunAsync();
-Console.WriteLine("GeCoChecks: pianificazione, ore, collegamento cartelle, notifiche, team della commessa e allineamento di GeCo verificati su dati sintetici.");
+Console.WriteLine("GeCoChecks: pianificazione, ore, collegamento cartelle, notifiche, team della commessa, commesse con scheda e richieste di accesso e allineamento di GeCo verificati su dati sintetici.");
 
 static void Check(bool condition, string message) { if (!condition) throw new Exception("FAIL: " + message); Console.WriteLine("PASS: " + message); }
 
@@ -281,14 +336,22 @@ static void Seed(TestDb db)
     var monday = new DateTime(2026, 11, 16);
     db.tblSocieta.Add(new tblSocieta { Soc_Id = 1, Soc_Codice = "S", Soc_RagSoc = "Studio di prova" });
     db.tblCentriDiCosto.AddRange(
-        new tblCentriDiCosto { Cdc_Id = 10, Cdc_Codice = "A", Cdc_Descrizione = "Persona A", Cdc_IntExt = "I", Cdc_Attivo = true },
-        new tblCentriDiCosto { Cdc_Id = 11, Cdc_Codice = "B", Cdc_Descrizione = "Persona B", Cdc_IntExt = "I", Cdc_Attivo = true });
+        new tblCentriDiCosto { Cdc_Id = 10, Cdc_Codice = "A", Cdc_Descrizione = "Persona A", Cdc_IntExt = "I", Cdc_Attivo = true, Cdc_FlCapocommessa = true },
+        new tblCentriDiCosto { Cdc_Id = 11, Cdc_Codice = "B", Cdc_Descrizione = "Persona B", Cdc_IntExt = "I", Cdc_Attivo = true, Cdc_FlCapocommessa = true });
     db.tblUtenti.AddRange(
         new tblUtenti { Ute_Id = 1, Ute_Username = "admin", Ute_Tipo = "A", Ute_TutteFunzioni = true, Ute_TF_Ins = true, Ute_TF_Mod = true, Ute_TF_Del = true, Ute_IdCdc = 10, Ute_ConfermaStatini = true },
         new tblUtenti { Ute_Id = 2, Ute_Username = "collab", Ute_Descrizione = "Collaboratore", Ute_Tipo = "U", Ute_IdCdc = 11, Ute_ConfermaStatini = true },
         new tblUtenti { Ute_Id = 3, Ute_Username = "altro", Ute_Tipo = "U", Ute_IdCdc = 11 });
     db.tblFunzioni.Add(new tblFunzioni { Fun_Id = 1, Fun_Codice = "statini", Fun_Descrizione = "Ore lavorate", Fun_Menu = "", Fun_Url = "RilevazioneStatini.aspx" });
     db.FunzioniUtenti.Add(new TestFunction { Id = 1, IdUtente = 2, Url = "RilevazioneStatini.aspx", Codice = "statini", Descrizione = "Ore lavorate", Ins = true, Mod = true });
+    // Commesse e scheda Fasi (2.42.0): il collaboratore ha le funzioni di GeCo2027 per consultarle e modificarle.
+    db.tblFunzioni.AddRange(
+        new tblFunzioni { Fun_Id = 2, Fun_Codice = "commesse", Fun_Descrizione = "Commesse", Fun_Menu = "", Fun_Url = "commesse.aspx" },
+        new tblFunzioni { Fun_Id = 3, Fun_Codice = ServizioCommessa.FunzioneFasi, Fun_Descrizione = "Fasi", Fun_Menu = "", Fun_Url = "Commessa_Fasi.aspx" });
+    db.FunzioniUtenti.AddRange(
+        new TestFunction { Id = 2, IdUtente = 2, Url = "commesse.aspx", Codice = "commesse", Descrizione = "Commesse", Ins = true, Mod = true },
+        new TestFunction { Id = 3, IdUtente = 2, Url = "Commessa_Fasi.aspx", Codice = ServizioCommessa.FunzioneFasi, Descrizione = "Fasi", Ins = true, Mod = true, Del = true });
+    db.tblTipiFase.Add(new tblTipiFase { Tfa_Id = 7, Tfa_Codice = "P", Tfa_Descrizione = "Progetto" });
     db.tblVociDiCosto.AddRange(
         new tblVociDiCosto { Vdc_Id = 100, Vdc_Codice = "ORE", Vdc_Descrizione = "Ore", Vdc_ConteggioOre = true },
         new tblVociDiCosto { Vdc_Id = 101, Vdc_Codice = "KM", Vdc_Descrizione = "Chilometri", Vdc_ConteggioOre = false });
@@ -313,8 +376,8 @@ static void Seed(TestDb db)
         Folder(4, @"\\server\lavori\2026\C26999 - Senza commessa", "C", "C26999", "Senza", "commessa"));
     db.tblCartelleSincronizzazioni.Add(new tblCartelleSincronizzazioni { Cas_Categoria = "C", Cas_Data = seen, Cas_Origine = "TA-Gestione di prova", Cas_Cartelle = 3 });
     db.tblFasiCommesse.AddRange(
-        new tblFasiCommesse { Fco_Id = 2000, Fco_IdCommessa = 1000, Fco_Descrizione = "Progetto", Fco_Ordinamento = 1 },
-        new tblFasiCommesse { Fco_Id = 2001, Fco_IdCommessa = 1000, Fco_Descrizione = "Direzione lavori", Fco_Ordinamento = 2 });
+        new tblFasiCommesse { Fco_Id = 2000, Fco_IdCommessa = 1000, Fco_IdTipoFase = 7, Fco_Descrizione = "Progetto", Fco_Ordinamento = 1 },
+        new tblFasiCommesse { Fco_Id = 2001, Fco_IdCommessa = 1000, Fco_IdTipoFase = 7, Fco_Descrizione = "Direzione lavori", Fco_Ordinamento = 2 });
     db.tblPianificazioneAttivita.AddRange(
         new tblPianificazioneAttivita { Pat_Id = 1, Pat_IdCdc = 11, Pat_IdCommessa = 1000, Pat_IdFase = 2000, Pat_DataInizio = monday, Pat_DataFine = monday.AddDays(4), Pat_DataMod = DateTime.Now, Pat_IdUtenteMod = 1 },
         new tblPianificazioneAttivita { Pat_Id = 2, Pat_IdCdc = 11, Pat_IdCommessa = 1001, Pat_DataInizio = monday.AddDays(2), Pat_DataFine = monday.AddDays(3), Pat_DataMod = DateTime.Now, Pat_IdUtenteMod = 1 });

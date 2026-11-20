@@ -47,7 +47,7 @@ public sealed partial class MainViewModel
     }
 
     // Al cambio di connessione l'utente può essere un altro: le finestre si chiudono (le ore non salvate vengono chieste prima).
-    private void CloseGeCoWindows() { planningWindow?.Close(); hoursWindow?.Close(); folderLinksWindow?.Close(); alignmentWindow?.Close(); geCoRevision = 0; viewRevision = 0; }
+    private void CloseGeCoWindows() { planningWindow?.Close(); hoursWindow?.Close(); folderLinksWindow?.Close(); alignmentWindow?.Close(); CloseGeCoProjectWindows(); SetGeCoAddress(""); geCoRevision = 0; viewRevision = 0; }
 
     // Notifica push «GeCoViste» (2.39.0): pianificazione o ore salvate in GeCo2027 o in un altro client di GeCa. Come per le
     // notifiche, torna subito (il riscontro al server parte dopo) e il lavoro si fa sul thread dell'interfaccia. La prima
@@ -59,7 +59,7 @@ public sealed partial class MainViewModel
         {
             if (notice.Revision <= viewRevision) return;
             var from = viewRevision; viewRevision = notice.Revision;
-            if (from == 0 || connection == null || (planningModel == null && hoursModel == null && !ProjectTeamViewModel.AnyOpen)) return;
+            if (from == 0 || connection == null || (planningModel == null && hoursModel == null && !ProjectTeamViewModel.AnyOpen && !ProjectCardViewModel.AnyOpen && !GeCoProjectsViewModel.AnyOpen)) return;
             try
             {
                 var updates = await new ServerGeCoGateway(connection).Send<GeCoViewUpdates>(new("ViewEvents", DopoId: from));
@@ -67,6 +67,8 @@ public sealed partial class MainViewModel
                 planningModel?.ViewsChanged(updates); hoursModel?.ViewsChanged(updates);
                 // Team della commessa (2.41.0): sezioni e finestre aperte si rileggono se è cambiato il team della loro commessa.
                 ProjectTeamViewModel.Dispatch(updates);
+                // Commesse (2.42.0): schede ed elenchi aperti si rileggono se cambiano dati, fasi o team delle loro commesse.
+                ProjectCardViewModel.Dispatch(updates); GeCoProjectsViewModel.Dispatch(updates);
             }
             catch (Exception ex)
             {
