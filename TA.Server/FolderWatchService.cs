@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 namespace TA.Server;
-// Il watcher e un acceleratore: la scansione periodica resta necessaria sulle condivisioni SMB.
+// Il watcher e un acceleratore: sulle condivisioni SMB gli eventi possono perdersi, quindi ogni 5 minuti si rilegge
+// comunque l'elenco di commesse e gare (solo nomi e percorsi, come la lettura manuale). La scansione completa dei
+// metadati resta quella notturna. Ogni elenco cambiato va subito ai client e al database comune (ScanCoordinator).
 public sealed class FolderWatchService(ServerSettings settings, ScanCoordinator scans, ILogger<FolderWatchService> logger) : BackgroundService
 {
     private sealed class Watch(string category, string root)
@@ -13,8 +15,10 @@ public sealed class FolderWatchService(ServerSettings settings, ScanCoordinator 
         public int Failed;
         public DateTime Retry;
     }
+    private static readonly TimeSpan Periodic = TimeSpan.FromMinutes(5);
     protected override async Task ExecuteAsync(CancellationToken token)
     {
+        var nextPeriodic = DateTime.UtcNow + Periodic;
         var watches = new[] { new Watch("C", settings.JobsRoot), new Watch("G", settings.BidsRoot), new Watch("A", settings.ArchivedJobsRoot) };
         try
         {
@@ -30,6 +34,12 @@ public sealed class FolderWatchService(ServerSettings settings, ScanCoordinator 
                         watch.Batch.Acknowledge(revision);
                         logger.LogInformation("Modifiche rilevate: verifica categoria {Category} avviata", watch.Category);
                     }
+                }
+                if (DateTime.UtcNow >= nextPeriodic)
+                {
+                    // L'archivio (A) ha molte copie e cambia di rado: solo watcher e scansione notturna.
+                    foreach (var category in new[] { "C", "G" }) scans.Refresh(category);
+                    nextPeriodic = DateTime.UtcNow + Periodic;
                 }
                 await Task.Delay(TimeSpan.FromSeconds(2), token);
             }

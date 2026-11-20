@@ -75,6 +75,8 @@ builder.Services.AddHostedService<TA.Server.SharedDatabase.GeCoEventsService>();
 builder.Services.AddHostedService<TA.Server.Business.BusinessBackupService>();
 builder.Services.AddHostedService<DailyDatabaseBackupService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<ScanCoordinator>());
+// Cartelle create, rinominate o spostate: elenco riletto pochi secondi dopo l'evento e comunque ogni 5 minuti.
+builder.Services.AddHostedService<FolderWatchService>();
 builder.Services.AddHostedService<CatalogRefreshService>();
 builder.Services.AddSingleton<LocalAnalysisService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<LocalAnalysisService>());

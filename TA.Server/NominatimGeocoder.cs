@@ -53,6 +53,9 @@ public sealed class NominatimGeocoder(string root, string endpoint, HttpClient? 
             try
             {
                 using var response = await (client ?? SharedClient).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+                // Il secondo di pausa si conta da quando la richiesta è davvero partita e ha avuto risposta, non da prima
+                // dell'invio: con un server lento l'intervallo tra due richieste scendeva sotto il secondo previsto da Nominatim.
+                GeologyStorage.Atomic(rateFile, new RateState(DateTime.UtcNow.AddMilliseconds(1100)));
                 if ((int)response.StatusCode == 429 || response.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
                     var retry = response.Headers.RetryAfter?.Date?.UtcDateTime ?? DateTime.UtcNow.Add(response.Headers.RetryAfter?.Delta ?? TimeSpan.FromMinutes(1));

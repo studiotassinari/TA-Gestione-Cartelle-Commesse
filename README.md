@@ -1,4 +1,10 @@
-# TA-Gestione Cartelle Commesse — 2.42.0
+# TA-Gestione Cartelle Commesse — 2.42.1
+
+## Novità 2.42.1 — cartelle aggiornate in tempo reale
+
+Torna il **monitoraggio delle cartelle** di commesse, gare e archivio: una cartella creata, rinominata o spostata compare nel programma, e attraverso il database comune in GeCo2027, pochi secondi dopo. Sulle condivisioni di rete gli eventi possono perdersi, quindi l'elenco di commesse e gare si rilegge comunque **ogni 5 minuti**, soltanto da nomi e percorsi come «Aggiorna elenco». Dimensioni, gerarchie e verifiche dei file restano alla scansione completa all'avvio e a mezzanotte. Basta aggiornare il server ([dettagli](deployment/SERVER-CLIENT.md)).
+
+[Scarica aggiornatore 2.42.1](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.42.1/TA-Commesse-Aggiornatore-2.42.1.exe)
 
 ## Novità 2.42.0 — le commesse di GeCo nel programma
 
