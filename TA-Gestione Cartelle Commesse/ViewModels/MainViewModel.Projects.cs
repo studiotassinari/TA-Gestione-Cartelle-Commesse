@@ -5,7 +5,7 @@ public sealed partial class MainViewModel
 {
     public Command CustomersCommand { get; private set; } = null!;
     private EntityWorkspace? entityWorkspace;
-    public EntityWorkspace? Workspace=>connection==null?null:entityWorkspace??=new(CreateBusiness(),System.Windows.Application.Current.MainWindow);
+    public EntityWorkspace? Workspace=>connection==null?null:entityWorkspace??=new(CreateBusiness(),System.Windows.Application.Current.MainWindow,new Services.ServerGeCoGateway(connection));
     private void CloseProjectWindows(){entityWorkspace?.Dispose();entityWorkspace=null;}
     private void ShowCustomers(string id)=>Workspace?.ShowCustomers(id);
     private void ShowProject(WorkProjectViewModel row)=>Workspace?.ShowProject(row.Id);

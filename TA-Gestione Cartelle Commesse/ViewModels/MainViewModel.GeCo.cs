@@ -31,6 +31,21 @@ public sealed partial class MainViewModel
         hoursWindow.Closed += (_, _) => { hoursWindow = null; hoursModel = null; };
         hoursWindow.Show();
     }
+    // Team della commessa selezionata nell'elenco delle commesse (2.41.0): la commessa di GeCo con il codice della cartella.
+    public Command GeCoTeamCommand { get; private set; } = null!;
+    private void ShowGeCoTeam()
+    {
+        if (connection == null || ActiveCategory.SelectedProject is not { Model.Category: "C" } row) return;
+        var model = new ProjectTeamViewModel(new ServerGeCoGateway(connection), code: row.Code);
+        new Views.GeCoTeamWindow(model) { Owner = System.Windows.Application.Current.MainWindow }.Show();
+    }
+    // Dal Collegamento cartelle: la commessa è già nota per Id.
+    public void ShowGeCoTeam(int projectId)
+    {
+        if (connection == null || projectId <= 0) return;
+        new Views.GeCoTeamWindow(new ProjectTeamViewModel(new ServerGeCoGateway(connection), projectId)) { Owner = System.Windows.Application.Current.MainWindow }.Show();
+    }
+
     // Al cambio di connessione l'utente può essere un altro: le finestre si chiudono (le ore non salvate vengono chieste prima).
     private void CloseGeCoWindows() { planningWindow?.Close(); hoursWindow?.Close(); folderLinksWindow?.Close(); alignmentWindow?.Close(); geCoRevision = 0; viewRevision = 0; }
 
@@ -44,12 +59,14 @@ public sealed partial class MainViewModel
         {
             if (notice.Revision <= viewRevision) return;
             var from = viewRevision; viewRevision = notice.Revision;
-            if (from == 0 || connection == null || (planningModel == null && hoursModel == null)) return;
+            if (from == 0 || connection == null || (planningModel == null && hoursModel == null && !ProjectTeamViewModel.AnyOpen)) return;
             try
             {
                 var updates = await new ServerGeCoGateway(connection).Send<GeCoViewUpdates>(new("ViewEvents", DopoId: from));
                 viewRevision = Math.Max(viewRevision, updates.UltimoId);
                 planningModel?.ViewsChanged(updates); hoursModel?.ViewsChanged(updates);
+                // Team della commessa (2.41.0): sezioni e finestre aperte si rileggono se è cambiato il team della loro commessa.
+                ProjectTeamViewModel.Dispatch(updates);
             }
             catch (Exception ex)
             {

@@ -10,7 +10,7 @@ public sealed partial class MainViewModel : Observable
     public CategoryViewModel Commesse { get; } = new("Commesse", 'C');
     public CategoryViewModel Gare { get; } = new("Gare", 'G'); public CategoryViewModel Archivio { get; } = new("Archivio", 'A');
     private int activeTabIndex;
-    public int ActiveTabIndex { get => activeTabIndex; set { activeTabIndex = value; Notify(); Notify(nameof(ActiveCategory)); ArchiveFolderCommand?.Refresh(); } }
+    public int ActiveTabIndex { get => activeTabIndex; set { activeTabIndex = value; Notify(); Notify(nameof(ActiveCategory)); ArchiveFolderCommand?.Refresh(); GeCoTeamCommand?.Refresh(); } }
     public CategoryViewModel ActiveCategory => ActiveTabIndex == 2 ? Archivio : ActiveTabIndex == 1 ? Gare : Commesse;
     private string host = "", port = "5443", reportStatus = "Configurare nome DNS del server e porta TCP dedicata.";
     private ServerConnection? connection;
@@ -50,6 +50,8 @@ public sealed partial class MainViewModel : Observable
         GeCoHoursCommand = new(ShowGeCoHours, () => connection != null);
         GeCoFolderLinksCommand = new(ShowGeCoFolderLinks, () => connection != null);
         GeCoAlignmentCommand = new(ShowGeCoAlignment, () => connection != null);
+        GeCoTeamCommand = new(ShowGeCoTeam, () => connection != null && ActiveCategory.SelectedProject?.Model.Category == "C");
+        foreach (var category in new[] { Commesse, Gare, Archivio }) category.PropertyChanged += (_, _) => GeCoTeamCommand.Refresh();
         foreach (var category in new[] { Commesse, Gare, Archivio }) category.CurriculumRequested += project => ShowCurriculum(project);
         CustomersCommand = new(() => ShowCustomers(""), () => connection != null);
         Commesse.ProjectRequested += ShowProject;
@@ -105,7 +107,7 @@ public sealed partial class MainViewModel : Observable
         ApplyManagementAccess(false);
         CloseProjectWindows(); businessWindow?.Close(); CloseGeCoWindows(); curriculumWindow?.Close(); ipripiWindow?.Close(); geologyWindow?.Close(); nonconformityWindow?.Close(); StopProgressPolling(); pushCancellation?.Cancel(); connecting = true; ConnectCommand.Refresh();
         ClientLog.Write($"Connessione a {host.Trim()}:{number}; account corrente={UseCurrentAccount}"); connection = new ServerConnection(host.Trim(), number, credentials);
-        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); GeCoPlanningCommand.Refresh(); GeCoHoursCommand.Refresh(); GeCoFolderLinksCommand.Refresh(); GeCoAlignmentCommand.Refresh(); CurriculumCommand.Refresh(); NonconformityReportCommand.Refresh();
+        Commesse.Connect(connection); Gare.Connect(connection); Archivio.Connect(connection); ReportCommand.Refresh(); DailyReportCommand.Refresh(); AnalysisReportCommand.Refresh(); CreateJobCommand.Refresh(); BusinessCommand.Refresh(); GeCoPlanningCommand.Refresh(); GeCoHoursCommand.Refresh(); GeCoFolderLinksCommand.Refresh(); GeCoAlignmentCommand.Refresh(); GeCoTeamCommand.Refresh(); CurriculumCommand.Refresh(); NonconformityReportCommand.Refresh();
         CustomersCommand.Refresh(); ArchiveFolderCommand.Refresh();
         try { new ClientSettings(host.Trim(), number, UseCurrentAccount, accountName).Save(); }
         catch (Exception ex) { ReportStatus = "Impossibile salvare la connessione: " + ex.Message; }

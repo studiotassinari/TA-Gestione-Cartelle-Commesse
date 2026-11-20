@@ -98,6 +98,43 @@ internal static class GeCoClientChecks
         Check(denied.Start == null && denied.AccessMessage.Contains("non corrisponde") && denied.People.Count == 0, "Ore: senza utente di GeCo la finestra mostra il motivo e non permette nulla");
         LiveUpdates(planning, pvm, hours, hvm);
         FolderLinks();
+        ProjectTeam();
+    }
+
+    // Team della commessa (2.41.0): lettura per codice, modifica con il team restituito dal servizio, rilettura dopo un rifiuto,
+    // ricarica per l'evento «TeamModificato» della stessa commessa fatto altrove, non per quello della propria finestra.
+    private static void ProjectTeam()
+    {
+        GeCoViewRefresh.Quiet = TimeSpan.FromMilliseconds(20); GeCoViewRefresh.Retry = TimeSpan.FromMilliseconds(20);
+        GeCoProjectTeam T(params GeCoTeamPerson[] members) => new(1000, "C26012", "Ponte", 10,
+            [new(10, "Persona A", true, true, false, [], "Capocommessa", "PA"), .. members.Select(m => new GeCoTeamMember(m.Id, m.Nome, true, false, true, [], "Membro", "PB"))],
+            members, [], [new(1, "Strutture")], [new(10, "Persona A"), new(11, "Persona B")], true);
+        var refuse = false;
+        var fake = new Fake(c => c.Action switch
+        {
+            "Access" => new GeCoAccess(true, "", "DOM\\a", "a", "Persona A"),
+            "ProjectTeam" => new GeCoProjectTeamResult(true, "", T()),
+            "SetTeamMember" => refuse ? throw new UnauthorizedAccessException("Il team lo modificano gli amministratori, i team manager e il capocommessa") : T(new GeCoTeamPerson(11, "Persona B")),
+            _ => true,
+        });
+        using var vm = new ProjectTeamViewModel(fake, code: "C26012");
+        vm.LoadAsync().GetAwaiter().GetResult();
+        Check(vm.Team is { IdCommessa: 1000, PuoModificare: true } && vm.Addable.Select(p => p.Id).SequenceEqual(new[] { 10, 11 }) && fake.Sent.Last() is { Action: "ProjectTeam", Testo: "C26012", IdCommessa: 0 }
+              && ProjectTeamViewModel.AnyOpen, "Team: letto dal codice della cartella, persone da aggiungere");
+        vm.SetMemberAsync(11, true).GetAwaiter().GetResult();
+        Check(vm.Team!.Membri.Single().Id == 11 && fake.Sent.Last() is { Action: "SetTeamMember", IdCommessa: 1000, IdCdc: 11, Valore: true } cmd && cmd.Scheda?.StartsWith("geca-") == true && vm.Addable.Single().Id == 10,
+            "Team: persona aggiunta sulla commessa trovata, con la finestra che salva");
+        refuse = true; vm.SetMemberAsync(10, true).GetAwaiter().GetResult();
+        Check(vm.Error.Contains("capocommessa") && fake.Sent.Last().Action == "ProjectTeam" && vm.Team!.Membri.Length == 0, "Team: rifiuto del servizio mostrato e stato riletto");
+        int Loads() { lock (fake.Sent) return fake.Sent.Count(c => c.Action == "ProjectTeam"); }
+        var before = Loads(); var own = fake.Sent.Last().Scheda;
+        GeCoViewUpdate U(long id, string? window, int project) => new(id, window == null ? "GeCo2027" : "GeCa", ProjectTeamViewModel.Changed, 0, "", "", [project], false, window, "Persona C");
+        ProjectTeamViewModel.Dispatch(new([U(1, own, 1000), U(2, null, 1001)], 2, true)); Thread.Sleep(150);
+        Check(Loads() == before, "Team: nessuna ricarica per il proprio salvataggio o per un'altra commessa");
+        ProjectTeamViewModel.Dispatch(new([U(3, null, 1000)], 3, true));
+        for (int i = 0; i < 200 && Loads() == before; i++) Thread.Sleep(10);
+        Check(Loads() == before + 1, "Team: ricarica quando il team della commessa cambia in GeCo2027");
+        Check(ProjectTeamViewModel.Text(new IOException("Comando GeCo sconosciuto.")).Contains("2.41.0"), "Team: servizio precedente, si chiede di aggiornarlo");
     }
 
     // Pianificazione e ore aggiornate subito (2.39.0): le finestre si ricaricano per i salvataggi fatti altrove che toccano

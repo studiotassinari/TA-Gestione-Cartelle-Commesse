@@ -36,7 +36,8 @@ public sealed record GeCoSyncEvents(GeCoSyncEvent[] Eventi, long UltimoId, bool 
 // Pianificazione o ore salvate (2.39.0, eventi tecnici del registro comune, scritti da GeCo2027 o da GeCa): non sono notifiche,
 // servono a ricaricare le finestre aperte. Tipo: PianificazioneModificata o OreModificate. IdCdc: persona toccata; Dal e Al
 // (aaaa-mm-gg): primo e ultimo giorno; Commesse: commesse coinvolte (AltreCommesse: elenco accorciato); Scheda: finestra o
-// scheda del browser che ha salvato; Utente: chi ha salvato.
+// scheda del browser che ha salvato; Utente: chi ha salvato. Dalla 2.41.0 anche TeamModificato (team della commessa): IdCdc 0,
+// Dal e Al vuoti, Commesse con la sola commessa il cui team è cambiato.
 public sealed record GeCoViewUpdate(long Id, string Origine, string Tipo, int IdCdc, string Dal, string Al, int[] Commesse, bool AltreCommesse, string? Scheda, string? Utente);
 // Eventi tecnici dopo DopoId che l'utente può vedere (persona propria o, secondo il ruolo, di tutti). UltimoId: ultimo evento
 // tecnico del registro. Parziale: ne sono arrivati più di quelli restituiti (client rimasto indietro): ricaricare comunque.

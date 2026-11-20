@@ -22,7 +22,9 @@ public sealed class GeCoFolderLinksWindow : Window
     private readonly DataGrid grid = new() { AutoGenerateColumns = false, IsReadOnly = true, CanUserAddRows = false, SelectionMode = DataGridSelectionMode.Single,
         HeadersVisibility = DataGridHeadersVisibility.Column, GridLinesVisibility = DataGridGridLinesVisibility.Horizontal, BorderThickness = new Thickness(0) };
     private readonly TextBlock detail = Caption("Selezionare una commessa o una gara.", 12, false, Grey);
-    private readonly Button confirm, choose, unlink;
+    private readonly Button confirm, choose, unlink, team;
+    // «Team della commessa…» (2.41.0): la finestra del team la apre la finestra principale, che ha il collegamento al servizio.
+    public event Action<int>? TeamRequested;
     private readonly StackPanel events = new();
     private readonly TextBlock eventsTitle = Caption("Notifiche da GeCo2027", 15, true, Teal);
     private readonly DispatcherTimer searchTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
@@ -57,7 +59,8 @@ public sealed class GeCoFolderLinksWindow : Window
         confirm = Push("Conferma proposta", async () => { if (Selected is { } r) await vm.ConfirmAsync(r); });
         choose = Push("Scegli cartella…", async () => await Choose());
         unlink = Push("Scollega", async () => { if (Selected is { } r) await vm.UnlinkAsync(r); });
-        buttons.Children.Add(confirm); buttons.Children.Add(choose); buttons.Children.Add(unlink);
+        team = Push("Team della commessa…", () => { if (Selected is { Tipo: "commessa" } r) TeamRequested?.Invoke(r.Id); }, tip: "Persone del team della commessa di GeCo, con la modifica per chi può");
+        buttons.Children.Add(confirm); buttons.Children.Add(choose); buttons.Children.Add(unlink); buttons.Children.Add(team);
         var close = Push("Chiudi", Close); close.IsCancel = true; buttons.Children.Add(close);
         actions.Children.Add(detail); actions.Children.Add(buttons.With(b => b.Margin = new Thickness(0, 8, 0, 0)));
         DockPanel.SetDock(actions, Dock.Bottom); root.Children.Add(actions);
@@ -105,6 +108,7 @@ public sealed class GeCoFolderLinksWindow : Window
         confirm.IsEnabled = vm.Allowed && !vm.Busy && r?.Proposta != null && (r.Collegamento == null || r.Cartella?.Presente != true);
         choose.IsEnabled = vm.Allowed && !vm.Busy && r != null;
         unlink.IsEnabled = vm.Allowed && !vm.Busy && r?.Collegamento != null;
+        team.IsEnabled = r?.Tipo == "commessa";
         if (item == null || r == null) { detail.Text = vm.Allowed ? "Selezionare una commessa o una gara." : ""; return; }
         var lines = new List<string> { $"{item.Elemento} {item.Codice} — {item.Stato}" + (item.Cartella.Length > 0 ? ": " + item.Cartella : "") };
         if (r.Cartella is { } f) lines.Add("Percorso: " + f.Percorso);

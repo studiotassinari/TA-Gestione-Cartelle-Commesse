@@ -20,11 +20,13 @@ public sealed partial class GeCoWorkService
     // Notifiche per i client di GeCa: gli eventi di GeCo2027 e, dalla 2.40.0, gli esiti delle cartelle chieste scritti da GeCa
     // (CartellaCreata e CartellaNonCreata, con i destinatari di NotificheMirate: li vede soltanto chi aveva chiesto la cartella).
     // Gli altri eventi di GeCa (scansioni, collegamenti decisi qui) sono già noti a chi li ha fatti e non diventano notifiche.
+    // Dalla 2.41.0 anche «AggiuntoAlTeam» scritto da GeCa: chi entra nel team di una commessa da un altro client di GeCa lo sa
+    // qui come in GeCo2027 (destinatari di NotificheMirate).
     public static bool Notice(string origin, string type) => origin == EventiSincronizzazione.GeCo2027
-        || origin == EventiSincronizzazione.GeCa && type is EventiSincronizzazione.Tipi.CartellaCreata or EventiSincronizzazione.Tipi.CartellaNonCreata;
+        || origin == EventiSincronizzazione.GeCa && type is EventiSincronizzazione.Tipi.CartellaCreata or EventiSincronizzazione.Tipi.CartellaNonCreata or EventiSincronizzazione.Tipi.AggiuntoAlTeam;
     private static IQueryable<tblSincronizzazioneEventi> Notices(GeCoDbContext db) => EventiSincronizzazione.SenzaTecnici(db.tblSincronizzazioneEventi.AsNoTracking())
         .Where(e => e.Sev_Origine == EventiSincronizzazione.GeCo2027 || e.Sev_Origine == EventiSincronizzazione.GeCa
-            && (e.Sev_Tipo == EventiSincronizzazione.Tipi.CartellaCreata || e.Sev_Tipo == EventiSincronizzazione.Tipi.CartellaNonCreata));
+            && (e.Sev_Tipo == EventiSincronizzazione.Tipi.CartellaCreata || e.Sev_Tipo == EventiSincronizzazione.Tipi.CartellaNonCreata || e.Sev_Tipo == EventiSincronizzazione.Tipi.AggiuntoAlTeam));
 
     private static async Task<object> HandleLinksAsync(GeCoCommand c, ContestoRegole context, CancellationToken token)
     {
@@ -108,6 +110,16 @@ public sealed partial class GeCoWorkService
         return new(visible, recent[0], true);
     }
 
+    // Evento tecnico come lo riceve il client: pianificazione e ore con persona e giorni; team della commessa (2.41.0) con
+    // IdCdc 0, senza giorni e con la sola commessa in Commesse. Eventi tecnici di tipi che questa versione non conosce: nessuno.
+    public static GeCoViewUpdate? View(EventoSincronizzazione e)
+    {
+        if (EventiSincronizzazione.ModificaTeam(e) is { } t)
+            return new GeCoViewUpdate(e.Id, e.Origine, e.Tipo, 0, "", "", [t.IdCommessa], false, t.Scheda, e.Utente);
+        return EventiSincronizzazione.Aggiornamento(e) is { } a
+            ? new GeCoViewUpdate(e.Id, e.Origine, e.Tipo, a.IdCdc, DateRegole.Iso(a.Dal), DateRegole.Iso(a.Al), a.Commesse.ToArray(), a.AltreCommesse, a.Scheda, e.Utente) : null;
+    }
+
     // Pianificazione e ore salvate (eventi tecnici di GeCo2027 e di GeCa) dopo DopoId, per le finestre aperte del client, solo
     // quelli che l'utente può vedere: la propria persona, la pianificazione di tutti per amministratori e team manager, le ore
     // di tutti per chi le vede (regole della libreria, EventiSincronizzazione.Visibile). Senza DopoId solo l'ultimo Id (punto di
@@ -122,10 +134,9 @@ public sealed partial class GeCoWorkService
         bool partial = recent.Count == EventWindow && from < recent[^1] - 1;
         var events = await EventiSincronizzazione.LeggiDopoAsync(db, Math.Max(from, recent[^1] - 1), massimo: EventWindow, stop: token, tecnici: true);
         var visibility = await EventiSincronizzazione.VisibilitaAsync(db, context.Utente, context.IdSocieta, token);
-        var updates = events.Where(e => EventiSincronizzazione.Visibile(e, new Dictionary<int, InfoCommessaEvento>(), visibility))
-            .Select(e => (Event: e, Data: EventiSincronizzazione.Aggiornamento(e))).Where(x => x.Data != null)
-            .Select(x => new GeCoViewUpdate(x.Event.Id, x.Event.Origine, x.Event.Tipo, x.Data!.IdCdc, DateRegole.Iso(x.Data.Dal), DateRegole.Iso(x.Data.Al),
-                x.Data.Commesse.ToArray(), x.Data.AltreCommesse, x.Data.Scheda, x.Event.Utente)).ToArray();
+        // Il team della commessa (2.41.0) lo vede chi vede la commessa: per questi eventi servono società e area delle commesse.
+        var projects = await EventiSincronizzazione.CommesseAsync(db, events.Where(e => e.Tipo == EventiSincronizzazione.Tipi.TeamModificato), token);
+        var updates = events.Where(e => EventiSincronizzazione.Visibile(e, projects, visibility)).Select(View).Where(u => u != null).Select(u => u!).ToArray();
         return new(updates, recent[0], true, partial);
     }
 }

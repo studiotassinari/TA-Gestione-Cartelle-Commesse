@@ -6,12 +6,12 @@ public sealed class ProjectDetailWindow : Window
 {
     private ProjectDetailViewModel current;
     public event Action<ProjectDetailViewModel>? CustomerRequested;
-    public ProjectDetailWindow(ProjectDetailViewModel vm)
+    public ProjectDetailWindow(ProjectDetailViewModel vm,TA_Gestione_Cartelle_Commesse.Services.IGeCoGateway? geCo=null)
     {
         current=vm; DataContext=vm; Width=1250;Height=850;MinWidth=950;MinHeight=600;
         SetBinding(TitleProperty,new Binding("DetailTitle"));
         var main=Application.Current.MainWindow;Resources=main.Resources;Background=main.Background;Foreground=main.Foreground;FontFamily=main.FontFamily;Icon=main.Icon;
-        Content=new ProjectDetailView{Background=Background};
+        Content=new ProjectDetailView(geCo){Background=Background};
         current.CustomerManagementRequested+=ManageCustomer;
         Loaded+=async(_,_)=>await current.Refresh();
         Closed+=(_,_)=>{current.CustomerManagementRequested-=ManageCustomer;current.Project?.Dispose();};

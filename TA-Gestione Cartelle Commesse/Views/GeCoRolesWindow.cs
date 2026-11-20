@@ -5,7 +5,8 @@ using static TA_Gestione_Cartelle_Commesse.Views.GeCoUi;
 namespace TA_Gestione_Cartelle_Commesse.Views;
 
 // «Ruoli e team» della pianificazione (components/RuoliTeam.jsx di GeCo2027): gli amministratori vedono chi è amministratore e
-// danno o tolgono il ruolo di team manager. I team permanenti e i team per persona non hanno ancora regole nella libreria
+// danno o tolgono il ruolo di team manager. Il team di una commessa si modifica dalla finestra «Team della commessa» (2.41.0,
+// ServizioTeamCommessa); la composizione dei team permanenti e i team per persona non hanno ancora regole nella libreria
 // comune: per non duplicarle restano nella stessa finestra di GeCo2027.
 internal sealed class GeCoRolesWindow : Window
 {
@@ -29,7 +30,7 @@ internal sealed class GeCoRolesWindow : Window
         content.Children.Add(Notice(text, "info"));
         content.Children.Add(Teams());
     }
-    private static TextBlock Teams() => Caption("Team permanenti e team per persona (le commesse del team di ciascuno) si gestiscono per ora in GeCo, pagina Pianificazione > Ruoli e team: il consuntivo delle ore li usa già per proporre le commesse.", 13, false, Grey);
+    private static TextBlock Teams() => Caption("Il team di una commessa (persone e team permanenti assegnati) si modifica da Gestione > Team della commessa selezionata (GeCo). La composizione dei team permanenti e i team per persona si gestiscono per ora in GeCo, pagina Pianificazione > Ruoli e team: il consuntivo delle ore li usa già per proporre le commesse.", 13, false, Grey);
     private async Task Load()
     {
         TA_Gestione_Cartelle_Commesse.Contracts.GeCoRoles roles;

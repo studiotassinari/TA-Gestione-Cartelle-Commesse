@@ -232,8 +232,47 @@ Check((await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: beforeSaves), Admin)
 using (var db = new TestDb(options))
     Check(await reader.PollAsync(db, version, default) == 1 && watching.TryRead(out var aimedPush) && aimedPush == aimed && hub.Summary == null,
         "Lettore degli eventi: una notifica mirata avvisa i client senza riepilogo per tutti (i destinatari la vedono nell'elenco)");
+// ---------------------------------------------------------------- team della commessa (2.41.0)
+// Le regole sono di ServizioTeamCommessa (provato in GeCo2027): qui il comando, i permessi dal token, l'origine «GeCa», l'evento
+// tecnico per le viste aperte e la notifica mirata a chi entra nel team.
+var beforeTeam = await Last();
+var byCode = await Send<GeCoProjectTeamResult>(new("ProjectTeam", Testo: "B260001"), Collab);
+Check(byCode is { Trovata: true, Team: { IdCommessa: Comm, Codice: "B260001", PuoModificare: true } } && byCode.Team.Componenti.Single() is { Id: CdcCollab, Capocommessa: true, Ruolo: "Capocommessa", Iniziali: "PB" }
+    && byCode.Team.Candidati!.Select(p => p.Id).SequenceEqual(new[] { CdcAdmin, CdcCollab }),
+    "Team: la commessa dal codice della cartella, il capocommessa può modificarla, persone candidabili");
+var notFound = await Send<GeCoProjectTeamResult>(new("ProjectTeam", Testo: "C26999"), Collab);
+Check(notFound is { Trovata: false, Team: null } && notFound.Message.Contains("C26999"), "Team: codice senza commessa di GeCo, con il motivo");
+var otherTeam = await Send<GeCoProjectTeamResult>(new("ProjectTeam", IdCommessa: CommOther), Collab);
+Check(otherTeam.Team is { PuoModificare: false, Candidati: null } && await Fails(() => Send<GeCoProjectTeam>(new("SetTeamMember", IdCommessa: CommOther, IdCdc: CdcCollab, Valore: true), Collab))
+    is UnauthorizedAccessException { Message: ServizioTeamCommessa.NonAutorizzato }, "Team: chi non è capocommessa, team manager o amministratore lo vede soltanto");
+var withAdmin = await Send<GeCoProjectTeam>(new("SetTeamMember", IdCommessa: Comm, IdCdc: CdcAdmin, Valore: true, Scheda: "geca-team1"), Collab);
+var teamEvent = LastEvent();
+Check(withAdmin.Membri.Single().Id == CdcAdmin && withAdmin.Componenti.Length == 2 && GeCoWorkService.Saves("SetTeamMember") && GeCoWorkService.Saves("SetPermanentTeam") && !GeCoWorkService.Saves("ProjectTeam"),
+    "Team: persona aggiunta dal client di GeCa; il salvataggio anticipa la lettura del registro");
+using (var db = new TestDb(options))
+{
+    var change = db.tblSincronizzazioneEventi.AsNoTracking().Single(e => e.Sev_Id > beforeTeam && e.Sev_Tipo == EventiSincronizzazione.Tipi.TeamModificato);
+    Check(change is { Sev_Origine: EventiSincronizzazione.GeCa, Sev_IdCommessa: Comm, Sev_Codice: EventiSincronizzazione.MarcaTecnica, Sev_IdUtente: UteCollab }
+        && teamEvent is { Tipo: EventiSincronizzazione.Tipi.AggiuntoAlTeam, Origine: EventiSincronizzazione.GeCa } && teamEvent.Testo.StartsWith("Sei stato aggiunto al team della commessa B260001")
+        && db.tblSincronizzazioneDestinatari.AsNoTracking().Where(d => d.Sde_IdEvento == teamEvent.Id).Select(d => d.Sde_IdUtente).ToList().SequenceEqual(new[] { UteAdmin }),
+        "Team: evento tecnico di origine GeCa e notifica mirata a chi entra nel team");
+}
+var teamViews = await Send<GeCoViewUpdates>(new("ViewEvents", DopoId: beforeTeam), Collab);
+Check(teamViews.Eventi.Single() is { Tipo: "TeamModificato", IdCdc: 0, Dal: "", Scheda: "geca-team1", Utente: "Collaboratore" } u && u.Commesse.SequenceEqual(new[] { Comm }),
+    "Team: l'evento arriva alle viste aperte di chi vede la commessa, con la commessa e la finestra che ha salvato");
+Check((await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: beforeTeam), Admin)).Eventi.Select(e => e.Tipo).SequenceEqual(new[] { "AggiuntoAlTeam" })
+    && (await Send<GeCoSyncEvents>(new("SyncEvents", DopoId: beforeTeam), Collab)).Eventi.Length == 0,
+    "Team: la notifica «aggiunto al team» scritta da GeCa arriva al destinatario, l'evento tecnico non è una notifica");
+using (var db = new TestDb(options))
+    Check(await reader.PollAsync(db, version, default) == 1 && views.TryReadViews(out var teamView) && teamView == teamEvent.Id - 1 && watching.TryRead(out var teamPush) && teamPush == teamEvent.Id,
+        "Lettore degli eventi: il team modificato aggiorna le viste, la notifica mirata avvisa i client");
+Check(await Fails(() => Send<GeCoProjectTeam>(new("SetPermanentTeam", IdCommessa: Comm, Id: 77, Valore: true), Admin)) is KeyNotFoundException
+    && await Fails(() => new GeCoWorkService(() => new TestDb(options), _ => Task.FromResult(8), Soc, (_, _, _) => Task.FromResult(true)).ExecuteAsync(new("SetPermanentTeam", IdCommessa: Comm, Id: 1, Valore: true), Admin, default)) is IOException,
+    "Team permanente: team inesistente = non trovato; database prima della migrazione 9 = non disponibile");
+var removed = await Send<GeCoProjectTeam>(new("SetTeamMember", IdCommessa: Comm, IdCdc: CdcAdmin, Valore: false), Admin);
+Check(removed.Membri.Length == 0 && GeCoWorkService.View(LastEvent()) is { Tipo: "TeamModificato", Commesse: [Comm] }, "Team: persona tolta dall'amministratore, evento per le viste");
 await AlignmentChecks.RunAsync();
-Console.WriteLine("GeCoChecks: pianificazione, ore, collegamento cartelle, notifiche e allineamento di GeCo verificati su dati sintetici.");
+Console.WriteLine("GeCoChecks: pianificazione, ore, collegamento cartelle, notifiche, team della commessa e allineamento di GeCo verificati su dati sintetici.");
 
 static void Check(bool condition, string message) { if (!condition) throw new Exception("FAIL: " + message); Console.WriteLine("PASS: " + message); }
 

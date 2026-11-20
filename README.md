@@ -1,4 +1,16 @@
-# TA-Gestione Cartelle Commesse — 2.40.0
+# TA-Gestione Cartelle Commesse — 2.41.0
+
+## Novità 2.41.0 — team della commessa
+
+Le commesse di GeCo hanno **più persone associate**, una sorta di team: il capocommessa, le persone indicate una per una e i membri dei **team permanenti** assegnati alla commessa. Lo stesso team si vede e si modifica in GeCo2027 (sezione «Team» della scheda della commessa) e ora anche nel programma:
+
+- nella **scheda della commessa** (dettaglio aperto dall'elenco) c'è la sezione **Team della commessa (GeCo)**, con le persone e il loro ruolo (capocommessa, membro, team permanente con il nome del team), per la commessa di GeCo con lo stesso codice della cartella;
+- nel menu **Gestione** c'è **Team della commessa selezionata (GeCo)…**, e nel **Collegamento cartelle** il pulsante **Team della commessa…**;
+- amministratori, team manager e capocommessa aggiungono o tolgono persone e team permanenti con **Modifica team…** (lo decide il servizio con le regole comuni di GeCo.Dati); gli altri vedono il team.
+
+Le modifiche valgono subito: GeCo2027 e gli altri client aperti si aggiornano da soli, e chi entra nel team riceve la notifica «Sei stato aggiunto al team della commessa…». Le persone del team trovano la commessa con le sue fasi già pronta nelle ore lavorate. Nessuna modifica al database; aggiornare prima GeCo2027, poi il server, poi i client ([dettagli](deployment/DATABASE-COMUNE.md#team-della-commessa-2410)).
+
+[Scarica aggiornatore 2.41.0](https://github.com/studiotassinari/TA-Gestione-Cartelle-Commesse/releases/download/v2.41.0/TA-Commesse-Aggiornatore-2.41.0.exe)
 
 ## Novità 2.40.0 — allineamento tra GeCo e GeCa
 

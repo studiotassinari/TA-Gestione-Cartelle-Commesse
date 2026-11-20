@@ -4,7 +4,8 @@ using TA_Gestione_Cartelle_Commesse.ViewModels;
 namespace TA_Gestione_Cartelle_Commesse.Views;
 
 // Un solo punto di navigazione per tutte le aperture da elenchi, anagrafiche e pianificazione.
-public sealed class EntityWorkspace(BusinessViewModel business,Window owner) : IDisposable
+// geCo (2.41.0): canale per la sezione «Team della commessa (GeCo)» della scheda.
+public sealed class EntityWorkspace(BusinessViewModel business,Window owner,TA_Gestione_Cartelle_Commesse.Services.IGeCoGateway? geCo=null) : IDisposable
 {
     public ProjectDetailWindow? ProjectWindow {get;private set;}
     public CustomerWindow? CustomerWindow {get;private set;}
@@ -15,7 +16,7 @@ public sealed class EntityWorkspace(BusinessViewModel business,Window owner) : I
             if(existing.Navigate(new(business,id)))CustomerWindow?.RequestSelection(null);
             TA.Desktop.SessionInstance.Restore(existing);return;
         }
-        var window=new ProjectDetailWindow(new(business,id)){Owner=owner};ProjectWindow=window;
+        var window=new ProjectDetailWindow(new(business,id),geCo){Owner=owner};ProjectWindow=window;
         window.CustomerRequested+=ChooseCustomer;
         window.Closed+=(_,_)=>{window.CustomerRequested-=ChooseCustomer;ProjectWindow=null;CustomerWindow?.RequestSelection(null);};
         window.Show();

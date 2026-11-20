@@ -16,6 +16,7 @@ public sealed partial class MainViewModel
         if (folderLinksWindow != null) { folderLinksWindow.Activate(); return; }
         folderLinks = new FolderLinksViewModel(new ServerGeCoGateway(connection));
         folderLinksWindow = new(folderLinks) { Owner = System.Windows.Application.Current.MainWindow };
+        folderLinksWindow.TeamRequested += ShowGeCoTeam;
         folderLinksWindow.Closed += (_, _) => { folderLinksWindow = null; folderLinks = null; };
         folderLinksWindow.Show();
     }

@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using TA_Gestione_Cartelle_Commesse.Contracts;
 namespace TA.Server.SharedDatabase;
 
-// Pianificazione delle attività, ore lavorate, collegamento delle cartelle (GeCoWorkService.Links.cs) e allineamento
-// (GeCoWorkService.Alignment.cs, 2.40.0) di GeCo per il client
+// Pianificazione delle attività, ore lavorate, collegamento delle cartelle (GeCoWorkService.Links.cs), allineamento
+// (GeCoWorkService.Alignment.cs, 2.40.0) e team della commessa (GeCoWorkService.Team.cs, 2.41.0) di GeCo per il client
 // WPF, sullo stesso database SQL Server di GeCo2027 e con le stesse regole: quelle dei servizi della libreria GeCo.Dati
 // (ServizioPianificazione, ServizioConsuntivo, ServizioCollegamentiCartelle, ServizioAllineamento), mai riscritte qui.
 // Il servizio decide soltanto chi è l'utente: l'account Windows autenticato sul canale (mai un nome inviato dal client)
@@ -89,9 +89,9 @@ public sealed partial class GeCoWorkService
         catch (RegolaException ex) when (ex.Stato == 403) { return false; }
     }
 
-    // Comandi che salvano pianificazione o ore (e quindi registrano un evento tecnico): dopo di essi il lettore del registro
+    // Comandi che salvano pianificazione, ore o team della commessa (e quindi registrano un evento tecnico): dopo di essi il lettore del registro
     // rilegge subito (GeCoEventHub.Wake), così gli altri client aperti si aggiornano senza aspettare il giro successivo.
-    public static bool Saves(string action) => action is "AddActivity" or "MoveActivity" or "RemoveActivity" or "HoursSave" or "HoursConfirm";
+    public static bool Saves(string action) => action is "AddActivity" or "MoveActivity" or "RemoveActivity" or "HoursSave" or "HoursConfirm" or "SetTeamMember" or "SetPermanentTeam";
 
     private static async Task<object> HandleAsync(GeCoCommand c, ContestoRegole context, CancellationToken token)
     {
@@ -129,6 +129,7 @@ public sealed partial class GeCoWorkService
                 var k = c.Conferma ?? throw new ArgumentException("Settimana mancante.");
                 return As<GeCoConfirmResult>(await hours.ConfermaAsync(new RichiestaConferma { IdCdc = k.IdCdc, Dal = k.Dal, Voci = k.Voci?.ToList(), Conferma = k.Conferma }));
             case "Links" or "Link" or "Unlink" or "ConfirmSafe" or "Folders" or "SyncEvents" or "ViewEvents": return await HandleLinksAsync(c, context, token);
+            case "ProjectTeam" or "SetTeamMember" or "SetPermanentTeam": return await HandleTeamAsync(c, context, token);
             default: throw new ArgumentException("Comando GeCo sconosciuto.");
         }
     }
